@@ -42,7 +42,7 @@ var anim_sprite: AnimatedSprite3D
 var slash_vfx: Sprite3D
 var player_light: OmniLight3D
 var camera_rig: CameraRig3D
-var _rim_shader_mat: ShaderMaterial
+var _rim_halo_sprite: Sprite3D
 var _contact_shadow: MeshInstance3D
 
 
@@ -93,14 +93,18 @@ func _build_visual_nodes() -> void:
 	anim_sprite.sprite_frames = custom_sprite_frames if custom_sprite_frames else PixelArtGenerator.get_player_sprite_frames()
 	anim_sprite.play("idle")
 
-	# Gắn Shader Rim-Light viền sáng cổ trang lên nhân vật (tự động cập nhật theo từng frame)
-	var rim_shader := load("res://assets/shaders/sprite_rim_light.gdshader") as Shader
-	if rim_shader:
-		_rim_shader_mat = ShaderMaterial.new()
-		_rim_shader_mat.shader = rim_shader
-		_rim_shader_mat.set_shader_parameter("rim_color", Color(1.0, 0.80, 0.44))
-		_rim_shader_mat.set_shader_parameter("rim_strength", 1.25)
-		anim_sprite.material_override = _rim_shader_mat
+	# Tạo viền sáng Rim-Light an toàn 100% bằng Sprite3D hào quang nhẹ phía sau (tránh xung đột pipeline material_override trên D3D12)
+	var rim_halo := Sprite3D.new()
+	rim_halo.name = "RimLightHalo"
+	rim_halo.position = Vector3(0.0, 0.96, -0.02)
+	rim_halo.pixel_size = 0.0475
+	rim_halo.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
+	rim_halo.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+	rim_halo.shaded = false
+	rim_halo.modulate = Color(1.0, 0.82, 0.46, 0.42)
+	rim_halo.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(rim_halo)
+	_rim_halo_sprite = rim_halo
 
 	# Bóng tròn mềm tiếp đất (Contact Shadow) giúp nhân vật đứng vững và rõ vị trí trong màn đêm
 	_contact_shadow = MeshInstance3D.new()
@@ -144,13 +148,12 @@ func _physics_process(delta: float) -> void:
 	if _is_dead:
 		return
 
-	# Đồng bộ texture & hướng lật cho Shader Rim-Light viền sáng nhân vật
-	if _rim_shader_mat and anim_sprite and anim_sprite.sprite_frames:
+	# Đồng bộ frame & hướng cho lớp Rim-Light Halo phía sau nhân vật
+	if _rim_halo_sprite and anim_sprite and anim_sprite.sprite_frames:
 		var cur_tex := anim_sprite.sprite_frames.get_frame_texture(anim_sprite.animation, anim_sprite.frame)
-		if cur_tex:
-			_rim_shader_mat.set_shader_parameter("albedo_tex", cur_tex)
-		_rim_shader_mat.set_shader_parameter("flip_h", anim_sprite.flip_h)
-		_rim_shader_mat.set_shader_parameter("modulate_color", anim_sprite.modulate)
+		if cur_tex and _rim_halo_sprite.texture != cur_tex:
+			_rim_halo_sprite.texture = cur_tex
+		_rim_halo_sprite.flip_h = anim_sprite.flip_h
 
 	# Hồi năng lượng tự nhiên theo thời gian
 	if current_energy < max_energy:

@@ -87,6 +87,9 @@ func build_map_for_theme(theme: String) -> void:
 		for child in _stage_map_root.get_children():
 			child.queue_free()
 
+	# Dọn dẹp các tham chiếu đèn / đèn lồng treo đã bị hủy để không giữ reference cũ
+	_prune_invalid_light_refs()
+
 	if theme == "hamlet_hub":
 		if _hamlet_root:
 			_hamlet_root.visible = true
@@ -99,6 +102,23 @@ func build_map_for_theme(theme: String) -> void:
 			_hamlet_root.process_mode = Node.PROCESS_MODE_DISABLED
 			_set_colliders_disabled(_hamlet_root, true)
 		StageMapLayouts.build_stage_map(self, _stage_map_root, theme)
+
+
+func _prune_invalid_light_refs() -> void:
+	var valid_lights: Array[OmniLight3D] = []
+	var valid_energies: Array[float] = []
+	for i in range(_lantern_lights.size()):
+		if is_instance_valid(_lantern_lights[i]) and not _lantern_lights[i].is_queued_for_deletion():
+			valid_lights.append(_lantern_lights[i])
+			valid_energies.append(_lantern_base_energies[i] if i < _lantern_base_energies.size() else 2.5)
+	_lantern_lights = valid_lights
+	_lantern_base_energies = valid_energies
+
+	var valid_hanging: Array[Node3D] = []
+	for hl in _hanging_lanterns:
+		if is_instance_valid(hl) and not hl.is_queued_for_deletion():
+			valid_hanging.append(hl)
+	_hanging_lanterns = valid_hanging
 
 
 func _set_colliders_disabled(root_node: Node, disabled: bool) -> void:
@@ -665,13 +685,13 @@ func _create_cottage(pos: Vector3, plaster_col: Color, roof_col: Color, has_chim
 			sign_lbl.visible = true
 	)
 
-	# Ánh sáng cam ấm tỏa ra trước ngôi nhà
+	# Ánh sáng cam ấm tỏa ra trước ngôi nhà (tắt shadow_enabled trên OmniLight để tránh quá tải GPU D3D12, DirectionalLight3D vẫn đổ bóng chuẩn)
 	var house_glow := OmniLight3D.new()
 	house_glow.position = Vector3(0.0, 2.2, 4.0)
 	house_glow.light_color = Color(1.0, 0.62, 0.22)
 	house_glow.light_energy = 2.8
 	house_glow.omni_range = 10.5
-	house_glow.shadow_enabled = true
+	house_glow.shadow_enabled = false
 	house.add_child(house_glow)
 	_lantern_lights.append(house_glow)
 	_lantern_base_energies.append(2.8)
@@ -774,7 +794,7 @@ func _build_lanterns() -> void:
 		light.light_color = Color(1.0, 0.66, 0.24)
 		light.light_energy = 2.8
 		light.omni_range = 8.8
-		light.shadow_enabled = true
+		light.shadow_enabled = false
 		post.add_child(light)
 		_lantern_lights.append(light)
 		_lantern_base_energies.append(2.8)
@@ -1014,7 +1034,7 @@ func _create_lantern_post(root: Node3D, pos: Vector3, light_col: Color, energy: 
 	light.light_color = light_col
 	light.light_energy = energy
 	light.omni_range = 8.5
-	light.shadow_enabled = true
+	light.shadow_enabled = false
 	post.add_child(light)
 	_lantern_lights.append(light)
 	_lantern_base_energies.append(energy)
@@ -1043,7 +1063,7 @@ func _create_brazier(root: Node3D, pos: Vector3, fire_col: Color) -> void:
 	light.light_color = fire_col
 	light.light_energy = 3.1
 	light.omni_range = 9.5
-	light.shadow_enabled = true
+	light.shadow_enabled = false
 	b.add_child(light)
 	_lantern_lights.append(light)
 	_lantern_base_energies.append(3.1)
@@ -1071,7 +1091,7 @@ func _create_campfire(root: Node3D, pos: Vector3, stone_mat: Material, wood_mat:
 	light.light_color = Color(1.0, 0.58, 0.20)
 	light.light_energy = 3.4
 	light.omni_range = 10.5
-	light.shadow_enabled = true
+	light.shadow_enabled = false
 	camp.add_child(light)
 	_lantern_lights.append(light)
 	_lantern_base_energies.append(3.4)

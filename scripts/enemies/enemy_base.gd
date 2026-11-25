@@ -26,7 +26,7 @@ var anim_sprite: AnimatedSprite3D
 var hp_bar_3d: Sprite3D
 var _hp_bar_img: Image
 var _hp_bar_tex: ImageTexture
-var _rim_shader_mat: ShaderMaterial
+var _rim_halo_sprite: Sprite3D
 
 
 func _ready() -> void:
@@ -69,15 +69,17 @@ func _build_visuals() -> void:
 	anim_sprite.sprite_frames = stats.custom_sprite_frames if stats.custom_sprite_frames else PixelArtGenerator.get_enemy_sprite_frames(stats.archetype, stats.sprite_tint)
 	anim_sprite.play("idle")
 
-	# Viền sáng Rim-Light cho quái & Boss (Boss tỏa viền đỏ rực uy nghi, quái thường tỏa viền ánh trăng xanh/cam)
-	var rim_shader := load("res://assets/shaders/sprite_rim_light.gdshader") as Shader
-	if rim_shader:
-		_rim_shader_mat = ShaderMaterial.new()
-		_rim_shader_mat.shader = rim_shader
-		var rcol := Color(1.0, 0.24, 0.34) if stats.archetype == "boss" else Color(0.58, 0.78, 1.0)
-		_rim_shader_mat.set_shader_parameter("rim_color", rcol)
-		_rim_shader_mat.set_shader_parameter("rim_strength", 1.85 if stats.archetype == "boss" else 0.95)
-		anim_sprite.material_override = _rim_shader_mat
+	# Lớp viền sáng Rim-Light an toàn 100% trên D3D12 (Boss tỏa viền đỏ rực uy nghi, quái thường tỏa viền ánh trăng)
+	_rim_halo_sprite = Sprite3D.new()
+	_rim_halo_sprite.name = "RimLightHalo"
+	_rim_halo_sprite.position = Vector3(0.0, y_offset * stats.sprite_scale, -0.025)
+	_rim_halo_sprite.pixel_size = 0.0485 * stats.sprite_scale
+	_rim_halo_sprite.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
+	_rim_halo_sprite.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+	_rim_halo_sprite.shaded = false
+	_rim_halo_sprite.modulate = Color(1.0, 0.24, 0.34, 0.58) if stats.archetype == "boss" else Color(0.56, 0.80, 1.0, 0.34)
+	_rim_halo_sprite.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(_rim_halo_sprite)
 
 	# Bóng tròn mềm tiếp đất dưới chân quái/Boss
 	var csh := MeshInstance3D.new()
@@ -127,12 +129,12 @@ func _update_overhead_hp_bar() -> void:
 
 
 func _physics_process(delta: float) -> void:
-	if _rim_shader_mat and anim_sprite and anim_sprite.sprite_frames:
+	if _rim_halo_sprite and anim_sprite and anim_sprite.sprite_frames:
 		var cur_tex := anim_sprite.sprite_frames.get_frame_texture(anim_sprite.animation, anim_sprite.frame)
-		if cur_tex:
-			_rim_shader_mat.set_shader_parameter("albedo_tex", cur_tex)
-		_rim_shader_mat.set_shader_parameter("flip_h", anim_sprite.flip_h)
-		_rim_shader_mat.set_shader_parameter("modulate_color", anim_sprite.modulate)
+		if cur_tex and _rim_halo_sprite.texture != cur_tex:
+			_rim_halo_sprite.texture = cur_tex
+		_rim_halo_sprite.flip_h = anim_sprite.flip_h
+		_rim_halo_sprite.visible = current_state != State.DIE
 
 	if current_state == State.DIE:
 		return
