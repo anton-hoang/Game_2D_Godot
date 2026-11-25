@@ -21,9 +21,40 @@ func _ready() -> void:
 
 	ui_controller.bind_player(stage_manager.player)
 	ui_controller.start_stage_requested.connect(_on_start_stage_requested)
+	ui_controller.enter_town_hub_requested.connect(_on_enter_town_hub_requested)
+	ui_controller.npc_service_requested.connect(_on_npc_service_requested)
 	ui_controller.quick_lighting_requested.connect(_on_quick_lighting_requested)
 	ui_controller.toggle_dof_requested.connect(_on_toggle_dof_requested)
 	stage_manager.wave_banner_requested.connect(ui_controller.show_wave_banner)
+	stage_manager.npc_interacted.connect(ui_controller.show_npc_dialogue)
+	stage_manager.hub_portal_entered.connect(ui_controller.open_stage_select_from_hub)
+
+
+func _on_enter_town_hub_requested() -> void:
+	stage_manager.enter_town_hub()
+	ui_controller.bind_player(stage_manager.player)
+
+
+func _on_npc_service_requested(role: String) -> void:
+	var p := stage_manager.player
+	if p == null:
+		return
+	if role == "innkeeper":
+		p.heal(p.max_hp)
+		p.add_energy(p.max_energy)
+		AudioManager.play_sfx("victory", 1.1)
+		ui_controller.show_wave_banner("ĐÃ NGHỈ NGƠI TẠI QUÁN TRỌ MIRA!", "Sinh lực và Năng lượng đã được hồi phục 100%")
+	elif role == "merchant":
+		if SaveManager.gold >= 20:
+			SaveManager.add_gold(-20)
+			p.heal(p.max_hp)
+			p.add_energy(p.max_energy)
+			GameManager.add_score(150)
+			AudioManager.play_sfx("pickup", 1.15)
+			ui_controller.show_wave_banner("MUA THUỐC TĂNG LỰC THÀNH CÔNG!", "Đã hồi đầy HP/MP & nhận +150 điểm thưởng")
+		else:
+			AudioManager.play_sfx("hurt", 0.9)
+			ui_controller.show_wave_banner("KHÔNG ĐỦ VÀNG (CẦN 20 VÀNG)", "Hãy mở Rương báu trong 3 nhà gỗ hoặc chém vỡ thùng gỗ để kiếm thêm vàng!")
 
 
 func _on_start_stage_requested(stage_id: int) -> void:

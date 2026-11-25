@@ -8,16 +8,20 @@ extends Node3D
 
 signal wave_banner_requested(title_text: String, subtitle_text: String)
 signal boss_appeared(boss_node: EnemyBase)
+signal npc_interacted(npc_data: Dictionary)
+signal hub_portal_entered
 
 var environment_builder: HD2DEnvironmentBuilder
 var player: PlayerController
 var camera_rig: CameraRig3D
 var wave_portal: WavePortal3D
 var entities_root: Node3D
+var town_npcs_root: Node3D
 
 var current_stage_data: StageData
 var current_wave_index: int = 0
 var alive_enemies_count: int = 0
+var is_in_town_hub: bool = false
 
 const SPAWN_POINTS: Array[Vector3] = [
 	Vector3(-14.5, 0.2, 1.5),
@@ -74,10 +78,91 @@ func _setup_scene_hierarchy() -> void:
 	wave_portal.position = Vector3(7.5, 0.05, 1.5)
 	wave_portal.portal_entered.connect(_on_portal_entered)
 
+	_build_town_npcs()
+
+
+## Tạo 3 NPC đứng quanh Làng Windferry trong chế độ Làng trung tâm (Town Hub)
+func _build_town_npcs() -> void:
+	town_npcs_root = Node3D.new()
+	town_npcs_root.name = "TownNPCs"
+	add_child(town_npcs_root)
+
+	var npc_configs := [
+		{
+			"role": "blacksmith",
+			"name": "Thợ Rèn Gorn",
+			"title": "Lò Rèn Cổ Windferry",
+			"text": "Hôm nay quái vật kéo về đông lắm! Mang vàng lại đây, ta sẽ cường hóa vũ khí, giáp trụ và giày gió cho ngươi trước khi xuất trận.",
+			"action_label": "Mở Lò Rèn Nâng Cấp",
+			"pos": Vector3(-3.0, 0.1, -3.6),
+		},
+		{
+			"role": "innkeeper",
+			"name": "Chủ Quán Trọ Mira",
+			"title": "Quán Trọ Ấm Áp Windferry",
+			"text": "Đêm xuống rồi, hãy nghỉ ngơi bên lò sưởi một lát nhé lữ khách! Ta có thể hồi phục toàn bộ Sinh lực & Năng lượng cho ngươi miễn phí.",
+			"action_label": "Nghỉ Ngơi (Hồi 100% HP & MP)",
+			"pos": Vector3(2.2, 2.7, -9.8),
+		},
+		{
+			"role": "merchant",
+			"name": "Thương Nhân Aurelius",
+			"title": "Hội Thương Buôn Lữ Hành",
+			"text": "Ta vừa mang về rất nhiều dược phẩm quý! Chỉ với 20 Vàng, ta sẽ tặng ngươi Bình Thuốc Hồi Phục & Tặng thêm điểm Năng lượng chiến đấu.",
+			"action_label": "Mua Thuốc Tăng Lực (20 Vàng)",
+			"pos": Vector3(-11.5, 0.1, -0.5),
+		},
+	]
+	for cfg in npc_configs:
+		var npc := VillageNPC3D.new()
+		npc.npc_role = str(cfg["role"])
+		npc.npc_name = str(cfg["name"])
+		npc.npc_title = str(cfg["title"])
+		npc.dialogue_text = str(cfg["text"])
+		npc.action_label = str(cfg["action_label"])
+		npc.position = cfg["pos"]
+		npc.interacted.connect(func(d: Dictionary) -> void: npc_interacted.emit(d))
+		town_npcs_root.add_child(npc)
+
+
+## Vào chế độ Làng Trung Tâm yên bình (Town Hub):
+## Người chơi tự do đi dạo, nói chuyện 3 NPC, leo bậc thang vào 3 ngôi nhà mở rương báu, chém thùng gỗ,
+## rồi bước vào Cổng Chiến Đấu bên phải để chọn màn đánh quái!
+func enter_town_hub() -> void:
+	_clear_entities()
+	is_in_town_hub = true
+	GameManager.is_stage_active = false
+	if town_npcs_root:
+		town_npcs_root.visible = true
+		town_npcs_root.process_mode = Node.PROCESS_MODE_INHERIT
+
+	player._is_dead = false
+	player._apply_save_upgrades()
+	player.global_position = Vector3(-1.5, 0.2, 1.8)
+	player.hp_changed.emit(player.current_hp, player.max_hp)
+	player.energy_changed.emit(player.current_energy, player.max_energy)
+
+	environment_builder.apply_time_of_day("midnight")
+	environment_builder.spawn_breakable_props()
+	AudioManager.play_stage_ambience("midnight")
+
+	wave_portal.set_portal_active(true, SaveManager.unlocked_stage, false)
+	wave_portal._label_3d.text = "CỔNG CHIẾN ĐẤU (MÀN " + str(SaveManager.unlocked_stage) + ")\n(Bước vào để chọn màn đánh quái)"
+	wave_portal._label_3d.modulate = Color(1.0, 0.86, 0.35)
+	wave_banner_requested.emit(
+		"LÀNG CỔ WINDFERRY (KHU VỰC YÊN BÌNH)",
+		"Nói chuyện NPC bằng [E] • Leo cầu thang bên phải vào 3 nhà mở Rương • Vào Cổng Ánh Sáng để đánh quái"
+	)
+
 
 ## Tải và bắt đầu màn chơi theo stage_id (1 đến 5)
 func load_and_start_stage(stage_id: int) -> void:
 	_clear_entities()
+	is_in_town_hub = false
+	if town_npcs_root:
+		town_npcs_root.visible = false
+		town_npcs_root.process_mode = Node.PROCESS_MODE_DISABLED
+
 	current_stage_data = StageDatabase.get_stage_data(stage_id)
 	current_wave_index = 0
 	alive_enemies_count = 0
@@ -89,8 +174,9 @@ func load_and_start_stage(stage_id: int) -> void:
 	player.hp_changed.emit(player.current_hp, player.max_hp)
 	player.energy_changed.emit(player.current_energy, player.max_energy)
 
-	# Áp dụng ánh sáng thời điểm của màn (Hoàng hôn / Đêm xanh / Mưa / Nguyệt thực)
+	# Áp dụng ánh sáng thời điểm của màn (Hoàng hôn / Đêm xanh / Mưa / Màn Đêm Sâu / Nguyệt thực)
 	environment_builder.apply_time_of_day(current_stage_data.time_of_day)
+	environment_builder.spawn_breakable_props()
 	AudioManager.play_stage_ambience(current_stage_data.time_of_day)
 
 	wave_portal.set_portal_active(false)
@@ -202,7 +288,10 @@ func _on_wave_cleared() -> void:
 
 
 func _on_portal_entered() -> void:
-	_spawn_current_wave()
+	if is_in_town_hub:
+		hub_portal_entered.emit()
+	else:
+		_spawn_current_wave()
 
 
 func _clear_entities() -> void:

@@ -84,6 +84,24 @@ static func get_enemy_sprite_frames(archetype: String, tint: Color = Color.WHITE
 	return frames
 
 
+static func get_npc_sprite_texture(npc_role: String) -> ImageTexture:
+	var key := "npc_sprite_" + npc_role
+	if _cache.has(key):
+		return _cache[key]
+	var tex := ImageTexture.create_from_image(_make_npc_image(npc_role))
+	_cache[key] = tex
+	return tex
+
+
+static func get_npc_portrait_texture(npc_role: String) -> ImageTexture:
+	var key := "npc_portrait_" + npc_role
+	if _cache.has(key):
+		return _cache[key]
+	var tex := ImageTexture.create_from_image(_make_npc_portrait_image(npc_role))
+	_cache[key] = tex
+	return tex
+
+
 static func get_prop_texture(prop_type: String) -> ImageTexture:
 	var key := "prop_hd_" + prop_type
 	if _cache.has(key):
@@ -571,6 +589,117 @@ static func _make_flower_cluster_image() -> Image:
 	_fill_rect(img, 6, 7, 3, 3, Color(0.98, 0.84, 0.36))
 	_fill_rect(img, 13, 5, 3, 3, Color(0.55, 0.82, 1.0))
 	_fill_rect(img, 18, 9, 3, 3, Color(0.98, 0.58, 0.68))
+	return img
+
+
+## Vẽ Sprite NPC HD-2D đứng trong làng (Thợ Rèn, Chủ Quán Trọ, Thương Nhân)
+static func _make_npc_image(role: String) -> Image:
+	var w := 36
+	var h := 42
+	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var outline := Color(0.10, 0.07, 0.13)
+	var skin := Color(0.95, 0.80, 0.68)
+
+	match role:
+		"blacksmith":
+			# Thợ Rèn Gorn: Râu quai nón nâu rậm, tạp dề da đen, búa rèn lớn
+			_fill_circle(img, 18, 12, 6, Color(0.36, 0.22, 0.14))
+			_fill_rect(img, 13, 11, 10, 7, skin)
+			_fill_rect(img, 12, 15, 12, 6, Color(0.32, 0.18, 0.12)) # Râu quai nón
+			_fill_rect(img, 15, 13, 2, 2, outline)
+			_fill_rect(img, 20, 13, 2, 2, outline)
+			_fill_rect(img, 10, 20, 16, 13, Color(0.68, 0.24, 0.18)) # Áo đỏ thợ rèn
+			_fill_rect(img, 12, 22, 12, 11, Color(0.24, 0.17, 0.13)) # Tạp dề da
+			_fill_rect(img, 12, 33, 5, 6, Color(0.18, 0.18, 0.24))
+			_fill_rect(img, 19, 33, 5, 6, Color(0.18, 0.18, 0.24))
+			# Búa rèn cầm tay
+			_fill_rect(img, 26, 17, 3, 14, Color(0.45, 0.28, 0.16))
+			_fill_rect(img, 23, 13, 9, 5, Color(0.55, 0.60, 0.68))
+		"innkeeper":
+			# Chủ Quán Trọ Mira: Tóc vàng búi cao, khăn đội trắng, váy xanh lục ấm áp
+			_fill_circle(img, 18, 11, 7, Color(0.88, 0.66, 0.24))
+			_fill_rect(img, 13, 6, 10, 3, Color(0.96, 0.94, 0.90)) # Mũ vải trắng
+			_fill_rect(img, 13, 11, 10, 7, skin)
+			_fill_rect(img, 15, 13, 2, 2, outline)
+			_fill_rect(img, 19, 13, 2, 2, outline)
+			img.set_pixel(14, 16, Color(0.95, 0.62, 0.58))
+			img.set_pixel(21, 16, Color(0.95, 0.62, 0.58))
+			_fill_rect(img, 11, 19, 14, 15, Color(0.22, 0.52, 0.34)) # Váy xanh lục
+			_fill_rect(img, 13, 21, 10, 12, Color(0.95, 0.92, 0.85)) # Tạp dề trắng
+			_fill_rect(img, 13, 34, 4, 5, Color(0.35, 0.20, 0.12))
+			_fill_rect(img, 19, 34, 4, 5, Color(0.35, 0.20, 0.12))
+		_: # "merchant"
+			# Thương Nhân Aurelius: Mũ lông tím, áo choàng quý tộc xanh lam viền vàng, túi vàng
+			_fill_rect(img, 10, 8, 16, 3, Color(0.42, 0.20, 0.58))
+			_fill_rect(img, 13, 4, 10, 5, Color(0.52, 0.26, 0.68))
+			_fill_rect(img, 22, 3, 4, 5, Color(0.98, 0.82, 0.26)) # Lông vũ vàng
+			_fill_rect(img, 13, 11, 10, 7, skin)
+			_fill_rect(img, 15, 13, 2, 2, outline)
+			_fill_rect(img, 19, 13, 2, 2, outline)
+			_fill_rect(img, 15, 16, 6, 2, Color(0.26, 0.18, 0.14)) # Ria mép
+			_fill_rect(img, 10, 19, 16, 14, Color(0.18, 0.34, 0.62))
+			_fill_rect(img, 16, 19, 4, 14, Color(0.96, 0.78, 0.24))
+			_fill_rect(img, 12, 33, 5, 6, Color(0.22, 0.16, 0.14))
+			_fill_rect(img, 19, 33, 5, 6, Color(0.22, 0.16, 0.14))
+			# Túi vàng lớn bên hông
+			_fill_circle(img, 27, 27, 4, Color(0.96, 0.78, 0.22))
+
+	_apply_clean_outline(img, outline)
+	return img
+
+
+## Chân dung cận cảnh 48x48 cho Hộp thoại Dialogue Portrait kiểu JRPG cổ điển
+static func _make_npc_portrait_image(role: String) -> Image:
+	var w := 48
+	var h := 48
+	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	var bg_col := Color(0.22, 0.12, 0.10) if role == "blacksmith" else (Color(0.12, 0.24, 0.18) if role == "innkeeper" else Color(0.14, 0.16, 0.30))
+	img.fill(bg_col)
+	# Viền khung chân dung màu vàng cổ điển
+	_fill_rect(img, 0, 0, w, 2, Color(0.88, 0.72, 0.36))
+	_fill_rect(img, 0, h - 2, w, 2, Color(0.88, 0.72, 0.36))
+	_fill_rect(img, 0, 0, 2, h, Color(0.88, 0.72, 0.36))
+	_fill_rect(img, w - 2, 0, 2, h, Color(0.88, 0.72, 0.36))
+
+	var skin := Color(0.96, 0.81, 0.69)
+	var outline := Color(0.10, 0.08, 0.14)
+
+	match role:
+		"blacksmith":
+			_fill_rect(img, 8, 32, 32, 14, Color(0.68, 0.24, 0.18))
+			_fill_rect(img, 13, 35, 22, 11, Color(0.24, 0.17, 0.13))
+			_fill_circle(img, 24, 21, 13, Color(0.36, 0.22, 0.14))
+			_fill_rect(img, 14, 14, 20, 15, skin)
+			_fill_rect(img, 12, 24, 24, 10, Color(0.30, 0.16, 0.10))
+			_fill_rect(img, 17, 19, 3, 3, outline)
+			_fill_rect(img, 28, 19, 3, 3, outline)
+			img.set_pixel(17, 19, Color.WHITE)
+			img.set_pixel(28, 19, Color.WHITE)
+		"innkeeper":
+			_fill_rect(img, 9, 33, 30, 13, Color(0.22, 0.52, 0.34))
+			_fill_rect(img, 16, 35, 16, 11, Color(0.95, 0.92, 0.85))
+			_fill_circle(img, 24, 20, 13, Color(0.88, 0.66, 0.24))
+			_fill_rect(img, 14, 7, 20, 5, Color(0.96, 0.94, 0.90))
+			_fill_rect(img, 14, 15, 20, 15, skin)
+			_fill_rect(img, 17, 20, 3, 4, outline)
+			_fill_rect(img, 28, 20, 3, 4, outline)
+			img.set_pixel(17, 20, Color.WHITE)
+			img.set_pixel(28, 20, Color.WHITE)
+			_fill_rect(img, 15, 25, 3, 2, Color(0.95, 0.60, 0.58))
+			_fill_rect(img, 30, 25, 3, 2, Color(0.95, 0.60, 0.58))
+		_:
+			_fill_rect(img, 8, 32, 32, 14, Color(0.18, 0.34, 0.62))
+			_fill_rect(img, 20, 32, 8, 14, Color(0.96, 0.78, 0.24))
+			_fill_rect(img, 10, 12, 28, 5, Color(0.42, 0.20, 0.58))
+			_fill_rect(img, 14, 5, 20, 8, Color(0.52, 0.26, 0.68))
+			_fill_rect(img, 32, 4, 6, 8, Color(0.98, 0.82, 0.26))
+			_fill_rect(img, 14, 17, 20, 14, skin)
+			_fill_rect(img, 17, 21, 3, 3, outline)
+			_fill_rect(img, 28, 21, 3, 3, outline)
+			img.set_pixel(17, 21, Color.WHITE)
+			img.set_pixel(28, 21, Color.WHITE)
+			_fill_rect(img, 18, 26, 12, 3, Color(0.26, 0.18, 0.14))
 	return img
 
 

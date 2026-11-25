@@ -327,26 +327,65 @@ func _build_terrain_and_walls() -> void:
 	for px: float in [-20.0, -12.0, -4.0, 4.0, 16.0, 24.0]:
 		_add_box_mesh(self, Vector3(0.85, 2.8, 0.55), Vector3(px, 1.4, -8.35), stone_trim_mat)
 
-	# Nền tầng 2 phía sau tường đá
-	_add_box_mesh(self, Vector3(58.0, 2.6, 16.0), Vector3(0.0, 1.30, -17.5), grass_mat)
+	# Nền tầng 2 phía sau tường đá (có CollisionShape3D để Player đi bộ lên tham quan và vào 3 ngôi nhà!)
+	var upper_body := StaticBody3D.new()
+	upper_body.name = "UpperTerraceGround"
+	add_child(upper_body)
+	var upper_col := CollisionShape3D.new()
+	var upper_box := BoxShape3D.new()
+	upper_box.size = Vector3(58.0, 2.6, 16.0)
+	upper_col.shape = upper_box
+	upper_col.position = Vector3(0.0, 1.30, -17.5)
+	upper_body.add_child(upper_col)
+	_add_box_mesh(upper_body, Vector3(58.0, 2.6, 16.0), Vector3(0.0, 1.30, -17.5), grass_mat)
+	# Con đường lát đá tầng 2 nối trước cửa 3 ngôi nhà gỗ
+	_add_box_mesh(upper_body, Vector3(38.0, 0.08, 2.6), Vector3(2.0, 2.62, -9.8), stone_cobble_mat)
 
-	# Bậc thang đá cổ có lan can đi lên tầng 2 ở bên phải (giống ảnh mẫu)
+	# Bậc thang đá cổ + dốc va chạm mượt (ramp collider) đi lên tầng 2 ở bên phải
 	for step_i in range(7):
 		_add_box_mesh(
 			self,
 			Vector3(3.8, 0.40, 1.25),
-			Vector3(10.6, 0.20 + step_i * 0.39, -7.2 - step_i * 0.45),
+			Vector3(10.6, 0.20 + float(step_i) * 0.39, -7.2 - float(step_i) * 0.45),
 			stone_cobble_mat
 		)
+	var ramp_body := StaticBody3D.new()
+	ramp_body.name = "StairsRamp"
+	add_child(ramp_body)
+	var ramp_col := CollisionShape3D.new()
+	var ramp_shape := BoxShape3D.new()
+	ramp_shape.size = Vector3(3.8, 0.35, 4.6)
+	ramp_col.shape = ramp_shape
+	ramp_col.position = Vector3(10.6, 1.28, -8.35)
+	ramp_col.rotation_degrees = Vector3(34.0, 0.0, 0.0)
+	ramp_body.add_child(ramp_col)
+
 	_add_box_mesh(self, Vector3(0.38, 1.9, 3.6), Vector3(8.55, 1.15, -8.5), stone_wall_mat)
 	_add_box_mesh(self, Vector3(0.38, 1.9, 3.6), Vector3(12.65, 1.15, -8.5), stone_wall_mat)
 
+	# BẪY ĐỊA HÌNH 3D: Suối nước sâu bên trái (đánh bay quái rơi xuống suối chịu sát thương) & 2 Hố gai sắt
+	var water_haz := HazardZone3D.new()
+	water_haz.name = "PondHazard"
+	water_haz.hazard_type = "water_hazard"
+	water_haz.zone_size = Vector3(11.5, 1.2, 6.2)
+	water_haz.damage_per_tick = 22
+	water_haz.position = Vector3(-8.4, 0.0, 4.8)
+	add_child(water_haz)
+
+	for sp_pos: Vector3 in [Vector3(12.8, 0.0, 4.8), Vector3(0.5, 0.0, -5.2)]:
+		var spike_haz := HazardZone3D.new()
+		spike_haz.hazard_type = "spike_pit"
+		spike_haz.zone_size = Vector3(2.8, 1.0, 2.4)
+		spike_haz.damage_per_tick = 28
+		spike_haz.position = sp_pos
+		add_child(spike_haz)
+
 
 func _build_cottages() -> void:
-	# 3 ngôi nhà gỗ khung nửa gỗ (half-timbered) trên tầng 2 + 1 nhà phụ ven rìa
-	_create_cottage(Vector3(-12.0, 2.6, -13.4), Color(0.68, 0.58, 0.46), Color(0.24, 0.17, 0.14), true)
-	_create_cottage(Vector3(2.2, 2.6, -13.0), Color(0.80, 0.68, 0.56), Color(0.28, 0.16, 0.14), true)
-	_create_cottage(Vector3(16.2, 2.6, -13.4), Color(0.70, 0.64, 0.56), Color(0.18, 0.22, 0.34), false)
+	# 3 ngôi nhà gỗ có NỘI THẤT BÊN TRONG & HIỆU ỨNG CUTAWAY TỰ MỜ MẶT TIỀN khi bước vào cửa!
+	_create_cottage(Vector3(-12.0, 2.6, -13.4), Color(0.68, 0.58, 0.46), Color(0.24, 0.17, 0.14), true, "Xưởng Rèn Cổ", 40)
+	_create_cottage(Vector3(2.2, 2.6, -13.0), Color(0.80, 0.68, 0.56), Color(0.28, 0.16, 0.14), true, "Quán Trọ Windferry", 50)
+	_create_cottage(Vector3(16.2, 2.6, -13.4), Color(0.70, 0.64, 0.56), Color(0.18, 0.22, 0.34), false, "Kho Hàng Thương Nhân", 65)
 
 	# Dây cờ vải nhiều màu treo giữa nhà giữa và nhà bên phải (chi tiết đắt giá giống ảnh Windferry!)
 	var rope_mat := StandardMaterial3D.new()
@@ -361,7 +400,10 @@ func _build_cottages() -> void:
 		_add_box_mesh(self, Vector3(0.85, 1.05, 0.08), Vector3(6.8 + float(fi) * 1.25, 4.55 - sag, -10.8), fmat)
 
 
-func _create_cottage(pos: Vector3, plaster_col: Color, roof_col: Color, has_chimney: bool) -> void:
+## Dựng ngôi nhà gỗ 2 phần tách biệt:
+## 1) Khung nhà sau & Nội thất ấm cúng (sàn gỗ, thảm đỏ, lò sưởi lửa cháy, bàn gỗ + nến, rương báu mở được bằng [E]).
+## 2) Mặt tiền & Mái nhà (facade_root) có Area3D cảm biến: khi Player bước vào nhà, mặt tiền tự mờ đi (Seamless Cutaway)!
+func _create_cottage(pos: Vector3, plaster_col: Color, roof_col: Color, has_chimney: bool, room_title: String, chest_gold: int) -> void:
 	var house := Node3D.new()
 	house.position = pos
 	add_child(house)
@@ -369,6 +411,7 @@ func _create_cottage(pos: Vector3, plaster_col: Color, roof_col: Color, has_chim
 	var wall_mat := _make_textured_material(plaster_col, plaster_col.darkened(0.16), 0.85, "brick")
 	var stone_base_mat := _make_textured_material(Color(0.30, 0.30, 0.34), Color(0.20, 0.20, 0.24), 0.84, "cobble")
 	var wood_mat := _make_textured_material(Color(0.26, 0.15, 0.10), Color(0.18, 0.10, 0.07), 0.86, "wood")
+	var floor_wood_mat := _make_textured_material(Color(0.38, 0.23, 0.13), Color(0.28, 0.16, 0.09), 0.80, "wood")
 	var shutter_mat := StandardMaterial3D.new()
 	shutter_mat.albedo_color = Color(0.18, 0.28, 0.32)
 	shutter_mat.roughness = 0.85
@@ -381,52 +424,131 @@ func _create_cottage(pos: Vector3, plaster_col: Color, roof_col: Color, has_chim
 	win_mat.emission_energy_multiplier = 3.2
 	_window_materials.append(win_mat)
 
-	# Móng đá + Thân nhà vữa cổ
-	_add_box_mesh(house, Vector3(8.0, 1.0, 5.6), Vector3(0.0, 0.5, 0.0), stone_base_mat)
-	_add_box_mesh(house, Vector3(7.8, 3.8, 5.4), Vector3(0.0, 2.9, 0.0), wall_mat)
+	# --- PHẦN 1: NỘI THẤT BÊN TRONG & TƯỜNG SAU / 2 TƯỜNG HÔNG ---
+	# Sàn gỗ nội thất + Thảm đỏ ấm cúng
+	_add_box_mesh(house, Vector3(7.6, 0.14, 5.2), Vector3(0.0, 0.08, 0.0), floor_wood_mat)
+	var rug_mat := StandardMaterial3D.new()
+	rug_mat.albedo_color = Color(0.62, 0.14, 0.18)
+	_add_box_mesh(house, Vector3(3.6, 0.05, 2.4), Vector3(0.0, 0.16, 0.3), rug_mat)
 
-	# Khung xà gỗ nửa gỗ (Half-timbered) tinh xảo
-	_add_box_mesh(house, Vector3(8.0, 0.24, 5.6), Vector3(0.0, 2.55, 0.0), wood_mat)
-	_add_box_mesh(house, Vector3(8.0, 0.24, 5.6), Vector3(0.0, 4.70, 0.0), wood_mat)
-	for tx: float in [-3.85, -1.25, 1.25, 3.85]:
-		_add_box_mesh(house, Vector3(0.24, 4.6, 5.55), Vector3(tx, 2.5, 0.0), wood_mat)
+	# Tường sau & 2 tường bên (luôn giữ nguyên để tạo không gian phòng ấm cúng khi mặt tiền ẩn đi)
+	_add_box_mesh(house, Vector3(7.8, 4.7, 0.32), Vector3(0.0, 2.35, -2.55), wall_mat)
+	_add_box_mesh(house, Vector3(0.32, 4.7, 5.4), Vector3(-3.75, 2.35, 0.0), wall_mat)
+	_add_box_mesh(house, Vector3(0.32, 4.7, 5.4), Vector3(3.75, 2.35, 0.0), wall_mat)
 
-	# Cửa gỗ chính có bậc thềm đá & đèn tường trước cửa
-	_add_box_mesh(house, Vector3(1.35, 2.25, 0.24), Vector3(0.0, 1.15, 2.72), wood_mat)
-	_add_box_mesh(house, Vector3(1.8, 0.26, 0.75), Vector3(0.0, 0.13, 3.05), stone_base_mat)
-	_add_box_mesh(house, Vector3(0.30, 0.36, 0.30), Vector3(0.95, 1.95, 2.92), win_mat) # Đèn treo tường
+	# Lò sưởi đá có lửa cháy rực cam đỏ ở tường sau bên trái
+	_add_box_mesh(house, Vector3(1.8, 2.2, 0.85), Vector3(-2.1, 1.1, -2.0), stone_base_mat)
+	var fire_mat := StandardMaterial3D.new()
+	fire_mat.albedo_color = Color(1.0, 0.62, 0.15)
+	fire_mat.emission_enabled = true
+	fire_mat.emission = Color(1.0, 0.45, 0.10)
+	fire_mat.emission_energy_multiplier = 4.2
+	_add_box_mesh(house, Vector3(0.95, 0.85, 0.35), Vector3(-2.1, 0.58, -1.58), fire_mat)
+	var hearth_light := OmniLight3D.new()
+	hearth_light.position = Vector3(-2.1, 1.0, -1.1)
+	hearth_light.light_color = Color(1.0, 0.56, 0.18)
+	hearth_light.light_energy = 2.6
+	hearth_light.omni_range = 6.5
+	house.add_child(hearth_light)
+	_lantern_lights.append(hearth_light)
+	_lantern_base_energies.append(2.6)
 
-	# Cửa sổ phát sáng vàng ấm có chấn song gỗ, cửa chớp xanh & bồn hoa cửa sổ
+	# Bàn gỗ + Ghế đẩu + Cây nến sáng giữa phòng
+	_add_box_mesh(house, Vector3(1.8, 0.14, 1.1), Vector3(0.2, 0.82, -0.8), wood_mat)
+	_add_box_mesh(house, Vector3(0.16, 0.80, 0.16), Vector3(-0.55, 0.40, -1.2), wood_mat)
+	_add_box_mesh(house, Vector3(0.16, 0.80, 0.16), Vector3(0.95, 0.40, -1.2), wood_mat)
+	_add_box_mesh(house, Vector3(0.14, 0.32, 0.14), Vector3(0.2, 1.04, -0.8), win_mat)
+
+	# Rương báu mở được bằng phím [E] đặt ở góc phải trong nhà
+	var chest := TreasureChest3D.new()
+	chest.gold_reward = chest_gold
+	chest.position = Vector3(2.3, 0.15, -1.3)
+	house.add_child(chest)
+
+	# Biển tên phòng phía trên cửa
+	var sign_lbl := Label3D.new()
+	sign_lbl.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	sign_lbl.pixel_size = 0.0085
+	sign_lbl.font_size = 26
+	sign_lbl.outline_size = 8
+	sign_lbl.position = Vector3(0.0, 2.75, 2.95)
+	sign_lbl.modulate = Color(1.0, 0.90, 0.55)
+	sign_lbl.text = room_title + "\n(Đi vào cửa để mở nội thất)"
+	house.add_child(sign_lbl)
+
+	# --- PHẦN 2: MẶT TIỀN & MÁI NHÀ (Tự ẩn/hiện mượt mà khi bước vào trong) ---
+	var facade := Node3D.new()
+	facade.name = "CutawayFacade"
+	house.add_child(facade)
+
+	# Tường mặt tiền 2 bên cửa chính (chừa khoảng trống ở giữa cho người chơi bước thẳng vào)
+	_add_box_mesh(facade, Vector3(3.1, 4.7, 0.28), Vector3(-2.35, 2.35, 2.60), wall_mat)
+	_add_box_mesh(facade, Vector3(3.1, 4.7, 0.28), Vector3(2.35, 2.35, 2.60), wall_mat)
+	_add_box_mesh(facade, Vector3(1.8, 2.45, 0.28), Vector3(0.0, 3.48, 2.60), wall_mat)
+
+	# Khung xà gỗ nửa gỗ mặt tiền
+	_add_box_mesh(facade, Vector3(8.0, 0.24, 0.34), Vector3(0.0, 2.55, 2.64), wood_mat)
+	_add_box_mesh(facade, Vector3(8.0, 0.24, 0.34), Vector3(0.0, 4.70, 2.64), wood_mat)
+	for tx: float in [-3.85, -1.10, 1.10, 3.85]:
+		_add_box_mesh(facade, Vector3(0.24, 4.6, 0.34), Vector3(tx, 2.35, 2.64), wood_mat)
+
+	# Bậc thềm đá & đèn tường trước cửa
+	_add_box_mesh(house, Vector3(2.0, 0.16, 0.85), Vector3(0.0, 0.08, 3.05), stone_base_mat)
+	_add_box_mesh(facade, Vector3(0.30, 0.36, 0.30), Vector3(1.05, 1.95, 2.86), win_mat)
+
+	# Cửa sổ phát sáng vàng ấm có chấn song & bồn hoa
 	var flower_box_mat := StandardMaterial3D.new()
 	flower_box_mat.albedo_color = Color(0.22, 0.44, 0.20)
 	for wx: float in [-2.55, 2.55]:
 		for wy: float in [1.65, 3.55]:
-			_add_box_mesh(house, Vector3(1.32, 1.10, 0.16), Vector3(wx, wy, 2.72), win_mat)
-			# Chấn song chữ thập
-			_add_box_mesh(house, Vector3(0.10, 1.14, 0.22), Vector3(wx, wy, 2.75), wood_mat)
-			_add_box_mesh(house, Vector3(1.36, 0.10, 0.22), Vector3(wx, wy, 2.75), wood_mat)
-			# Cửa chớp 2 bên
-			_add_box_mesh(house, Vector3(0.32, 1.12, 0.14), Vector3(wx - 0.82, wy, 2.74), shutter_mat)
-			_add_box_mesh(house, Vector3(0.32, 1.12, 0.14), Vector3(wx + 0.82, wy, 2.74), shutter_mat)
-			# Bồn hoa dưới bậu cửa sổ
-			_add_box_mesh(house, Vector3(1.45, 0.26, 0.35), Vector3(wx, wy - 0.66, 2.86), wood_mat)
-			_add_box_mesh(house, Vector3(1.30, 0.24, 0.28), Vector3(wx, wy - 0.48, 2.86), flower_box_mat)
+			_add_box_mesh(facade, Vector3(1.32, 1.10, 0.16), Vector3(wx, wy, 2.72), win_mat)
+			_add_box_mesh(facade, Vector3(0.10, 1.14, 0.22), Vector3(wx, wy, 2.75), wood_mat)
+			_add_box_mesh(facade, Vector3(1.36, 0.10, 0.22), Vector3(wx, wy, 2.75), wood_mat)
+			_add_box_mesh(facade, Vector3(0.32, 1.12, 0.14), Vector3(wx - 0.82, wy, 2.74), shutter_mat)
+			_add_box_mesh(facade, Vector3(0.32, 1.12, 0.14), Vector3(wx + 0.82, wy, 2.74), shutter_mat)
+			_add_box_mesh(facade, Vector3(1.45, 0.26, 0.35), Vector3(wx, wy - 0.66, 2.86), wood_mat)
+			_add_box_mesh(facade, Vector3(1.30, 0.24, 0.28), Vector3(wx, wy - 0.48, 2.86), flower_box_mat)
 
-	# Mái nhà dốc lợp ngói nhô rộng có viền đầu hồi gỗ
+	# Mái nhà dốc & ống khói thuộc nhóm Cutaway để khi vào nhà nhìn xuống nội thất cực thoáng
 	var roof_mesh := MeshInstance3D.new()
 	var prism := PrismMesh.new()
 	prism.size = Vector3(8.8, 3.1, 6.4)
 	roof_mesh.mesh = prism
 	roof_mesh.position = Vector3(0.0, 6.25, 0.0)
 	roof_mesh.material_override = roof_mat
-	house.add_child(roof_mesh)
+	facade.add_child(roof_mesh)
 
-	# Ống khói đá trên mái
 	if has_chimney:
-		_add_box_mesh(house, Vector3(0.85, 2.4, 0.85), Vector3(-2.6, 6.9, -0.8), stone_base_mat)
-		_add_box_mesh(house, Vector3(1.05, 0.22, 1.05), Vector3(-2.6, 8.15, -0.8), stone_base_mat)
+		_add_box_mesh(facade, Vector3(0.85, 2.4, 0.85), Vector3(-2.6, 6.9, -0.8), stone_base_mat)
+		_add_box_mesh(facade, Vector3(1.05, 0.22, 1.05), Vector3(-2.6, 8.15, -0.8), stone_base_mat)
 
-	# Ánh sáng cam ấm tỏa ra từ cửa sổ & đèn tường ngôi nhà
+	# Cảm biến Cutaway: Khi Player đi qua cửa vào bên trong, mặt tiền & mái tự động co/ẩn mượt mà!
+	var interior_sensor := Area3D.new()
+	interior_sensor.name = "InteriorCutawaySensor"
+	var s_col := CollisionShape3D.new()
+	var s_box := BoxShape3D.new()
+	s_box.size = Vector3(7.4, 3.8, 5.4)
+	s_col.shape = s_box
+	s_col.position = Vector3(0.0, 1.9, 0.1)
+	interior_sensor.add_child(s_col)
+	house.add_child(interior_sensor)
+
+	interior_sensor.body_entered.connect(func(body: Node) -> void:
+		if body and body.is_in_group("player"):
+			var tw := facade.create_tween()
+			tw.tween_property(facade, "scale", Vector3(1.0, 0.01, 1.0), 0.25).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+			tw.tween_callback(func() -> void: facade.visible = false)
+			sign_lbl.visible = false
+	)
+	interior_sensor.body_exited.connect(func(body: Node) -> void:
+		if body and body.is_in_group("player"):
+			facade.visible = true
+			var tw := facade.create_tween()
+			tw.tween_property(facade, "scale", Vector3.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+			sign_lbl.visible = true
+	)
+
+	# Ánh sáng cam ấm tỏa ra trước ngôi nhà
 	var house_glow := OmniLight3D.new()
 	house_glow.position = Vector3(0.0, 2.2, 4.0)
 	house_glow.light_color = Color(1.0, 0.62, 0.22)
@@ -438,14 +560,14 @@ func _create_cottage(pos: Vector3, plaster_col: Color, roof_col: Color, has_chim
 	_lantern_base_energies.append(2.8)
 
 
-## Các đạo cụ làng ven đường: Ghế băng gỗ ven suối, thùng rượu gỗ, hòm hàng, hàng rào gỗ
+## Các đạo cụ làng ven đường: Ghế băng gỗ, hàng rào gỗ và các Thùng rượu / Hòm hàng PHÁ HỦY ĐƯỢC rơi Vàng/Máu!
 func _build_village_props() -> void:
 	var wood_mat := _make_textured_material(Color(0.32, 0.20, 0.12), Color(0.22, 0.13, 0.08), 0.88, "wood")
 	var iron_mat := StandardMaterial3D.new()
 	iron_mat.albedo_color = Color(0.18, 0.19, 0.22)
 	iron_mat.metallic = 0.65
 
-	# Ghế băng gỗ ven bờ suối bên trái (giống ảnh Windferry)
+	# Ghế băng gỗ ven bờ suối bên trái
 	var bench := Node3D.new()
 	bench.position = Vector3(-13.8, 0.0, -2.5)
 	add_child(bench)
@@ -454,31 +576,6 @@ func _build_village_props() -> void:
 	_add_box_mesh(bench, Vector3(0.16, 0.55, 0.55), Vector3(-0.85, 0.27, 0.0), iron_mat)
 	_add_box_mesh(bench, Vector3(0.16, 0.55, 0.55), Vector3(0.85, 0.27, 0.0), iron_mat)
 
-	# Cụm thùng gỗ & hòm hàng cạnh bậc thang bên phải (giống góc phải ảnh mẫu)
-	var barrel_positions := [
-		Vector3(14.2, 0.0, -5.2),
-		Vector3(15.3, 0.0, -5.5),
-		Vector3(14.8, 0.0, -4.3),
-		Vector3(-15.5, 0.0, -6.2),
-	]
-	for bp in barrel_positions:
-		var cyl := MeshInstance3D.new()
-		var cm := CylinderMesh.new()
-		cm.top_radius = 0.42
-		cm.bottom_radius = 0.44
-		cm.height = 1.05
-		cyl.mesh = cm
-		cyl.position = bp + Vector3(0.0, 0.52, 0.0)
-		cyl.material_override = wood_mat
-		add_child(cyl)
-		# Đai sắt thùng gỗ
-		_add_box_mesh(self, Vector3(0.90, 0.08, 0.90), bp + Vector3(0.0, 0.30, 0.0), iron_mat)
-		_add_box_mesh(self, Vector3(0.90, 0.08, 0.90), bp + Vector3(0.0, 0.78, 0.0), iron_mat)
-
-	# Hòm gỗ cạnh thùng
-	_add_box_mesh(self, Vector3(1.1, 1.0, 1.1), Vector3(16.4, 0.50, -4.8), wood_mat)
-	_add_box_mesh(self, Vector3(0.85, 0.85, 0.85), Vector3(16.3, 1.42, -4.9), wood_mat)
-
 	# Hàng rào gỗ cổ dọc 2 bên rìa làng
 	for fx: float in [-20.5, -18.5, -16.5, 17.5, 19.5, 21.5]:
 		_add_box_mesh(self, Vector3(0.18, 1.25, 0.18), Vector3(fx, 0.62, -6.8), wood_mat)
@@ -486,6 +583,31 @@ func _build_village_props() -> void:
 	_add_box_mesh(self, Vector3(4.5, 0.14, 0.10), Vector3(-18.5, 0.50, -6.8), wood_mat)
 	_add_box_mesh(self, Vector3(4.5, 0.14, 0.10), Vector3(19.5, 0.95, -6.8), wood_mat)
 	_add_box_mesh(self, Vector3(4.5, 0.14, 0.10), Vector3(19.5, 0.50, -6.8), wood_mat)
+
+	spawn_breakable_props()
+
+
+## Sinh lại các thùng rượu & hòm hàng phá hủy được mỗi khi vào làng hoặc bắt đầu màn chơi mới
+func spawn_breakable_props() -> void:
+	for old_b in get_tree().get_nodes_in_group("breakables"):
+		if is_instance_valid(old_b):
+			old_b.queue_free()
+
+	var specs := [
+		["barrel", Vector3(14.2, 0.0, -5.2)],
+		["barrel", Vector3(15.3, 0.0, -5.5)],
+		["crate", Vector3(16.4, 0.0, -4.7)],
+		["barrel", Vector3(-15.5, 0.0, -5.8)],
+		["crate", Vector3(-14.3, 0.0, -5.6)],
+		["barrel", Vector3(-2.5, 0.0, -5.8)],
+		["crate", Vector3(5.6, 0.0, 5.2)],
+		["barrel", Vector3(6.8, 0.0, 5.4)],
+	]
+	for sp in specs:
+		var br := BreakableProp3D.new()
+		br.prop_kind = str(sp[0])
+		br.position = sp[1]
+		add_child(br)
 
 
 func _build_lanterns() -> void:

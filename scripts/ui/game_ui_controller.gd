@@ -7,8 +7,10 @@ extends CanvasLayer
 ## - Menu chính, Chọn màn (1-5), Cửa hàng Nâng cấp (Sát thương, Máu, Tốc độ), Tạm dừng, Màn hình Thắng (Hạng S/A/B/C) & Thua.
 
 signal start_stage_requested(stage_id: int)
+signal enter_town_hub_requested
 signal quick_lighting_requested(mode: String)
 signal toggle_dof_requested
+signal npc_service_requested(role: String)
 
 var hud_root: Control
 var hp_bar: ProgressBar
@@ -33,6 +35,7 @@ var upgrade_panel: Control
 var pause_panel: Control
 var result_panel: Control
 var gameover_panel: Control
+var dialogue_panel: Control
 
 var _stage_buttons_box: VBoxContainer
 var _upgrade_info_label: Label
@@ -40,6 +43,11 @@ var _result_title_label: Label
 var _result_details_label: Label
 var _result_rank_label: Label
 var _next_stage_btn: Button
+var _dlg_portrait: TextureRect
+var _dlg_name_lbl: Label
+var _dlg_text_lbl: Label
+var _dlg_action_btn: Button
+var _current_npc_role: String = ""
 
 
 func _ready() -> void:
@@ -52,6 +60,7 @@ func _ready() -> void:
 	_build_pause_menu()
 	_build_result_menu()
 	_build_gameover_menu()
+	_build_dialogue_panel()
 
 	GameManager.stats_updated.connect(_on_stats_updated)
 	GameManager.stage_cleared.connect(_on_stage_cleared)
@@ -72,7 +81,12 @@ func _process(_delta: float) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("pause"):
-		if GameManager.is_stage_active:
+		if dialogue_panel and dialogue_panel.visible:
+			_hide_all_panels()
+			get_tree().paused = false
+		elif GameManager.is_stage_active:
+			_toggle_pause()
+		elif not main_menu_panel.visible and not stage_select_panel.visible and not upgrade_panel.visible:
 			_toggle_pause()
 	elif event is InputEventKey and event.pressed and not event.echo:
 		var kev := event as InputEventKey
@@ -126,9 +140,34 @@ func show_main_menu() -> void:
 
 
 func _hide_all_panels() -> void:
-	for p in [main_menu_panel, stage_select_panel, upgrade_panel, pause_panel, result_panel, gameover_panel]:
+	for p in [main_menu_panel, stage_select_panel, upgrade_panel, pause_panel, result_panel, gameover_panel, dialogue_panel]:
 		if p:
 			p.visible = false
+
+
+## Mở hộp thoại Chân dung NPC khi người chơi nhấn [E] trước Thợ Rèn, Chủ Quán Trọ, Thương Nhân
+func show_npc_dialogue(npc_data: Dictionary) -> void:
+	get_tree().paused = true
+	_hide_all_panels()
+	_current_npc_role = str(npc_data.get("role", "blacksmith"))
+	if _dlg_portrait:
+		_dlg_portrait.texture = PixelArtGenerator.get_npc_portrait_texture(_current_npc_role)
+	if _dlg_name_lbl:
+		_dlg_name_lbl.text = "%s — %s" % [str(npc_data.get("name", "NPC")), str(npc_data.get("title", ""))]
+	if _dlg_text_lbl:
+		_dlg_text_lbl.text = str(npc_data.get("text", ""))
+	if _dlg_action_btn:
+		_dlg_action_btn.text = str(npc_data.get("action_label", "Xác nhận"))
+	if dialogue_panel:
+		dialogue_panel.visible = true
+
+
+## Mở bảng Chọn Màn khi bước vào Cổng Chiến Đấu trong Làng Trung Tâm
+func open_stage_select_from_hub() -> void:
+	get_tree().paused = true
+	_hide_all_panels()
+	_refresh_all_menus()
+	stage_select_panel.visible = true
 
 
 func _build_vignette_overlay() -> void:
@@ -173,7 +212,7 @@ func _build_hud() -> void:
 	energy_label = _create_overlay_label(energy_bar, "MP (Kỹ năng K): 100 / 100")
 
 	var controls_hint := Label.new()
-	controls_hint.text = "WASD: Di chuyển | J: Combo 3 đòn | K: Tuyệt kỹ | L: Né (Dash) | ESC: Tạm dừng\nÁnh sáng HD-2D: [1] Hoàng hôn  [2] Đêm xanh  [3] Màn Đêm Sâu  [R] Đêm mưa  [4] Nguyệt thực  [G] DOF"
+	controls_hint.text = "WASD: Di chuyển | E: Tương tác NPC/Rương | J: Combo | K: Tuyệt kỹ | L: Né | ESC: Tạm dừng\nÁnh sáng HD-2D: [1] Hoàng hôn  [2] Đêm xanh  [3] Màn Đêm Sâu  [R] Đêm mưa  [4] Nguyệt thực  [G] DOF"
 	controls_hint.add_theme_font_size_override("font_size", 12)
 	controls_hint.modulate = Color(0.82, 0.88, 0.96, 0.85)
 	top_left.add_child(controls_hint)
@@ -273,6 +312,14 @@ func _build_main_menu() -> void:
 	sub.modulate = Color(0.82, 0.88, 0.96)
 	vbox.add_child(sub)
 
+	var hub_btn := _create_button("VÀO LÀNG WINDFERRY (THAM QUAN, NPC & RƯƠNG BÁU)", func() -> void:
+		_hide_all_panels()
+		boss_box.visible = false
+		get_tree().paused = false
+		enter_town_hub_requested.emit()
+	)
+	vbox.add_child(hub_btn)
+
 	var play_btn := _create_button("BẮT ĐẦU NGAY (MÀN ĐÃ MỞ: 1)", func() -> void:
 		_start_stage(SaveManager.unlocked_stage)
 	)
@@ -358,7 +405,11 @@ func _build_upgrade_menu() -> void:
 	vbox.add_child(btn_spd)
 
 	vbox.add_child(_create_button("QUAY LẠI", func() -> void:
-		show_main_menu()
+		if get_tree().paused and not GameManager.is_stage_active and not main_menu_panel.visible:
+			_hide_all_panels()
+			get_tree().paused = false
+		else:
+			show_main_menu()
 	))
 
 
@@ -419,6 +470,13 @@ func _build_result_menu() -> void:
 		upgrade_panel.visible = true
 	))
 
+	vbox.add_child(_create_button("VỀ LÀNG WINDFERRY (GẶP NPC & CHUẨN BỊ)", func() -> void:
+		_hide_all_panels()
+		boss_box.visible = false
+		get_tree().paused = false
+		enter_town_hub_requested.emit()
+	))
+
 	vbox.add_child(_create_button("VỀ MENU CHÍNH", func() -> void:
 		show_main_menu()
 	))
@@ -452,6 +510,72 @@ func _build_gameover_menu() -> void:
 	vbox.add_child(_create_button("VỀ MENU CHÍNH", func() -> void:
 		show_main_menu()
 	))
+
+
+## Hộp thoại Chân dung NPC phong cách JRPG cổ điển ở cạnh dưới màn hình
+func _build_dialogue_panel() -> void:
+	var backdrop := ColorRect.new()
+	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	backdrop.color = Color(0.02, 0.02, 0.05, 0.45)
+	backdrop.visible = false
+	add_child(backdrop)
+	dialogue_panel = backdrop
+
+	var panel := _create_styled_panel()
+	panel.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	panel.position = Vector2(-380, -210)
+	panel.custom_minimum_size = Vector2(760, 185)
+	backdrop.add_child(panel)
+
+	var hbox := HBoxContainer.new()
+	hbox.add_theme_constant_override("separation", 18)
+	panel.add_child(hbox)
+
+	_dlg_portrait = TextureRect.new()
+	_dlg_portrait.custom_minimum_size = Vector2(132, 132)
+	_dlg_portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_dlg_portrait.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	hbox.add_child(_dlg_portrait)
+
+	var text_col := VBoxContainer.new()
+	text_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	text_col.add_theme_constant_override("separation", 8)
+	hbox.add_child(text_col)
+
+	_dlg_name_lbl = Label.new()
+	_dlg_name_lbl.add_theme_font_size_override("font_size", 19)
+	_dlg_name_lbl.modulate = Color(1.0, 0.86, 0.36)
+	text_col.add_child(_dlg_name_lbl)
+
+	_dlg_text_lbl = Label.new()
+	_dlg_text_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_dlg_text_lbl.add_theme_font_size_override("font_size", 15)
+	_dlg_text_lbl.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	text_col.add_child(_dlg_text_lbl)
+
+	var btn_row := HBoxContainer.new()
+	btn_row.add_theme_constant_override("separation", 12)
+	text_col.add_child(btn_row)
+
+	_dlg_action_btn = _create_button("Thực hiện", func() -> void:
+		if _current_npc_role == "blacksmith":
+			_hide_all_panels()
+			_refresh_all_menus()
+			upgrade_panel.visible = true
+		else:
+			_hide_all_panels()
+			get_tree().paused = false
+			npc_service_requested.emit(_current_npc_role)
+	)
+	_dlg_action_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	btn_row.add_child(_dlg_action_btn)
+
+	var close_btn := _create_button("Đóng hội thoại", func() -> void:
+		_hide_all_panels()
+		get_tree().paused = false
+	)
+	close_btn.custom_minimum_size = Vector2(150, 38)
+	btn_row.add_child(close_btn)
 
 
 func _start_stage(stage_id: int) -> void:

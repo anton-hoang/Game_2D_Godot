@@ -115,6 +115,7 @@ func _setup_input_map() -> void:
 	_bind_action_keys("attack", [KEY_J, KEY_Z, KEY_SPACE])
 	_bind_action_keys("special", [KEY_K, KEY_X])
 	_bind_action_keys("dash", [KEY_L, KEY_C, KEY_SHIFT])
+	_bind_action_keys("interact", [KEY_E, KEY_F, KEY_ENTER])
 	_bind_action_keys("pause", [KEY_ESCAPE, KEY_P])
 
 	# Tay cầm (Gamepad)
@@ -125,6 +126,7 @@ func _setup_input_map() -> void:
 	_bind_action_joy_button("attack", JOY_BUTTON_X)
 	_bind_action_joy_button("special", JOY_BUTTON_Y)
 	_bind_action_joy_button("dash", JOY_BUTTON_A)
+	_bind_action_joy_button("interact", JOY_BUTTON_B)
 	_bind_action_joy_button("pause", JOY_BUTTON_START)
 
 

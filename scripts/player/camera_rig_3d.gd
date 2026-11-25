@@ -10,8 +10,8 @@ extends Node3D
 @export var pitch_degrees: float = -33.0
 @export var camera_fov: float = 28.0
 @export var smooth_speed: float = 7.5
-@export var limit_x: Vector2 = Vector2(-13.0, 13.0)
-@export var limit_z: Vector2 = Vector2(-4.5, 8.5)
+@export var limit_x: Vector2 = Vector2(-15.5, 15.5)
+@export var limit_z: Vector2 = Vector2(-14.5, 8.5)
 
 var target: Node3D
 var camera: Camera3D

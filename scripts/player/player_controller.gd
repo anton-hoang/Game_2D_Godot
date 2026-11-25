@@ -183,9 +183,9 @@ func _physics_process(delta: float) -> void:
 	_knockback_vel = _knockback_vel.move_toward(Vector3.ZERO, 18.0 * delta)
 	move_and_slide()
 
-	# Giới hạn trong đấu trường để không rơi khỏi map
-	global_position.x = clampf(global_position.x, -21.0, 21.0)
-	global_position.z = clampf(global_position.z, -8.5, 9.5)
+	# Giới hạn trong khu vực làng (cho phép đi lên cầu thang, sân tầng 2 và bước vào 3 ngôi nhà gỗ)
+	global_position.x = clampf(global_position.x, -21.5, 21.5)
+	global_position.z = clampf(global_position.z, -16.5, 9.5)
 
 
 func _start_dash(dir: Vector3) -> void:
@@ -262,6 +262,18 @@ func _deal_melee_damage(dmg: float, radius: float, dot_threshold: float, knockba
 			if dot_threshold < -0.5 or dir_to.dot(facing_dir) >= -0.25:
 				var final_dmg := int(round(dmg * randf_range(0.95, 1.08)))
 				node.take_damage(final_dmg, dir_to * knockback_force, is_crit)
+				hit_any = true
+
+	# Hỗ trợ chém vỡ các vật thể 3D phá hủy được (Thùng rượu gỗ, Hòm hàng)
+	for br in get_tree().get_nodes_in_group("breakables"):
+		if not is_instance_valid(br) or not br.has_method("take_damage"):
+			continue
+		var to_br: Vector3 = br.global_position - global_position
+		to_br.y = 0.0
+		if to_br.length() <= radius + 0.45:
+			var dir_br := to_br.normalized() if to_br.length() > 0.01 else facing_dir
+			if dot_threshold < -0.5 or dir_br.dot(facing_dir) >= -0.35:
+				br.take_damage(int(round(dmg)))
 				hit_any = true
 
 	if hit_any:
