@@ -1053,11 +1053,11 @@ func _refresh_quest_board() -> void:
 	for sc in _scarf_buttons_box.get_children():
 		sc.queue_free()
 	for scarf_id in SaveManager.SCARF_PALETTES.keys():
-		var sp: Dictionary = SaveManager.SCARF_PALETTES[scarf_id]
-		var unlocked := SaveManager.unlocked_scarves.has(scarf_id)
-		var equipped := SaveManager.equipped_scarf == scarf_id
-		var s_key := str(scarf_id)
-		var label_txt := ("★ " if equipped else "") + str(sp["name"]) if unlocked else "🔒 " + str(sp["name"])
+		var s_key: String = str(scarf_id)
+		var sp: Dictionary = SaveManager.SCARF_PALETTES[s_key]
+		var unlocked: bool = SaveManager.unlocked_scarves.has(s_key)
+		var equipped: bool = (SaveManager.equipped_scarf == s_key)
+		var label_txt: String = ("★ " if equipped else "") + str(sp["name"]) if unlocked else "🔒 " + str(sp["name"])
 		var sbtn := _create_button(label_txt, func() -> void:
 			if unlocked:
 				SaveManager.equip_scarf(s_key)
