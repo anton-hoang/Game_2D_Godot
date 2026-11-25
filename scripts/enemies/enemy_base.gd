@@ -5,9 +5,9 @@ extends CharacterBody3D
 ## - Hỗ trợ Boss cuối chương với 3 Pha chiến đấu (Phase 1 -> Phase 2 dưới 65% HP -> Phase 3 Cuồng Nộ dưới 30% HP).
 
 signal died(enemy: EnemyBase)
-signal boss_hp_changed(current_hp: float, max_hp: float, boss_name: String, phase: int)
+signal boss_hp_changed(current_hp: float, max_hp: float, boss_name: String, phase: int, shield_pts: int, is_broken: bool)
 
-enum State { IDLE, CHASE, ATTACK, HURT, DIE }
+enum State { IDLE, CHASE, ATTACK, HURT, BROKEN, DIE }
 
 @export var stats: EnemyStats
 
@@ -15,6 +15,9 @@ var current_state: State = State.IDLE
 var current_hp: float = 60.0
 var max_hp: float = 60.0
 var boss_phase: int = 1
+var max_shield: int = 0
+var current_shield: int = 0
+var _break_timer: float = 0.0
 
 var _attack_cd_timer: float = 0.0
 var _state_timer: float = 0.0
@@ -24,6 +27,7 @@ var _is_charging_dash: bool = false
 
 var anim_sprite: AnimatedSprite3D
 var hp_bar_3d: Sprite3D
+var shield_label_3d: Label3D
 var _hp_bar_img: Image
 var _hp_bar_tex: ImageTexture
 var _rim_halo_sprite: Sprite3D
@@ -35,9 +39,16 @@ func _ready() -> void:
 		stats = EnemyStats.new()
 	max_hp = stats.max_hp
 	current_hp = max_hp
+	# Gán Khiên Giáp (Shield) cho Quái Tank (3 Khiên) & Boss Malakor (5 Khiên)
+	if stats.archetype == "tank":
+		max_shield = 3
+	elif stats.archetype == "boss":
+		max_shield = 5
+	current_shield = max_shield
+
 	_build_visuals()
 	if stats.archetype == "boss":
-		boss_hp_changed.emit(current_hp, max_hp, stats.enemy_name, boss_phase)
+		boss_hp_changed.emit(current_hp, max_hp, stats.enemy_name, boss_phase, current_shield, false)
 
 
 func _build_visuals() -> void:
@@ -108,6 +119,29 @@ func _build_visuals() -> void:
 		hp_bar_3d.texture = _hp_bar_tex
 		add_child(hp_bar_3d)
 		_update_overhead_hp_bar()
+
+	# Biểu tượng Khiên Giáp trên đầu cho quái Tank (Boss hiển thị ngay trên thanh máu lớn HUD)
+	if max_shield > 0 and stats.archetype != "boss":
+		shield_label_3d = Label3D.new()
+		shield_label_3d.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		shield_label_3d.pixel_size = 0.0085
+		shield_label_3d.font_size = 28
+		shield_label_3d.outline_size = 8
+		shield_label_3d.position = Vector3(0.0, 2.22 * stats.sprite_scale, 0.0)
+		add_child(shield_label_3d)
+		_update_shield_display()
+
+
+func _update_shield_display() -> void:
+	if shield_label_3d:
+		if current_state == State.BROKEN:
+			shield_label_3d.text = "★ PHÁ GIÁP (x2 SÁT THƯƠNG) ★"
+			shield_label_3d.modulate = Color(1.0, 0.35, 0.25)
+		else:
+			shield_label_3d.text = "🛡 KHIÊN: %d / %d" % [current_shield, max_shield]
+			shield_label_3d.modulate = Color(0.55, 0.90, 1.0)
+	if stats.archetype == "boss":
+		boss_hp_changed.emit(current_hp, max_hp, stats.enemy_name, boss_phase, current_shield, current_state == State.BROKEN)
 
 
 func _update_overhead_hp_bar() -> void:
@@ -202,6 +236,21 @@ func _physics_process(delta: float) -> void:
 			if _state_timer <= 0.0:
 				_change_state(State.CHASE)
 
+		State.BROKEN:
+			# TRẠNG THÁI PHÁ GIÁP (BREAK): Quái/Boss bị choáng bất động hoàn toàn trong 3 giây & nhận x2 sát thương!
+			_break_timer -= delta
+			velocity.x = _knockback_vel.x * 0.4
+			velocity.z = _knockback_vel.z * 0.4
+			if anim_sprite:
+				anim_sprite.position.x = sin(_break_timer * 32.0) * 0.08
+			if _break_timer <= 0.0:
+				if anim_sprite:
+					anim_sprite.position.x = 0.0
+					anim_sprite.modulate = Color.WHITE
+				current_shield = max_shield
+				_change_state(State.CHASE)
+				_update_shield_display()
+
 	if not is_on_floor():
 		velocity.y -= 24.0 * delta
 	else:
@@ -285,7 +334,7 @@ func _schedule_melee_hit(player: Node3D, delay: float, hit_radius: float, dmg: f
 		diff.y = 0.0
 		if diff.length() <= hit_radius:
 			var kb_dir := diff.normalized() if diff.length() > 0.01 else Vector3.RIGHT
-			player.take_damage(dmg, kb_dir * 7.5)
+			player.take_damage(dmg, kb_dir * 7.5, self)
 
 
 func _schedule_ranged_shot(base_dir: Vector3, delay: float, count: int) -> void:
@@ -322,14 +371,51 @@ func _spawn_projectile(dir: Vector3) -> void:
 	proj.global_position = global_position + Vector3(0.0, 0.85, 0.0)
 
 
-## Nhận sát thương từ người chơi
+## Xử lý khi bị Player Đỡ Đòn Hoàn Hảo (Perfect Parry): Phá 2 điểm Khiên Giáp ngay lập tức & phản sát thương chí mạng!
+func on_parried_by_player(counter_dmg: int, player_pos: Vector3) -> void:
+	if current_state == State.DIE:
+		return
+	var push_dir := (global_position - player_pos)
+	push_dir.y = 0.0
+	push_dir = push_dir.normalized() if push_dir.length() > 0.01 else Vector3.RIGHT
+	_damage_shield(2)
+	take_damage(counter_dmg, push_dir * 12.0, true)
+
+
+func _damage_shield(points: int) -> void:
+	if max_shield <= 0 or current_state == State.BROKEN or current_state == State.DIE:
+		return
+	current_shield = maxi(0, current_shield - points)
+	if current_shield == 0:
+		# VỠ KHIÊN -> KÍCH HOẠT PHÁ GIÁP (BREAK): Choáng 3.0 giây + nhận x2 sát thương!
+		current_state = State.BROKEN
+		_is_charging_dash = false
+		_break_timer = 3.0
+		anim_sprite.play("hurt")
+		anim_sprite.modulate = Color(1.0, 0.55, 0.25)
+		AudioManager.play_sfx("boss_roar", 1.3)
+		GameManager.trigger_hit_stop(0.10, 0.05)
+		CombatVFX3D.spawn_shockwave_ring(get_parent(), global_position, Color(1.0, 0.42, 0.16), 0.6, 5.0, 0.42)
+		CombatVFX3D.spawn_hit_sparks(get_parent(), global_position, Vector3.UP, Color(1.0, 0.80, 0.25), 14)
+		DamageNumber3D.spawn(get_parent(), global_position + Vector3(0, 1.0, 0), 0, true, false, "💥 PHÁ GIÁP (BREAK)! x2 DMG!")
+	_update_shield_display()
+
+
+## Nhận sát thương từ người chơi (Đòn chí mạng / đòn 3 / tuyệt kỹ trừ 1 Khiên; khi đang PHÁ GIÁP nhận x2 sát thương!)
 func take_damage(amount: int, knockback: Vector3 = Vector3.ZERO, is_crit: bool = false) -> void:
 	if current_state == State.DIE:
 		return
 
-	current_hp = maxf(0.0, current_hp - float(amount))
+	var actual_dmg := amount
+	if current_state == State.BROKEN:
+		actual_dmg = amount * 2
+		is_crit = true
+	elif max_shield > 0 and is_crit:
+		_damage_shield(1)
+
+	current_hp = maxf(0.0, current_hp - float(actual_dmg))
 	AudioManager.play_sfx("hit")
-	DamageNumber3D.spawn(get_parent(), global_position, amount, is_crit, false)
+	DamageNumber3D.spawn(get_parent(), global_position, actual_dmg, is_crit, false)
 	_update_overhead_hp_bar()
 
 	var kb_mult := clampf(1.0 - stats.knockback_resistance, 0.1, 1.0)
@@ -343,18 +429,18 @@ func take_damage(amount: int, knockback: Vector3 = Vector3.ZERO, is_crit: bool =
 			boss_phase = new_phase
 			AudioManager.play_sfx("boss_roar")
 			DamageNumber3D.spawn(get_parent(), global_position + Vector3(0, 0.8, 0), 0, true, false, "PHA " + str(boss_phase) + "!")
-		boss_hp_changed.emit(current_hp, max_hp, stats.enemy_name, boss_phase)
+		boss_hp_changed.emit(current_hp, max_hp, stats.enemy_name, boss_phase, current_shield, current_state == State.BROKEN)
 
 	# Hiệu ứng nháy trắng/đỏ khi trúng đòn
 	var flash_col := Color(1.0, 0.45, 0.45) if boss_phase < 3 else Color(1.0, 0.25, 0.35)
 	anim_sprite.modulate = flash_col
 	var tw := create_tween()
-	var normal_col := Color.WHITE if boss_phase < 3 else Color(1.0, 0.72, 0.72)
+	var normal_col := Color(1.0, 0.65, 0.35) if current_state == State.BROKEN else (Color.WHITE if boss_phase < 3 else Color(1.0, 0.72, 0.72))
 	tw.tween_property(anim_sprite, "modulate", normal_col, 0.22)
 
 	if current_hp <= 0.0:
 		_die()
-	elif stats.knockback_resistance < 0.65 and current_state != State.ATTACK:
+	elif current_state != State.BROKEN and stats.knockback_resistance < 0.65 and current_state != State.ATTACK:
 		_change_state(State.HURT)
 		_state_timer = 0.18
 		anim_sprite.play("hurt")

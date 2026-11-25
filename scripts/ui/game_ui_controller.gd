@@ -389,7 +389,7 @@ func _build_hud() -> void:
 	# Dòng gợi ý thao tác ngắn gọn, Vũ Khí đang cầm & Bùa Cổ Ngữ bên dưới bảng máu
 	var controls_hint := Label.new()
 	controls_hint.position = Vector2(22, 124)
-	controls_hint.text = "WASD: Hành tẩu  •  [I] Rương Đồ  •  [E] Giao tiếp/Rương  •  [J] Công  •  [K] Tuyệt kỹ  •  [L] Thân Pháp"
+	controls_hint.text = "WASD: Di chuyển • [I] Rương Đồ • [E] Tương tác • [J] Công • [K] Tuyệt kỹ • [L] Khinh Công • [Shift/Chuột phải] Đỡ Phản Kích"
 	controls_hint.add_theme_font_size_override("font_size", 12)
 	controls_hint.modulate = Color(0.92, 0.86, 0.72, 0.88)
 	hud_root.add_child(controls_hint)
@@ -1543,16 +1543,18 @@ func _on_boss_spawned(boss_node: Node) -> void:
 		boss.boss_hp_changed.connect(_on_boss_hp_changed)
 	if not boss.died.is_connected(_on_boss_died):
 		boss.died.connect(_on_boss_died)
-	_on_boss_hp_changed(boss.current_hp, boss.max_hp, boss.stats.enemy_name, boss.boss_phase)
+	_on_boss_hp_changed(boss.current_hp, boss.max_hp, boss.stats.enemy_name, boss.boss_phase, boss.current_shield, boss.current_state == EnemyBase.State.BROKEN)
 
 
-func _on_boss_hp_changed(cur: float, mx: float, b_name: String, phase: int) -> void:
+func _on_boss_hp_changed(cur: float, mx: float, b_name: String, phase: int, shield_pts: int = 0, is_broken: bool = false) -> void:
 	if boss_hp_bar:
 		boss_hp_bar.max_value = mx
 		boss_hp_bar.value = cur
 	if boss_name_label:
 		var phase_txt := "ĐỆ NHẤT CẢNH" if phase == 1 else ("ĐỆ NHỊ CẢNH" if phase == 2 else "CUỒNG NỘ CẢNH")
-		boss_name_label.text = "【 %s • %s (%d / %d) 】" % [b_name.to_upper(), phase_txt, int(ceil(cur)), int(mx)]
+		var sh_txt := "💥 PHÁ GIÁP (x2 SÁT THƯƠNG)!" if is_broken else ("🛡 KHIÊN: %d" % shield_pts)
+		boss_name_label.text = "【 %s • %s • %s (%d / %d) 】" % [b_name.to_upper(), phase_txt, sh_txt, int(ceil(cur)), int(mx)]
+		boss_name_label.modulate = Color(1.0, 0.36, 0.24) if is_broken else Color(1.0, 0.78, 0.38)
 
 
 func _on_boss_died(_enemy: EnemyBase) -> void:

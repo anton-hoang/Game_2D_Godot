@@ -88,6 +88,8 @@ func _on_body_entered(body: Node) -> void:
 		return
 	if body.is_in_group("enemies") and body.has_method("take_damage"):
 		if aoe_radius > 0.1:
+			CombatVFX3D.spawn_shockwave_ring(get_parent(), global_position, proj_color, 0.3, aoe_radius * 1.15, 0.28)
+			CombatVFX3D.spawn_hit_sparks(get_parent(), global_position, direction, proj_color, 10)
 			# Cầu pháp thuật nổ lan AOE trúng các quái xung quanh
 			for e in get_tree().get_nodes_in_group("enemies"):
 				if is_instance_valid(e) and e.has_method("take_damage"):
@@ -95,6 +97,7 @@ func _on_body_entered(body: Node) -> void:
 						var push_dir: Vector3 = (e.global_position - global_position).normalized()
 						e.take_damage(damage, push_dir * knockback_force, is_crit)
 		else:
+			CombatVFX3D.spawn_hit_sparks(get_parent(), body.global_position, direction, proj_color, 7)
 			body.take_damage(damage, direction * knockback_force, is_crit)
 		queue_free()
 	elif body.is_in_group("breakables") and body.has_method("take_damage"):

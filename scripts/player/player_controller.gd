@@ -48,6 +48,11 @@ var active_relics: Dictionary = {
 	"siphon": 0,
 }
 var _fire_trail_spawn_cd: float = 0.0
+var _afterimage_cd: float = 0.0
+var _dust_cd: float = 0.0
+var _parry_window_timer: float = 0.0
+var _parry_cd_timer: float = 0.0
+var _parry_ring_mesh: MeshInstance3D
 
 var anim_sprite: AnimatedSprite3D
 var slash_vfx: Sprite3D
@@ -209,6 +214,25 @@ func _build_visual_nodes() -> void:
 	_shield_dome.visible = false
 	add_child(_shield_dome)
 
+	# Vòng sáng vàng kim khi nhân vật giơ kiếm Đỡ Đòn (Parry — Shift / Chuột phải)
+	_parry_ring_mesh = MeshInstance3D.new()
+	var ptm := TorusMesh.new()
+	ptm.inner_radius = 0.72
+	ptm.outer_radius = 0.92
+	_parry_ring_mesh.mesh = ptm
+	_parry_ring_mesh.position = Vector3(0.0, 0.95, 0.0)
+	_parry_ring_mesh.rotation_degrees = Vector3(90.0, 0.0, 0.0)
+	var p_mat := StandardMaterial3D.new()
+	p_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	p_mat.albedo_color = Color(1.0, 0.88, 0.34, 0.82)
+	p_mat.emission_enabled = true
+	p_mat.emission = Color(1.0, 0.82, 0.25)
+	p_mat.emission_energy_multiplier = 3.5
+	p_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_parry_ring_mesh.material_override = p_mat
+	_parry_ring_mesh.visible = false
+	add_child(_parry_ring_mesh)
+
 	slash_vfx = get_node_or_null("SlashVFX") as Sprite3D
 	if slash_vfx == null:
 		slash_vfx = Sprite3D.new()
@@ -265,6 +289,15 @@ func _physics_process(delta: float) -> void:
 		dash_cooldown_changed.emit(_dash_cd_timer, dash_cooldown)
 	if _attack_timer > 0.0:
 		_attack_timer -= delta
+	if _parry_cd_timer > 0.0:
+		_parry_cd_timer -= delta
+	if _parry_window_timer > 0.0:
+		_parry_window_timer -= delta
+		if _parry_ring_mesh:
+			_parry_ring_mesh.visible = true
+			_parry_ring_mesh.rotation.z += delta * 12.0
+		if _parry_window_timer <= 0.0 and _parry_ring_mesh:
+			_parry_ring_mesh.visible = false
 
 	# Lấy vector di chuyển 8 hướng trên mặt phẳng XZ
 	var input_vec := Input.get_vector("move_left", "move_right", "move_up", "move_down")
@@ -275,12 +308,16 @@ func _physics_process(delta: float) -> void:
 		if absf(move_dir.x) > 0.05:
 			anim_sprite.flip_h = move_dir.x < 0.0
 
+	# Xử lý phím Đỡ Đòn Hoàn Hảo (Perfect Parry — Shift / Chuột phải / Q)
+	if Input.is_action_just_pressed("parry") and _parry_cd_timer <= 0.0 and _dash_timer <= 0.0:
+		_start_parry()
+
 	# Xử lý phím Né (Dash - phím L)
 	if Input.is_action_just_pressed("dash") and _dash_cd_timer <= 0.0 and _dash_timer <= 0.0:
 		_start_dash(move_dir if move_dir.length_squared() > 0.01 else facing_dir)
 
 	# Xử lý phím Tấn công combo 3 đòn (phím J) & Kỹ năng đặc biệt (phím K)
-	if _dash_timer <= 0.0 and _attack_timer <= 0.0:
+	if _dash_timer <= 0.0 and _attack_timer <= 0.0 and _parry_window_timer <= 0.0:
 		if Input.is_action_just_pressed("attack"):
 			_perform_combo_attack()
 		elif Input.is_action_just_pressed("special") and current_energy >= special_energy_cost:
@@ -291,6 +328,12 @@ func _physics_process(delta: float) -> void:
 		_dash_timer -= delta
 		velocity.x = facing_dir.x * dash_speed
 		velocity.z = facing_dir.z * dash_speed
+		# TÀN ẢNH KHINH CÔNG: Để lại chuỗi 4 tàn ảnh ngọc bích mờ dần sau lưng Nữ Kiếm Khách!
+		_afterimage_cd -= delta
+		if _afterimage_cd <= 0.0 and anim_sprite and anim_sprite.sprite_frames:
+			var gtex := anim_sprite.sprite_frames.get_frame_texture(anim_sprite.animation, anim_sprite.frame)
+			CombatVFX3D.spawn_afterimage(get_parent(), global_position + anim_sprite.position, gtex, anim_sprite.flip_h, anim_sprite.pixel_size)
+			_afterimage_cd = 0.036
 		# Bùa Cổ Ngữ Hỏa Viêm Khinh Công: Để lại vệt lửa đốt cháy quái đuổi theo
 		var fire_lv: int = int(active_relics.get("fire_dash", 0))
 		if fire_lv > 0:
@@ -298,6 +341,9 @@ func _physics_process(delta: float) -> void:
 			if _fire_trail_spawn_cd <= 0.0:
 				_spawn_fire_trail(fire_lv)
 				_fire_trail_spawn_cd = 0.065
+	elif _parry_window_timer > 0.0:
+		velocity.x = _knockback_vel.x * 0.25
+		velocity.z = _knockback_vel.z * 0.25
 	elif _attack_timer > 0.0:
 		velocity.x = facing_dir.x * 1.4 + _knockback_vel.x
 		velocity.z = facing_dir.z * 1.4 + _knockback_vel.z
@@ -308,6 +354,11 @@ func _physics_process(delta: float) -> void:
 			if move_dir.length_squared() > 0.01:
 				if anim_sprite.animation != "run":
 					anim_sprite.play("run")
+				# Bụi chân nhẹ khi chạy nhanh trên đường đá
+				_dust_cd -= delta
+				if _dust_cd <= 0.0:
+					CombatVFX3D.spawn_footstep_dust(get_parent(), global_position)
+					_dust_cd = 0.28
 			else:
 				if anim_sprite.animation != "idle":
 					anim_sprite.play("idle")
@@ -331,9 +382,19 @@ func _start_dash(dir: Vector3) -> void:
 	_dash_timer = dash_duration
 	_dash_cd_timer = dash_cooldown
 	_invuln_timer = dash_duration + 0.08
+	_afterimage_cd = 0.0
 	anim_sprite.play("dash")
 	AudioManager.play_sfx("dash")
+	CombatVFX3D.spawn_footstep_dust(get_parent(), global_position, Color(0.55, 0.96, 0.92, 0.65))
 	dash_cooldown_changed.emit(_dash_cd_timer, dash_cooldown)
+
+
+## Thế Đỡ Đòn Hoàn Hảo (Perfect Parry — Phím Shift / Chuột phải): cửa sổ 0.34s chặn đòn và tung Phản Kích phá giáp!
+func _start_parry() -> void:
+	_parry_window_timer = 0.34
+	_parry_cd_timer = 0.72
+	anim_sprite.play("attack_1")
+	AudioManager.play_sfx("slash", 1.35)
 
 
 ## Tấn công thường theo combo 3 đòn — MỖI VŨ KHÍ (Kiếm, Đao, Cung Tên, Gậy Phép) có nhịp đánh, tầm và chiêu thức riêng!
@@ -426,6 +487,7 @@ func _perform_special_skill() -> void:
 
 	if camera_rig:
 		camera_rig.shake(0.24, 0.18)
+	CombatVFX3D.spawn_shockwave_ring(get_parent(), global_position, w_col, 0.6, 4.2, 0.35)
 
 
 func _fire_player_projectile(kind: String, dir: Vector3, dmg: int, spd: float, col: Color, aoe: float, is_homing: bool, is_crit: bool) -> void:
@@ -470,6 +532,9 @@ func _deal_melee_damage(dmg: float, radius: float, dot_threshold: float, knockba
 			if dot_threshold < -0.5 or dir_to.dot(facing_dir) >= -0.25:
 				var final_dmg := int(round(dmg * randf_range(0.95, 1.08)))
 				node.take_damage(final_dmg, dir_to * knockback_force, is_crit)
+				# Bắn tóe tia lửa 3D theo hướng vung kiếm + đèn chớp sáng hắt xuống đường đá!
+				var spark_col: Color = Color(1.0, 0.85, 0.30) if is_crit else SaveManager.get_equipped_weapon_data().get("color", Color(0.8, 0.95, 1.0))
+				CombatVFX3D.spawn_hit_sparks(get_parent(), node.global_position, dir_to, spark_col, 11 if is_crit else 7)
 				hit_any = true
 
 	# Hỗ trợ chém vỡ các vật thể 3D phá hủy được (Thùng rượu gỗ, Hòm hàng)
@@ -557,15 +622,51 @@ func _spawn_fire_trail(level: int) -> void:
 	fz.global_position = global_position + Vector3(0.0, 0.05, 0.0)
 
 
-## Nhận sát thương từ quái hoặc đạn
-func take_damage(amount: float, knockback: Vector3 = Vector3.ZERO) -> void:
+## Nhận sát thương từ quái hoặc đạn (hỗ trợ attacker để kích hoạt ĐỠ ĐÒN HOÀN HẢO & PHẢN KÍCH PHÁ GIÁP!)
+func take_damage(amount: float, knockback: Vector3 = Vector3.ZERO, attacker: Node = null) -> void:
 	if _is_dead or _invuln_timer > 0.0:
 		return
+
+	# ĐỠ ĐÒN HOÀN HẢO (PERFECT PARRY)!
+	if _parry_window_timer > 0.0:
+		_execute_perfect_parry(attacker)
+		return
+
 	if _spirit_shield_timer > 0.0:
 		AudioManager.play_sfx("pickup", 1.4)
 		DamageNumber3D.spawn(get_parent(), global_position + Vector3(0, 0.5, 0), 0, true, false, "KHIÊN CHẶN!")
 		_invuln_timer = 0.25
 		return
+
+
+## Kích hoạt Phản Đòn Hoàn Hảo: Chớp sóng vàng kim + Hit-Stop kịch tính + Hồi Chân Khí + Phá 2 Khiên Giáp kẻ tấn công!
+func _execute_perfect_parry(attacker: Node) -> void:
+	_parry_window_timer = 0.0
+	_parry_cd_timer = 0.15 # Hồi ngay để có thể đỡ liên hoàn cực đã tay!
+	_invuln_timer = 0.65
+	if _parry_ring_mesh:
+		_parry_ring_mesh.visible = false
+
+	AudioManager.play_sfx("victory", 1.45)
+	add_energy(28.0)
+	GameManager.add_score(120)
+	GameManager.trigger_hit_stop(0.11, 0.05)
+	if camera_rig:
+		camera_rig.shake(0.30, 0.22)
+
+	CombatVFX3D.spawn_shockwave_ring(get_parent(), global_position, Color(1.0, 0.88, 0.28), 0.4, 4.6, 0.34)
+	CombatVFX3D.spawn_hit_sparks(get_parent(), global_position + Vector3(0, 0.2, 0), facing_dir, Color(1.0, 0.90, 0.32), 14)
+	DamageNumber3D.spawn(get_parent(), global_position + Vector3(0, 0.75, 0), 0, true, false, "★ PHẢN ĐÒN HOÀN HẢO! ★")
+
+	# Phản kích phá khiên + gây sát thương chí mạng lên kẻ tấn công hoặc toàn bộ quái áp sát
+	var counter_dmg := int(round(attack_damage * 1.9))
+	if attacker and is_instance_valid(attacker) and attacker.has_method("on_parried_by_player"):
+		attacker.on_parried_by_player(counter_dmg, global_position)
+	else:
+		for e in get_tree().get_nodes_in_group("enemies"):
+			if is_instance_valid(e) and e.global_position.distance_to(global_position) <= 4.2:
+				if e.has_method("on_parried_by_player"):
+					e.on_parried_by_player(counter_dmg, global_position)
 	current_hp = maxf(0.0, current_hp - amount)
 	GameManager.damage_taken_in_stage += amount
 	SaveManager.reset_no_damage_goblin_streak()
