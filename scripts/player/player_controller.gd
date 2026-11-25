@@ -53,6 +53,9 @@ var _dust_cd: float = 0.0
 var _parry_window_timer: float = 0.0
 var _parry_cd_timer: float = 0.0
 var _parry_ring_mesh: MeshInstance3D
+var _skin_vfx_ring: MeshInstance3D
+var _skin_vfx_particles: GPUParticles3D
+var _skin_vfx_light: OmniLight3D
 
 var anim_sprite: AnimatedSprite3D
 var slash_vfx: Sprite3D
@@ -74,13 +77,57 @@ func _ready() -> void:
 	energy_changed.emit(current_energy, max_energy)
 
 
-## Cập nhật màu khăn choàng & hệ vũ khí ngay lập tức khi người chơi đổi trang bị trong Rương Đồ
+## Cập nhật màu khăn choàng, vũ khí & Trang Phục Gacha (tự bật/tắt Hiệu Ứng Hào Quang 3D cho Skin Hiếm trở lên!)
 func refresh_cosmetic_appearance() -> void:
 	attack_damage = base_attack_damage + SaveManager.get_bonus_attack()
 	if anim_sprite and custom_sprite_frames == null:
 		var cur_anim := anim_sprite.animation
-		anim_sprite.sprite_frames = PixelArtGenerator.get_player_sprite_frames(SaveManager.equipped_scarf, SaveManager.get_equipped_weapon_type())
+		anim_sprite.sprite_frames = PixelArtGenerator.get_player_sprite_frames(
+			SaveManager.equipped_scarf,
+			SaveManager.get_equipped_weapon_type(),
+			SaveManager.equipped_skin
+		)
 		anim_sprite.play(cur_anim if anim_sprite.sprite_frames.has_animation(cur_anim) else "idle")
+	_apply_skin_aura_vfx()
+
+
+## Bật/tắt hiệu ứng hào quang + hạt bay 3D quanh nhân vật:
+## - 5 Skin Thường (has_vfx=false): Tắt hoàn toàn hiệu ứng, mặc đẹp tự nhiên như bình thường.
+## - 5 Skin Hiếm / Sử Thi / Huyền Thoại (has_vfx=true): Hiện vòng pháp trận phát sáng dưới chân + hạt bay + ánh sáng theo chủ đề!
+func _apply_skin_aura_vfx() -> void:
+	var sk: Dictionary = SaveManager.get_equipped_skin_data()
+	var has_vfx: bool = bool(sk.get("has_vfx", false))
+	var vcol: Color = sk.get("vfx_color", Color.WHITE)
+	var tier: String = str(sk.get("tier", "common"))
+
+	if _rim_halo_sprite:
+		_rim_halo_sprite.modulate = Color(vcol.r, vcol.g, vcol.b, 0.65) if has_vfx else Color(1.0, 0.82, 0.46, 0.42)
+
+	if _skin_vfx_ring:
+		_skin_vfx_ring.visible = has_vfx
+		if has_vfx:
+			var rmat := _skin_vfx_ring.material_override as StandardMaterial3D
+			if rmat:
+				rmat.albedo_color = Color(vcol.r, vcol.g, vcol.b, 0.82)
+				rmat.emission = vcol
+				rmat.emission_energy_multiplier = 4.2 if tier == "legendary" else 2.8
+			_skin_vfx_ring.scale = Vector3.ONE * (1.28 if tier == "legendary" else (1.08 if tier == "epic" else 0.92))
+
+	if _skin_vfx_light:
+		_skin_vfx_light.visible = has_vfx
+		if has_vfx:
+			_skin_vfx_light.light_color = vcol
+			_skin_vfx_light.light_energy = 2.4 if tier == "legendary" else 1.55
+
+	if _skin_vfx_particles:
+		_skin_vfx_particles.emitting = has_vfx
+		if has_vfx:
+			var qm := _skin_vfx_particles.draw_pass_1 as QuadMesh
+			if qm and qm.material is StandardMaterial3D:
+				var pmat := qm.material as StandardMaterial3D
+				pmat.albedo_color = Color(vcol.r, vcol.g, vcol.b, 0.92)
+				pmat.emission = vcol
+			_skin_vfx_particles.amount_ratio = 1.0 if tier == "legendary" else (0.75 if tier == "epic" else 0.55)
 
 
 ## Dùng đan dược từ Rương Đồ (Hồi Xuân Đan / Tụ Khí Tán / Long Hổ Thần Đan)
@@ -165,7 +212,7 @@ func _build_visual_nodes() -> void:
 	anim_sprite.shaded = true
 	anim_sprite.alpha_cut = SpriteBase3D.ALPHA_CUT_DISCARD
 	anim_sprite.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_DOUBLE_SIDED
-	anim_sprite.sprite_frames = custom_sprite_frames if custom_sprite_frames else PixelArtGenerator.get_player_sprite_frames(SaveManager.equipped_scarf, SaveManager.get_equipped_weapon_type())
+	anim_sprite.sprite_frames = custom_sprite_frames if custom_sprite_frames else PixelArtGenerator.get_player_sprite_frames(SaveManager.equipped_scarf, SaveManager.get_equipped_weapon_type(), SaveManager.equipped_skin)
 	anim_sprite.play("idle")
 
 	# Tạo viền sáng Rim-Light an toàn 100% bằng Sprite3D hào quang nhẹ phía sau (tránh xung đột pipeline material_override trên D3D12)
@@ -233,6 +280,60 @@ func _build_visual_nodes() -> void:
 	_parry_ring_mesh.visible = false
 	add_child(_parry_ring_mesh)
 
+	# --- HỆ THỐNG HIỆU ỨNG 3D RIÊNG CHO 5 SKIN HIẾM / SỬ THI / HUYỀN THOẠI ---
+	_skin_vfx_ring = MeshInstance3D.new()
+	var stm := TorusMesh.new()
+	stm.inner_radius = 0.72
+	stm.outer_radius = 0.82
+	_skin_vfx_ring.mesh = stm
+	_skin_vfx_ring.position = Vector3(0.0, 0.08, 0.0)
+	var srmat := StandardMaterial3D.new()
+	srmat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	srmat.albedo_color = Color(1.0, 0.85, 0.30, 0.8)
+	srmat.emission_enabled = true
+	srmat.emission = Color(1.0, 0.85, 0.30)
+	srmat.emission_energy_multiplier = 3.0
+	srmat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_skin_vfx_ring.material_override = srmat
+	_skin_vfx_ring.visible = false
+	add_child(_skin_vfx_ring)
+
+	_skin_vfx_light = OmniLight3D.new()
+	_skin_vfx_light.position = Vector3(0.0, 0.9, 0.0)
+	_skin_vfx_light.omni_range = 4.8
+	_skin_vfx_light.visible = false
+	add_child(_skin_vfx_light)
+
+	_skin_vfx_particles = GPUParticles3D.new()
+	_skin_vfx_particles.amount = 28
+	_skin_vfx_particles.lifetime = 1.65
+	_skin_vfx_particles.emitting = false
+	_skin_vfx_particles.position = Vector3(0.0, 0.35, 0.0)
+	var sp_proc := ParticleProcessMaterial.new()
+	sp_proc.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_RING
+	sp_proc.emission_ring_radius = 0.75
+	sp_proc.emission_ring_inner_radius = 0.35
+	sp_proc.emission_ring_height = 0.2
+	sp_proc.gravity = Vector3(0.0, 1.35, 0.0)
+	sp_proc.initial_velocity_min = 0.25
+	sp_proc.initial_velocity_max = 0.65
+	sp_proc.orbit_velocity_min = 0.25
+	sp_proc.orbit_velocity_max = 0.55
+	_skin_vfx_particles.process_material = sp_proc
+	var sp_quad := QuadMesh.new()
+	sp_quad.size = Vector2(0.16, 0.16)
+	var sp_draw := StandardMaterial3D.new()
+	sp_draw.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	sp_draw.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+	sp_draw.emission_enabled = true
+	sp_draw.emission_energy_multiplier = 3.2
+	sp_draw.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	sp_quad.material = sp_draw
+	_skin_vfx_particles.draw_pass_1 = sp_quad
+	add_child(_skin_vfx_particles)
+
+	_apply_skin_aura_vfx()
+
 	slash_vfx = get_node_or_null("SlashVFX") as Sprite3D
 	if slash_vfx == null:
 		slash_vfx = Sprite3D.new()
@@ -291,6 +392,9 @@ func _physics_process(delta: float) -> void:
 		_attack_timer -= delta
 	if _parry_cd_timer > 0.0:
 		_parry_cd_timer -= delta
+	if _skin_vfx_ring and _skin_vfx_ring.visible:
+		_skin_vfx_ring.rotation.y += delta * 2.4
+
 	if _parry_window_timer > 0.0:
 		_parry_window_timer -= delta
 		if _parry_ring_mesh:
@@ -628,6 +732,9 @@ func take_damage(amount: float, knockback: Vector3 = Vector3.ZERO, attacker: Nod
 		return
 
 	# ĐỠ ĐÒN HOÀN HẢO (PERFECT PARRY)!
+	if _skin_vfx_ring and _skin_vfx_ring.visible:
+		_skin_vfx_ring.rotation.y += delta * 2.4
+
 	if _parry_window_timer > 0.0:
 		_execute_perfect_parry(attacker)
 		return

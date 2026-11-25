@@ -7,8 +7,8 @@ extends RefCounted
 static var _cache: Dictionary = {}
 
 
-static func get_player_sprite_frames(scarf_id: String = "blue", weapon_type: String = "sword") -> SpriteFrames:
-	var key := "player_frames_hd_" + scarf_id + "_" + weapon_type
+static func get_player_sprite_frames(scarf_id: String = "blue", weapon_type: String = "sword", skin_id: String = "skin_default") -> SpriteFrames:
+	var key := "player_frames_hd_" + scarf_id + "_" + weapon_type + "_" + skin_id
 	if _cache.has(key):
 		return _cache[key]
 	var frames := SpriteFrames.new()
@@ -16,36 +16,36 @@ static func get_player_sprite_frames(scarf_id: String = "blue", weapon_type: Str
 		frames.remove_animation("default")
 
 	_add_anim(frames, "idle", 4.5, true, [
-		_make_hero_frame(0, false, false, Color.WHITE, 0, scarf_id, weapon_type),
-		_make_hero_frame(1, false, false, Color.WHITE, 0, scarf_id, weapon_type),
-		_make_hero_frame(2, false, false, Color.WHITE, 0, scarf_id, weapon_type),
-		_make_hero_frame(1, false, false, Color.WHITE, 0, scarf_id, weapon_type),
+		_make_hero_frame(0, false, false, Color.WHITE, 0, scarf_id, weapon_type, skin_id),
+		_make_hero_frame(1, false, false, Color.WHITE, 0, scarf_id, weapon_type, skin_id),
+		_make_hero_frame(2, false, false, Color.WHITE, 0, scarf_id, weapon_type, skin_id),
+		_make_hero_frame(1, false, false, Color.WHITE, 0, scarf_id, weapon_type, skin_id),
 	])
 	_add_anim(frames, "run", 11.0, true, [
-		_make_hero_frame(0, true, false, Color.WHITE, 0, scarf_id, weapon_type),
-		_make_hero_frame(1, true, false, Color.WHITE, 0, scarf_id, weapon_type),
-		_make_hero_frame(2, true, false, Color.WHITE, 0, scarf_id, weapon_type),
-		_make_hero_frame(3, true, false, Color.WHITE, 0, scarf_id, weapon_type),
+		_make_hero_frame(0, true, false, Color.WHITE, 0, scarf_id, weapon_type, skin_id),
+		_make_hero_frame(1, true, false, Color.WHITE, 0, scarf_id, weapon_type, skin_id),
+		_make_hero_frame(2, true, false, Color.WHITE, 0, scarf_id, weapon_type, skin_id),
+		_make_hero_frame(3, true, false, Color.WHITE, 0, scarf_id, weapon_type, skin_id),
 	])
 	_add_anim(frames, "dash", 14.0, false, [
-		_make_hero_frame(2, true, false, Color(0.68, 0.96, 1.0), 0, scarf_id, weapon_type),
+		_make_hero_frame(2, true, false, Color(0.68, 0.96, 1.0), 0, scarf_id, weapon_type, skin_id),
 	])
 	_add_anim(frames, "attack_1", 15.0, false, [
-		_make_hero_frame(0, false, true, Color.WHITE, 1, scarf_id, weapon_type),
-		_make_hero_frame(1, false, true, Color.WHITE, 2, scarf_id, weapon_type),
+		_make_hero_frame(0, false, true, Color.WHITE, 1, scarf_id, weapon_type, skin_id),
+		_make_hero_frame(1, false, true, Color.WHITE, 2, scarf_id, weapon_type, skin_id),
 	])
 	_add_anim(frames, "attack_2", 15.0, false, [
-		_make_hero_frame(1, false, true, Color.WHITE, 2, scarf_id, weapon_type),
-		_make_hero_frame(2, false, true, Color.WHITE, 3, scarf_id, weapon_type),
+		_make_hero_frame(1, false, true, Color.WHITE, 2, scarf_id, weapon_type, skin_id),
+		_make_hero_frame(2, false, true, Color.WHITE, 3, scarf_id, weapon_type, skin_id),
 	])
 	_add_anim(frames, "attack_3", 15.0, false, [
-		_make_hero_frame(2, false, true, Color(1.0, 0.94, 0.72), 4, scarf_id, weapon_type),
+		_make_hero_frame(2, false, true, Color(1.0, 0.94, 0.72), 4, scarf_id, weapon_type, skin_id),
 	])
 	_add_anim(frames, "special", 13.0, false, [
-		_make_hero_frame(2, false, true, Color(0.55, 0.92, 1.0), 4, scarf_id, weapon_type),
+		_make_hero_frame(2, false, true, Color(0.55, 0.92, 1.0), 4, scarf_id, weapon_type, skin_id),
 	])
 	_add_anim(frames, "hurt", 8.0, false, [
-		_make_hero_frame(1, false, false, Color(1.0, 0.42, 0.42), 0, scarf_id, weapon_type),
+		_make_hero_frame(1, false, false, Color(1.0, 0.42, 0.42), 0, scarf_id, weapon_type, skin_id),
 	])
 
 	_cache[key] = frames
@@ -102,11 +102,11 @@ static func get_pet_sprite_frames(pet_type: String = "fox") -> SpriteFrames:
 	return frames
 
 
-static func get_hero_portrait_texture(scarf_id: String = "blue") -> ImageTexture:
-	var key := "hero_portrait_" + scarf_id
+static func get_hero_portrait_texture(scarf_id: String = "blue", skin_id: String = "skin_default") -> ImageTexture:
+	var key := "hero_portrait_" + scarf_id + "_" + skin_id
 	if _cache.has(key):
 		return _cache[key]
-	var tex := ImageTexture.create_from_image(_make_hero_portrait_image(scarf_id))
+	var tex := ImageTexture.create_from_image(_make_hero_portrait_image(scarf_id, skin_id))
 	_cache[key] = tex
 	return tex
 
@@ -181,7 +181,7 @@ static func _add_anim(frames: SpriteFrames, anim_name: String, fps: float, loop:
 ## - Mắt anime to tròn long lanh ánh ngọc bích, má hồng nhẹ.
 ## - Hán phục cổ trang cổ giao lĩnh trắng ngà phối áo khoác lụa đỏ son viền vàng kim, dải lụa/khăn choàng đổi màu theo trang bị mở khóa.
 ## - Tay áo rộng (quảng tụ) thướt tha, thắt lưng ngọc bội và thanh Cổ Kiếm ánh ngọc đeo hông / vung kiếm khí thủy mặc!
-static func _make_hero_frame(step: int, running: bool, attacking: bool, modulate_col: Color = Color.WHITE, sword_pose: int = 0, scarf_id: String = "blue", weapon_type: String = "sword") -> ImageTexture:
+static func _make_hero_frame(step: int, running: bool, attacking: bool, modulate_col: Color = Color.WHITE, sword_pose: int = 0, scarf_id: String = "blue", weapon_type: String = "sword", skin_id: String = "skin_default") -> ImageTexture:
 	var w := 44
 	var h := 48
 	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
@@ -192,21 +192,22 @@ static func _make_hero_frame(step: int, running: bool, attacking: bool, modulate
 	var flow: int = (step % 2) * 2 - 1 # Nhịp bay lụa & tóc (-1 / +1)
 	var outline := Color(0.11, 0.08, 0.14)
 
-	# Bảng màu Anime Kiếm Hiệp Cổ Trang (Tóc đen ánh lam, Hán phục trắng ngà - đỏ son - vàng kim)
-	var hair_d := Color(0.10, 0.10, 0.16)
-	var hair_m := Color(0.18, 0.19, 0.28)
-	var hair_h := Color(0.36, 0.40, 0.56)
-	var hair_spec := Color(0.62, 0.68, 0.86)
+	# Lấy bảng màu theo 1 trong 10 bộ Trang Phục Gacha (Thường / Hiếm / Sử Thi / Huyền Thoại)
+	var sk: Dictionary = SaveManager.SKIN_CATALOG.get(skin_id, SaveManager.SKIN_CATALOG["skin_default"])
+	var hair_d: Color = sk["hair_d"]
+	var hair_m: Color = sk["hair_m"]
+	var hair_h: Color = sk["hair_h"]
+	var hair_spec: Color = hair_h.lightened(0.32)
 	var skin := Color(0.99, 0.89, 0.81)
 	var skin_shade := Color(0.88, 0.72, 0.64)
 	var blush := Color(0.96, 0.60, 0.62)
-	var eye_iris := Color(0.20, 0.68, 0.72)
+	var eye_iris: Color = sk["eye"]
 
-	var robe_white := Color(0.96, 0.94, 0.90)
-	var robe_shade := Color(0.80, 0.78, 0.84)
-	var crimson_d := Color(0.50, 0.10, 0.14)
-	var crimson_m := Color(0.78, 0.16, 0.20)
-	var crimson_h := Color(0.94, 0.34, 0.32)
+	var robe_white: Color = sk["robe"]
+	var robe_shade: Color = robe_white.darkened(0.15)
+	var crimson_d: Color = sk["coat_d"]
+	var crimson_m: Color = sk["coat_m"]
+	var crimson_h: Color = crimson_m.lightened(0.22)
 	var gold := Color(0.98, 0.82, 0.30)
 	var gold_d := Color(0.72, 0.52, 0.16)
 	var boot_d := Color(0.18, 0.14, 0.20)
@@ -814,47 +815,48 @@ static func _make_butterfly_image() -> Image:
 	return img
 
 
-## Chân dung Nữ Kiếm Khách Anime Cổ Trang 48x48 (Tóc đen trâm vàng, mắt ngọc bích, Hán phục đỏ trắng & dải lụa đổi màu)
-static func _make_hero_portrait_image(scarf_id: String = "blue") -> Image:
+## Chân dung Nữ Kiếm Khách Anime Cổ Trang 48x48 (tự động đổi theo 10 Trang Phục Gacha & Màu Khăn Choàng)
+static func _make_hero_portrait_image(scarf_id: String = "blue", skin_id: String = "skin_default") -> Image:
 	var w := 48
 	var h := 48
 	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	var sk: Dictionary = SaveManager.SKIN_CATALOG.get(skin_id, SaveManager.SKIN_CATALOG["skin_default"])
+	var border_col: Color = sk["tag_color"] if bool(sk["has_vfx"]) else Color(0.88, 0.70, 0.32)
 	img.fill(Color(0.14, 0.08, 0.11))
-	# Khung viền cổ trang vàng đồng 2 lớp
-	_fill_rect(img, 0, 0, w, 2, Color(0.88, 0.70, 0.32))
-	_fill_rect(img, 0, h - 2, w, 2, Color(0.88, 0.70, 0.32))
-	_fill_rect(img, 0, 0, 2, h, Color(0.88, 0.70, 0.32))
-	_fill_rect(img, w - 2, 0, 2, h, Color(0.88, 0.70, 0.32))
-	_fill_rect(img, 3, 3, w - 6, 1, Color(0.62, 0.14, 0.16))
-	_fill_rect(img, 3, h - 4, w - 6, 1, Color(0.62, 0.14, 0.16))
+	# Khung viền cổ trang vàng đồng (hoặc ánh sắc hiếm của skin)
+	_fill_rect(img, 0, 0, w, 2, border_col)
+	_fill_rect(img, 0, h - 2, w, 2, border_col)
+	_fill_rect(img, 0, 0, 2, h, border_col)
+	_fill_rect(img, w - 2, 0, 2, h, border_col)
+	_fill_rect(img, 3, 3, w - 6, 1, sk["coat_m"])
+	_fill_rect(img, 3, h - 4, w - 6, 1, sk["coat_m"])
 
 	var sp: Dictionary = SaveManager.SCARF_PALETTES.get(scarf_id, SaveManager.SCARF_PALETTES["blue"])
-	# Hán phục cổ giao lĩnh đỏ son - trắng ngà & dải lụa cổ đổi màu
-	_fill_rect(img, 8, 34, 32, 12, Color(0.78, 0.16, 0.20))
-	_fill_rect(img, 16, 34, 16, 12, Color(0.96, 0.94, 0.90))
+	# Hán phục theo bộ Trang Phục đang mặc
+	_fill_rect(img, 8, 34, 32, 12, sk["coat_m"])
+	_fill_rect(img, 16, 34, 16, 12, sk["robe"])
 	_fill_rect(img, 12, 31, 24, 5, sp["mid"])
 	_fill_rect(img, 16, 31, 16, 2, sp["hi"])
 
-	# Búi tóc đỉnh đầu + Trâm cài vàng & ngọc bích
-	_fill_circle(img, 24, 8, 5, Color(0.10, 0.10, 0.16))
+	# Búi tóc đỉnh đầu + Trâm cài vàng & ngọc
+	_fill_circle(img, 24, 8, 5, sk["hair_d"])
 	_fill_rect(img, 14, 7, 20, 2, Color(0.98, 0.82, 0.30))
 	_fill_rect(img, 12, 6, 4, 4, sp["hi"])
 
-	# Mái tóc đen huyền bồng bềnh có vầng sáng ngang anime
-	_fill_circle(img, 24, 21, 13, Color(0.10, 0.10, 0.16))
-	_fill_circle(img, 24, 20, 11, Color(0.18, 0.19, 0.28))
-	_fill_rect(img, 16, 11, 16, 2, Color(0.42, 0.48, 0.66))
-	_fill_rect(img, 20, 11, 8, 1, Color(0.68, 0.74, 0.92))
+	# Mái tóc bồng bềnh theo màu Skin
+	_fill_circle(img, 24, 21, 13, sk["hair_d"])
+	_fill_circle(img, 24, 20, 11, sk["hair_m"])
+	_fill_rect(img, 16, 11, 16, 2, sk["hair_h"])
+	_fill_rect(img, 20, 11, 8, 1, (sk["hair_h"] as Color).lightened(0.32))
 
-	# Khuôn mặt anime thanh tú, 2 lọn tóc mai dài, cặp mắt ngọc bích long lanh
+	# Khuôn mặt anime thanh tú, 2 lọn tóc mai dài, cặp mắt theo màu Skin
 	_fill_rect(img, 16, 16, 16, 14, Color(0.99, 0.89, 0.81))
-	_fill_rect(img, 13, 15, 4, 18, Color(0.12, 0.12, 0.20))
-	_fill_rect(img, 31, 15, 4, 18, Color(0.12, 0.12, 0.20))
-	# Mắt anime 4px
+	_fill_rect(img, 13, 15, 4, 18, sk["hair_d"])
+	_fill_rect(img, 31, 15, 4, 18, sk["hair_d"])
 	_fill_rect(img, 18, 20, 4, 4, Color(0.10, 0.08, 0.14))
 	_fill_rect(img, 26, 20, 4, 4, Color(0.10, 0.08, 0.14))
-	_fill_rect(img, 19, 21, 3, 3, Color(0.20, 0.68, 0.72))
-	_fill_rect(img, 27, 21, 3, 3, Color(0.20, 0.68, 0.72))
+	_fill_rect(img, 19, 21, 3, 3, sk["eye"])
+	_fill_rect(img, 27, 21, 3, 3, sk["eye"])
 	img.set_pixel(19, 20, Color.WHITE)
 	img.set_pixel(27, 20, Color.WHITE)
 	_fill_rect(img, 17, 25, 3, 2, Color(0.96, 0.60, 0.62))
@@ -899,6 +901,19 @@ static func _make_npc_image(role: String) -> Image:
 			_fill_rect(img, 13, 21, 10, 12, Color(0.95, 0.92, 0.85)) # Tạp dề trắng
 			_fill_rect(img, 13, 34, 4, 5, Color(0.35, 0.20, 0.12))
 			_fill_rect(img, 19, 34, 4, 5, Color(0.35, 0.20, 0.12))
+		"tailor":
+			# Cẩm Y Tiên Cô (Chủ Tụ Bảo Các Gacha Trang Phục): Tóc cài hoa đào, áo lụa hồng vàng quý phái
+			_fill_circle(img, 18, 11, 7, Color(0.20, 0.12, 0.24))
+			_fill_rect(img, 11, 6, 4, 4, Color(1.0, 0.56, 0.74))
+			_fill_rect(img, 22, 6, 4, 4, Color(0.98, 0.82, 0.28))
+			_fill_rect(img, 13, 11, 10, 7, skin)
+			_fill_rect(img, 15, 13, 2, 2, outline)
+			_fill_rect(img, 19, 13, 2, 2, outline)
+			img.set_pixel(14, 16, Color(0.96, 0.58, 0.64))
+			img.set_pixel(21, 16, Color(0.96, 0.58, 0.64))
+			_fill_rect(img, 10, 19, 16, 16, Color(0.86, 0.34, 0.56))
+			_fill_rect(img, 14, 20, 8, 15, Color(1.0, 0.88, 0.60))
+			_fill_rect(img, 12, 35, 12, 4, Color(0.54, 0.16, 0.34))
 		_: # "merchant"
 			# Thương Nhân Aurelius: Mũ lông tím, áo choàng quý tộc xanh lam viền vàng, túi vàng
 			_fill_rect(img, 10, 8, 16, 3, Color(0.42, 0.20, 0.58))
@@ -958,6 +973,19 @@ static func _make_npc_portrait_image(role: String) -> Image:
 			img.set_pixel(28, 20, Color.WHITE)
 			_fill_rect(img, 15, 25, 3, 2, Color(0.95, 0.60, 0.58))
 			_fill_rect(img, 30, 25, 3, 2, Color(0.95, 0.60, 0.58))
+		"tailor":
+			_fill_rect(img, 8, 33, 32, 13, Color(0.86, 0.34, 0.56))
+			_fill_rect(img, 18, 34, 12, 12, Color(1.0, 0.88, 0.60))
+			_fill_circle(img, 24, 20, 13, Color(0.20, 0.12, 0.24))
+			_fill_rect(img, 10, 10, 6, 5, Color(1.0, 0.56, 0.74))
+			_fill_rect(img, 32, 10, 6, 5, Color(0.98, 0.82, 0.28))
+			_fill_rect(img, 14, 15, 20, 15, skin)
+			_fill_rect(img, 17, 20, 3, 4, outline)
+			_fill_rect(img, 28, 20, 3, 4, outline)
+			img.set_pixel(17, 20, Color.WHITE)
+			img.set_pixel(28, 20, Color.WHITE)
+			_fill_rect(img, 15, 25, 3, 2, Color(0.96, 0.58, 0.64))
+			_fill_rect(img, 30, 25, 3, 2, Color(0.96, 0.58, 0.64))
 		_:
 			_fill_rect(img, 8, 32, 32, 14, Color(0.18, 0.34, 0.62))
 			_fill_rect(img, 20, 32, 8, 14, Color(0.96, 0.78, 0.24))

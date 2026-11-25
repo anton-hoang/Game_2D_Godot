@@ -124,6 +124,14 @@ func _build_town_npcs() -> void:
 			"action_label": "Mở Cửa Hàng Vũ Khí & Đan Dược",
 			"pos": Vector3(-11.5, 0.1, -0.5),
 		},
+		{
+			"role": "tailor",
+			"name": "Cẩm Y Tiên Cô",
+			"title": "Tụ Bảo Các — Shop Gacha Trang Phục",
+			"text": "Chào Nữ Hiệp! Tụ Bảo Các có 10 bộ Y Phục tuyệt mỹ: 5 bộ Thường thanh nhã và 5 bộ Hiếm/Huyền Thoại tỏa hào quang 3D lung linh! Ngươi muốn thử vận may chứ?",
+			"action_label": "Mở Shop Gacha Trang Phục (10 Skin)",
+			"pos": Vector3(6.8, 0.1, -4.5),
+		},
 	]
 	for cfg in npc_configs:
 		var npc := VillageNPC3D.new()

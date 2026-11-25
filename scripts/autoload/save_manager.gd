@@ -63,6 +63,90 @@ const ITEM_CATALOG: Dictionary = {
 	"elixir_power": {"name": "Long Hổ Thần Đan", "price": 55, "desc": "Hồi đầy 100% Sinh Lực & Chân Khí + Tạo Khiên 4s"},
 }
 
+## ============================================================================
+## KHO 10 TRANG PHỤC (SKIN) GACHA CỔ TRANG CHO NHÂN VẬT CHÍNH:
+## - 5 Skin Thường (tier="common", has_vfx=false): Mặc vào thay đổi hoàn toàn bảng màu y phục & tóc như bình thường.
+## - 5 Skin Hiếm / Sử Thi / Huyền Thoại (has_vfx=true): Có hiệu ứng hào quang, vòng ánh sáng & hạt bay quanh thân 3D!
+## ============================================================================
+const SKIN_CATALOG: Dictionary = {
+	# --- 5 SKIN THƯỜNG (Mặc bình thường, không có hiệu ứng hạt) ---
+	"skin_default": {
+		"name": "Hồng Y Kiếm Khách", "rarity": "Thường", "tier": "common", "has_vfx": false,
+		"tag_color": Color(0.84, 0.86, 0.90), "vfx_color": Color(0, 0, 0, 0),
+		"hair_d": Color(0.10, 0.10, 0.16), "hair_m": Color(0.18, 0.19, 0.28), "hair_h": Color(0.36, 0.40, 0.56),
+		"robe": Color(0.96, 0.94, 0.90), "coat_d": Color(0.50, 0.10, 0.14), "coat_m": Color(0.78, 0.16, 0.20),
+		"eye": Color(0.20, 0.68, 0.72), "desc": "Hán phục đỏ son - trắng ngà cổ điển của Nữ Kiếm Khách.",
+	},
+	"skin_bamboo": {
+		"name": "Thanh Trúc Du Hiệp", "rarity": "Thường", "tier": "common", "has_vfx": false,
+		"tag_color": Color(0.62, 0.88, 0.68), "vfx_color": Color(0, 0, 0, 0),
+		"hair_d": Color(0.12, 0.14, 0.12), "hair_m": Color(0.22, 0.26, 0.22), "hair_h": Color(0.42, 0.50, 0.40),
+		"robe": Color(0.92, 0.95, 0.86), "coat_d": Color(0.12, 0.34, 0.20), "coat_m": Color(0.22, 0.56, 0.32),
+		"eye": Color(0.28, 0.74, 0.40), "desc": "Y phục xanh trúc thanh nhã, nhẹ nhàng hòa mình vào rừng núi.",
+	},
+	"skin_ink": {
+		"name": "Mặc Ảnh Dạ Hành", "rarity": "Thường", "tier": "common", "has_vfx": false,
+		"tag_color": Color(0.68, 0.72, 0.80), "vfx_color": Color(0, 0, 0, 0),
+		"hair_d": Color(0.08, 0.08, 0.12), "hair_m": Color(0.16, 0.17, 0.24), "hair_h": Color(0.34, 0.36, 0.48),
+		"robe": Color(0.28, 0.30, 0.36), "coat_d": Color(0.10, 0.11, 0.16), "coat_m": Color(0.18, 0.20, 0.28),
+		"eye": Color(0.75, 0.82, 0.95), "desc": "Dạ hành y đen mực huyền bí của thích khách giang hồ.",
+	},
+	"skin_azure": {
+		"name": "Bích Hải Thư Sinh", "rarity": "Thường", "tier": "common", "has_vfx": false,
+		"tag_color": Color(0.56, 0.82, 0.96), "vfx_color": Color(0, 0, 0, 0),
+		"hair_d": Color(0.12, 0.15, 0.24), "hair_m": Color(0.22, 0.28, 0.42), "hair_h": Color(0.44, 0.54, 0.74),
+		"robe": Color(0.90, 0.96, 1.0), "coat_d": Color(0.12, 0.28, 0.52), "coat_m": Color(0.22, 0.48, 0.80),
+		"eye": Color(0.26, 0.62, 0.96), "desc": "Áo dài xanh biển nho nhã của kiếm khách vùng sông nước.",
+	},
+	"skin_autumn": {
+		"name": "Thu Phong Cẩm Y", "rarity": "Thường", "tier": "common", "has_vfx": false,
+		"tag_color": Color(0.92, 0.72, 0.46), "vfx_color": Color(0, 0, 0, 0),
+		"hair_d": Color(0.28, 0.14, 0.10), "hair_m": Color(0.48, 0.24, 0.14), "hair_h": Color(0.74, 0.42, 0.24),
+		"robe": Color(0.98, 0.92, 0.80), "coat_d": Color(0.52, 0.26, 0.10), "coat_m": Color(0.84, 0.46, 0.18),
+		"eye": Color(0.90, 0.56, 0.22), "desc": "Gấm thu màu lá phong ấm áp như nắng chiều ngoại ô Windferry.",
+	},
+
+	# --- 5 SKIN HIẾM / SỬ THI / HUYỀN THOẠI (CÓ HIỆU ỨNG HÀO QUANG & HẠT 3D RIÊNG!) ---
+	"skin_sakura": {
+		"name": "Anh Đào Tiên Tử", "rarity": "Hiếm ★", "tier": "rare", "has_vfx": true,
+		"tag_color": Color(1.0, 0.64, 0.82), "vfx_color": Color(1.0, 0.68, 0.86), "vfx_style": "petals",
+		"hair_d": Color(0.56, 0.24, 0.36), "hair_m": Color(0.86, 0.48, 0.64), "hair_h": Color(1.0, 0.76, 0.86),
+		"robe": Color(1.0, 0.93, 0.96), "coat_d": Color(0.74, 0.28, 0.46), "coat_m": Color(0.96, 0.52, 0.70),
+		"eye": Color(1.0, 0.44, 0.68), "desc": "[HIỆU ỨNG] Cánh hoa anh đào hồng tỏa sáng bay lượn quanh thân!",
+	},
+	"skin_frost": {
+		"name": "Băng Tuyết Ngọc Nữ", "rarity": "Hiếm ★", "tier": "rare", "has_vfx": true,
+		"tag_color": Color(0.48, 0.92, 1.0), "vfx_color": Color(0.46, 0.92, 1.0), "vfx_style": "frost",
+		"hair_d": Color(0.48, 0.66, 0.84), "hair_m": Color(0.76, 0.90, 1.0), "hair_h": Color(0.96, 0.99, 1.0),
+		"robe": Color(0.92, 0.98, 1.0), "coat_d": Color(0.16, 0.48, 0.74), "coat_m": Color(0.32, 0.76, 0.96),
+		"eye": Color(0.32, 0.94, 1.0), "desc": "[HIỆU ỨNG] Bông tuyết băng tinh & sương lạnh phát sáng xoay quanh thân!",
+	},
+	"skin_phoenix": {
+		"name": "Chu Tước Viêm Hoàng", "rarity": "Sử Thi ★★", "tier": "epic", "has_vfx": true,
+		"tag_color": Color(1.0, 0.48, 0.20), "vfx_color": Color(1.0, 0.44, 0.14), "vfx_style": "flame",
+		"hair_d": Color(0.42, 0.08, 0.08), "hair_m": Color(0.78, 0.18, 0.12), "hair_h": Color(1.0, 0.54, 0.20),
+		"robe": Color(1.0, 0.90, 0.74), "coat_d": Color(0.68, 0.12, 0.08), "coat_m": Color(0.98, 0.34, 0.14),
+		"eye": Color(1.0, 0.78, 0.22), "desc": "[HIỆU ỨNG] Tàn lửa Phượng Hoàng bốc cháy & vòng hào quang rực lửa!",
+	},
+	"skin_thunder": {
+		"name": "Lôi Đình Kiếm Tôn", "rarity": "Sử Thi ★★", "tier": "epic", "has_vfx": true,
+		"tag_color": Color(0.76, 0.52, 1.0), "vfx_color": Color(0.72, 0.46, 1.0), "vfx_style": "lightning",
+		"hair_d": Color(0.18, 0.10, 0.34), "hair_m": Color(0.38, 0.22, 0.68), "hair_h": Color(0.72, 0.56, 1.0),
+		"robe": Color(0.92, 0.90, 1.0), "coat_d": Color(0.28, 0.12, 0.54), "coat_m": Color(0.56, 0.28, 0.92),
+		"eye": Color(0.84, 0.62, 1.0), "desc": "[HIỆU ỨNG] Tia lôi điện tím vàng nhấp nháy & luồng điện xoay quanh chân!",
+	},
+	"skin_celestial": {
+		"name": "Cửu Thiên Kim Long", "rarity": "Huyền Thoại ★★★", "tier": "legendary", "has_vfx": true,
+		"tag_color": Color(1.0, 0.86, 0.26), "vfx_color": Color(1.0, 0.84, 0.28), "vfx_style": "celestial",
+		"hair_d": Color(0.62, 0.48, 0.18), "hair_m": Color(0.94, 0.82, 0.42), "hair_h": Color(1.0, 0.98, 0.82),
+		"robe": Color(1.0, 0.97, 0.88), "coat_d": Color(0.68, 0.48, 0.08), "coat_m": Color(0.98, 0.78, 0.20),
+		"eye": Color(1.0, 0.88, 0.26), "desc": "[HIỆU ỨNG TỐI THƯỢNG] Vòng Pháp Trận Hoàng Kim dưới chân + Sao vàng thăng thiên rực rỡ!",
+	},
+}
+
+const GACHA_COST_SINGLE := 40
+const GACHA_COST_MULTI := 180 # Quay 5 lần (giảm giá + chắc chắn ra ít nhất 1 Skin Hiếm có hiệu ứng!)
+
 ## 4 nhiệm vụ phụ dân làng trên Bảng Truy Nã (Bounty Board)
 const QUEST_DEFINITIONS: Dictionary = {
 	"goblin_slayer": {
@@ -134,6 +218,9 @@ var equipped_title: String = "Lữ Khách Windferry"
 var unlocked_scarves: Array = ["blue"]
 var equipped_scarf: String = "blue"
 var equipped_pet: String = "fox" # "fox" (Tiểu Hồ Ly) | "crane" (Tiên Hạc)
+var owned_skins: Array = ["skin_default"]
+var equipped_skin: String = "skin_default"
+var gacha_pity: int = 0 # Bảo hiểm: Quay đủ 5 lần chắc chắn nổ Skin Hiếm trở lên!
 
 # Rương đồ (Inventory): Danh sách vũ khí sở hữu + vũ khí đang trang bị + vật phẩm tiêu hao
 var owned_weapons: Array = ["sword_basic"]
@@ -164,6 +251,9 @@ func save_game() -> void:
 	cfg.set_value("cosmetics", "unlocked_scarves", unlocked_scarves)
 	cfg.set_value("cosmetics", "equipped_scarf", equipped_scarf)
 	cfg.set_value("cosmetics", "equipped_pet", equipped_pet)
+	cfg.set_value("cosmetics", "owned_skins", owned_skins)
+	cfg.set_value("cosmetics", "equipped_skin", equipped_skin)
+	cfg.set_value("cosmetics", "gacha_pity", gacha_pity)
 	cfg.set_value("inventory", "owned_weapons", owned_weapons)
 	cfg.set_value("inventory", "equipped_weapon", equipped_weapon)
 	cfg.set_value("inventory", "bag_items", bag_items)
@@ -192,6 +282,11 @@ func load_game() -> void:
 	unlocked_scarves = cfg.get_value("cosmetics", "unlocked_scarves", ["blue"])
 	equipped_scarf = str(cfg.get_value("cosmetics", "equipped_scarf", "blue"))
 	equipped_pet = str(cfg.get_value("cosmetics", "equipped_pet", "fox"))
+	owned_skins = cfg.get_value("cosmetics", "owned_skins", ["skin_default"])
+	equipped_skin = str(cfg.get_value("cosmetics", "equipped_skin", "skin_default"))
+	if not SKIN_CATALOG.has(equipped_skin):
+		equipped_skin = "skin_default"
+	gacha_pity = int(cfg.get_value("cosmetics", "gacha_pity", 0))
 	owned_weapons = cfg.get_value("inventory", "owned_weapons", ["sword_basic"])
 	equipped_weapon = str(cfg.get_value("inventory", "equipped_weapon", "sword_basic"))
 	if not WEAPON_CATALOG.has(equipped_weapon):
@@ -279,6 +374,85 @@ func equip_scarf(scarf_id: String) -> void:
 		equipped_scarf = scarf_id
 		save_game()
 		cosmetic_changed.emit()
+
+
+func get_equipped_skin_data() -> Dictionary:
+	return SKIN_CATALOG.get(equipped_skin, SKIN_CATALOG["skin_default"])
+
+
+func equip_skin(skin_id: String) -> void:
+	if owned_skins.has(skin_id) and SKIN_CATALOG.has(skin_id):
+		equipped_skin = skin_id
+		save_game()
+		cosmetic_changed.emit()
+
+
+## Quay Gacha Trang Phục (count = 1 hoặc 5):
+## Tỉ lệ: 52% Thường | 28% Hiếm ★ | 14% Sử Thi ★★ | 6% Huyền Thoại ★★★ (có bảo hiểm Pity mỗi 5 lần chắc chắn nổ Skin có VFX!)
+## Nếu quay trúng Skin đã sở hữu -> hoàn lại Ngân Lượng (15 Lượng skin thường / 45 Lượng skin hiếm)!
+func roll_skin_gacha(count: int = 1) -> Array[Dictionary]:
+	var cost: int = GACHA_COST_SINGLE if count == 1 else GACHA_COST_MULTI
+	if gold < cost:
+		return []
+	gold -= cost
+
+	var common_pool: Array[String] = ["skin_default", "skin_bamboo", "skin_ink", "skin_azure", "skin_autumn"]
+	var rare_pool: Array[String] = ["skin_sakura", "skin_frost"]
+	var epic_pool: Array[String] = ["skin_phoenix", "skin_thunder"]
+	var legend_pool: Array[String] = ["skin_celestial"]
+
+	var results: Array[Dictionary] = []
+	var guaranteed_vfx_given := false
+
+	for i in range(count):
+		gacha_pity += 1
+		var chosen_id: String = "skin_bamboo"
+		var force_high: bool = (gacha_pity >= 5) or (count >= 5 and i == count - 1 and not guaranteed_vfx_given)
+
+		var r := randf()
+		if force_high:
+			if r < 0.18:
+				chosen_id = legend_pool[0]
+			elif r < 0.52:
+				chosen_id = epic_pool[randi() % epic_pool.size()]
+			else:
+				chosen_id = rare_pool[randi() % rare_pool.size()]
+		else:
+			if r < 0.06:
+				chosen_id = legend_pool[0]
+			elif r < 0.20:
+				chosen_id = epic_pool[randi() % epic_pool.size()]
+			elif r < 0.48:
+				chosen_id = rare_pool[randi() % rare_pool.size()]
+			else:
+				chosen_id = common_pool[randi() % common_pool.size()]
+
+		var sdata: Dictionary = SKIN_CATALOG[chosen_id]
+		if bool(sdata["has_vfx"]):
+			gacha_pity = 0
+			guaranteed_vfx_given = true
+
+		var is_new: bool = not owned_skins.has(chosen_id)
+		var refund: int = 0
+		if is_new:
+			owned_skins.append(chosen_id)
+		else:
+			refund = 45 if bool(sdata["has_vfx"]) else 15
+			gold += refund
+
+		results.append({
+			"id": chosen_id,
+			"name": str(sdata["name"]),
+			"rarity": str(sdata["rarity"]),
+			"has_vfx": bool(sdata["has_vfx"]),
+			"tag_color": sdata["tag_color"],
+			"is_new": is_new,
+			"refund": refund,
+		})
+
+	save_game()
+	cosmetic_changed.emit()
+	return results
 
 
 func equip_pet(pet_id: String) -> void:
@@ -429,6 +603,9 @@ func reset_save() -> void:
 	unlocked_scarves = ["blue"]
 	equipped_scarf = "blue"
 	equipped_pet = "fox"
+	owned_skins = ["skin_default"]
+	equipped_skin = "skin_default"
+	gacha_pity = 0
 	owned_weapons = ["sword_basic"]
 	equipped_weapon = "sword_basic"
 	bag_items = {"hp_potion": 2, "mp_potion": 1, "elixir_power": 0}

@@ -50,6 +50,7 @@ var relic_panel: Control
 var quest_board_panel: Control
 var inventory_panel: Control
 var shop_panel: Control
+var gacha_panel: Control
 
 var _hero_portrait_rect: TextureRect
 var _hero_title_label: Label
@@ -63,6 +64,11 @@ var _inv_items_box: VBoxContainer
 var _shop_gold_lbl: Label
 var _shop_weapons_box: VBoxContainer
 var _shop_items_box: VBoxContainer
+var _gacha_gold_lbl: Label
+var _gacha_result_box: HBoxContainer
+var _gacha_wardrobe_box: VBoxContainer
+var _gacha_btn_x1: Button
+var _gacha_btn_x5: Button
 
 var _stage_buttons_box: VBoxContainer
 var _upgrade_info_label: Label
@@ -93,6 +99,7 @@ func _ready() -> void:
 	_build_quest_board_panel()
 	_build_inventory_panel()
 	_build_shop_panel()
+	_build_gacha_panel()
 
 	GameManager.stats_updated.connect(_on_stats_updated)
 	GameManager.stage_cleared.connect(_on_stage_cleared)
@@ -143,6 +150,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			_hide_all_panels()
 			get_tree().paused = false
 		elif shop_panel and shop_panel.visible:
+			_hide_all_panels()
+			get_tree().paused = false
+		elif gacha_panel and gacha_panel.visible:
 			_hide_all_panels()
 			get_tree().paused = false
 		elif relic_panel and relic_panel.visible:
@@ -214,9 +224,18 @@ func show_main_menu() -> void:
 
 
 func _hide_all_panels() -> void:
-	for p in [main_menu_panel, stage_select_panel, upgrade_panel, pause_panel, result_panel, gameover_panel, dialogue_panel, relic_panel, quest_board_panel, inventory_panel, shop_panel]:
+	for p in [main_menu_panel, stage_select_panel, upgrade_panel, pause_panel, result_panel, gameover_panel, dialogue_panel, relic_panel, quest_board_panel, inventory_panel, shop_panel, gacha_panel]:
 		if p:
 			p.visible = false
+
+
+## Mở Shop Gacha Trang Phục & Tủ 10 Skin Cổ Trang
+func show_gacha_shop() -> void:
+	get_tree().paused = true
+	_hide_all_panels()
+	_refresh_gacha_ui()
+	if gacha_panel:
+		gacha_panel.visible = true
 
 
 ## Mở Rương Đồ / Túi Đồ Cổ Trang (Phím I / B hoặc từ Menu)
@@ -269,7 +288,7 @@ func update_relics_hud(relics: Dictionary) -> void:
 
 func _refresh_hero_cosmetic_hud() -> void:
 	if _hero_portrait_rect:
-		_hero_portrait_rect.texture = PixelArtGenerator.get_hero_portrait_texture(SaveManager.equipped_scarf)
+		_hero_portrait_rect.texture = PixelArtGenerator.get_hero_portrait_texture(SaveManager.equipped_scarf, SaveManager.equipped_skin)
 	if _hero_title_label:
 		_hero_title_label.text = "  " + SaveManager.equipped_title.to_upper()
 	if _weapon_hud_label:
@@ -340,7 +359,7 @@ func _build_hud() -> void:
 	hbox.add_child(portrait_frame)
 
 	var hero_tex := TextureRect.new()
-	hero_tex.texture = PixelArtGenerator.get_hero_portrait_texture(SaveManager.equipped_scarf)
+	hero_tex.texture = PixelArtGenerator.get_hero_portrait_texture(SaveManager.equipped_scarf, SaveManager.equipped_skin)
 	hero_tex.custom_minimum_size = Vector2(64, 64)
 	hero_tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	hero_tex.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -672,6 +691,10 @@ func _build_main_menu() -> void:
 		show_weapon_shop()
 	))
 
+	vbox.add_child(_create_button("❖ TỤ BẢO CÁC — SHOP GACHA TRANG PHỤC (10 SKIN)", func() -> void:
+		show_gacha_shop()
+	))
+
 	vbox.add_child(_create_button("❖ BẢNG TRUY NÃ & TỦ KHĂN CHOÀNG (NHIỆM VỤ)", func() -> void:
 		show_quest_board()
 	))
@@ -904,6 +927,8 @@ func _build_dialogue_panel() -> void:
 			upgrade_panel.visible = true
 		elif _current_npc_role == "merchant":
 			show_weapon_shop()
+		elif _current_npc_role == "tailor":
+			show_gacha_shop()
 		else:
 			_hide_all_panels()
 			get_tree().paused = false
@@ -1447,6 +1472,205 @@ func _refresh_shop_ui() -> void:
 		)
 		ibtn.disabled = SaveManager.gold < price
 		iv.add_child(ibtn)
+
+
+## ============================================================================
+## TỤ BẢO CÁC — SHOP GACHA TRANG PHỤC (10 SKIN: 5 THƯỜNG + 5 HIẾM CÓ HIỆU ỨNG 3D)
+## ============================================================================
+func _build_gacha_panel() -> void:
+	gacha_panel = _create_center_modal(920, 620)
+	var vbox := _get_modal_vbox(gacha_panel)
+
+	var title := Label.new()
+	title.text = "【 TỤ BẢO CÁC — SHOP GACHA Y PHỤC (10 BỘ TRANG PHỤC CỔ TRANG) 】"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 20)
+	title.modulate = Color(1.0, 0.86, 0.36)
+	vbox.add_child(title)
+
+	_gacha_gold_lbl = Label.new()
+	_gacha_gold_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_gacha_gold_lbl.add_theme_font_size_override("font_size", 14)
+	_gacha_gold_lbl.modulate = Color(1.0, 0.92, 0.50)
+	vbox.add_child(_gacha_gold_lbl)
+
+	# Khu vực nút Quay Gacha x1 & Quay Gacha x5 (chắc chắn nổ Skin Hiếm có VFX!)
+	var roll_row := HBoxContainer.new()
+	roll_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	roll_row.add_theme_constant_override("separation", 18)
+	vbox.add_child(roll_row)
+
+	_gacha_btn_x1 = _create_button("❖ QUAY 1 LẦN (%d Lượng)" % SaveManager.GACHA_COST_SINGLE, func() -> void:
+		_perform_gacha_roll(1)
+	)
+	_gacha_btn_x1.custom_minimum_size = Vector2(270, 44)
+	roll_row.add_child(_gacha_btn_x1)
+
+	_gacha_btn_x5 = _create_button("★ QUAY 5 LẦN (%d Lượng — BAO NỔ SKIN HIẾM!)" % SaveManager.GACHA_COST_MULTI, func() -> void:
+		_perform_gacha_roll(5)
+	)
+	_gacha_btn_x5.custom_minimum_size = Vector2(400, 44)
+	roll_row.add_child(_gacha_btn_x5)
+
+	# Khu vực trưng bày kết quả quay Gacha vừa rút
+	var res_frame := _create_classical_panel(Color(0.09, 0.06, 0.06, 0.94), Color(0.84, 0.66, 0.30, 0.9))
+	res_frame.custom_minimum_size = Vector2(860, 138)
+	vbox.add_child(res_frame)
+
+	_gacha_result_box = HBoxContainer.new()
+	_gacha_result_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	_gacha_result_box.add_theme_constant_override("separation", 12)
+	res_frame.add_child(_gacha_result_box)
+
+	var hint_lbl := Label.new()
+	hint_lbl.text = "Hãy bấm Quay 1 Lần hoặc Quay 5 Lần để rút ngẫu nhiên 10 bộ Trang Phục!\n• 5 Skin Thường: Mặc tự nhiên   • 5 Skin Hiếm/Sử Thi/Huyền Thoại: Có Vòng Hào Quang & Hạt 3D quanh thân!"
+	hint_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint_lbl.modulate = Color(0.92, 0.86, 0.72)
+	_gacha_result_box.add_child(hint_lbl)
+
+	# Tủ Trang Phục 10 Skin (xem bộ sưu tập & bấm MẶC NGAY)
+	var ward_scroll := ScrollContainer.new()
+	ward_scroll.custom_minimum_size = Vector2(860, 260)
+	ward_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	vbox.add_child(ward_scroll)
+
+	_gacha_wardrobe_box = VBoxContainer.new()
+	_gacha_wardrobe_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_gacha_wardrobe_box.add_theme_constant_override("separation", 6)
+	ward_scroll.add_child(_gacha_wardrobe_box)
+
+	vbox.add_child(_create_button("ĐÓNG TỤ BẢO CÁC", func() -> void:
+		if not main_menu_panel.visible:
+			_hide_all_panels()
+			get_tree().paused = false
+		else:
+			show_main_menu()
+	))
+
+
+func _perform_gacha_roll(count: int) -> void:
+	var results := SaveManager.roll_skin_gacha(count)
+	if results.is_empty():
+		AudioManager.play_sfx("hurt", 0.9)
+		return
+
+	var got_vfx := false
+	for r in results:
+		if bool(r["has_vfx"]):
+			got_vfx = true
+	AudioManager.play_sfx("victory" if got_vfx else "pickup", 1.25 if got_vfx else 1.05)
+
+	# Hiển thị từng thẻ kết quả quay kèm ảnh chân dung của bộ Skin vừa trúng!
+	for c in _gacha_result_box.get_children():
+		c.queue_free()
+	for r in results:
+		var sid: String = str(r["id"])
+		var tcol: Color = r["tag_color"]
+		var card := _create_classical_panel(Color(0.16, 0.10, 0.09, 0.98), tcol)
+		card.custom_minimum_size = Vector2(154, 118)
+		_gacha_result_box.add_child(card)
+
+		var cv := VBoxContainer.new()
+		cv.alignment = BoxContainer.ALIGNMENT_CENTER
+		cv.add_theme_constant_override("separation", 2)
+		card.add_child(cv)
+
+		var pic := TextureRect.new()
+		pic.texture = PixelArtGenerator.get_hero_portrait_texture(SaveManager.equipped_scarf, sid)
+		pic.custom_minimum_size = Vector2(46, 46)
+		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		cv.add_child(pic)
+
+		var nlbl := Label.new()
+		nlbl.text = str(r["name"])
+		nlbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		nlbl.add_theme_font_size_override("font_size", 11)
+		nlbl.modulate = tcol
+		cv.add_child(nlbl)
+
+		var sub_lbl := Label.new()
+		var status_txt := "MỚI!" if bool(r["is_new"]) else ("Trùng +%d Lượng" % int(r["refund"]))
+		sub_lbl.text = "%s • %s" % [str(r["rarity"]), status_txt]
+		sub_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		sub_lbl.add_theme_font_size_override("font_size", 10)
+		sub_lbl.modulate = Color(1.0, 0.92, 0.55) if bool(r["has_vfx"]) else Color(0.84, 0.84, 0.88)
+		cv.add_child(sub_lbl)
+
+		# Hoạt ảnh lóe mở thẻ cực đã mắt
+		card.scale = Vector2(0.75, 0.75)
+		var tw := card.create_tween()
+		tw.tween_property(card, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+	_refresh_gacha_ui()
+
+
+func _refresh_gacha_ui() -> void:
+	if _gacha_gold_lbl:
+		var remain_pity: int = maxi(1, 5 - SaveManager.gacha_pity)
+		_gacha_gold_lbl.text = "❖ NGÂN LƯỢNG: %d LƯỢNG   •   ĐÃ SƯU TẬP: %d / %d SKIN   •   Còn %d lượt chắc chắn nổ Skin Hiếm có VFX!" % [
+			SaveManager.gold, SaveManager.owned_skins.size(), SaveManager.SKIN_CATALOG.size(), remain_pity
+		]
+	if _gacha_btn_x1:
+		_gacha_btn_x1.disabled = SaveManager.gold < SaveManager.GACHA_COST_SINGLE
+	if _gacha_btn_x5:
+		_gacha_btn_x5.disabled = SaveManager.gold < SaveManager.GACHA_COST_MULTI
+
+	if _gacha_wardrobe_box == null:
+		return
+	for c in _gacha_wardrobe_box.get_children():
+		c.queue_free()
+
+	for sid in SaveManager.SKIN_CATALOG.keys():
+		var s_key: String = str(sid)
+		var sk: Dictionary = SaveManager.SKIN_CATALOG[s_key]
+		var owned: bool = SaveManager.owned_skins.has(s_key)
+		var equipped: bool = (SaveManager.equipped_skin == s_key)
+		var has_vfx: bool = bool(sk["has_vfx"])
+		var tcol: Color = sk["tag_color"]
+
+		var row_panel := _create_classical_panel(Color(0.15, 0.10, 0.08, 0.94), tcol if (equipped or has_vfx) else Color(0.55, 0.45, 0.30, 0.8))
+		_gacha_wardrobe_box.add_child(row_panel)
+
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 12)
+		row_panel.add_child(row)
+
+		var pic := TextureRect.new()
+		pic.texture = PixelArtGenerator.get_hero_portrait_texture(SaveManager.equipped_scarf, s_key)
+		pic.custom_minimum_size = Vector2(46, 46)
+		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		pic.modulate = Color.WHITE if owned else Color(0.35, 0.35, 0.40, 0.8)
+		row.add_child(pic)
+
+		var info := VBoxContainer.new()
+		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(info)
+
+		var nlbl := Label.new()
+		var vfx_badge := " ✨[CÓ HIỆU ỨNG 3D]" if has_vfx else " [Thường]"
+		nlbl.text = "[%s] %s%s" % [str(sk["rarity"]), str(sk["name"]), vfx_badge]
+		nlbl.add_theme_font_size_override("font_size", 14)
+		nlbl.modulate = tcol if owned else Color(0.65, 0.65, 0.70)
+		info.add_child(nlbl)
+
+		var dlbl := Label.new()
+		dlbl.text = str(sk["desc"])
+		dlbl.add_theme_font_size_override("font_size", 12)
+		dlbl.modulate = Color(0.92, 0.87, 0.76) if owned else Color(0.55, 0.55, 0.60)
+		info.add_child(dlbl)
+
+		var b_txt := "★ ĐANG MẶC" if equipped else ("MẶC NGAY" if owned else "🔒 CHƯA MỞ")
+		var btn := _create_button(b_txt, func() -> void:
+			if owned:
+				SaveManager.equip_skin(s_key)
+				AudioManager.play_sfx("pickup", 1.2)
+				_refresh_gacha_ui()
+		)
+		btn.custom_minimum_size = Vector2(125, 38)
+		btn.disabled = (not owned) or equipped
+		row.add_child(btn)
 
 
 func _start_stage(stage_id: int) -> void:
