@@ -73,6 +73,8 @@ var _spirit_shield_timer: float = 0.0
 
 func _ready() -> void:
 	add_to_group("player")
+	floor_max_angle = deg_to_rad(52.0)
+	floor_snap_length = 0.40
 	_apply_save_upgrades()
 	_build_visual_nodes()
 	if not SaveManager.cosmetic_changed.is_connected(refresh_cosmetic_appearance):

@@ -530,19 +530,20 @@ func _build_terrain_and_walls() -> void:
 	ground_body.add_child(ground_col)
 
 	_add_box_mesh(ground_body, Vector3(60.0, 2.0, 30.0), Vector3(0.0, -1.0, 0.0), grass_mat)
-	# Con đường lát đá cuội chạy qua làng (bên phải & giữa) và đường đất ấm (bên trái)
-	_add_box_mesh(ground_body, Vector3(32.0, 0.09, 7.6), Vector3(8.0, 0.02, 1.5), stone_cobble_mat)
-	_add_box_mesh(ground_body, Vector3(20.0, 0.08, 7.2), Vector3(-15.0, 0.015, 0.5), dirt_path_mat)
+	# Con đường lát đá cuội (bên phải hồ x: -2.0 .. +24.0) & đường đất ấm (bên trái hồ x: -24.0 .. -10.4)
+	# Tách hoàn toàn 2 bờ không bao giờ chồng đè lên mặt hồ (x: -10.2 .. -2.2) -> Hết 100% lỗi Z-fighting!
+	_add_box_mesh(ground_body, Vector3(26.0, 0.12, 7.6), Vector3(11.0, 0.04, 1.4), stone_cobble_mat)
+	_add_box_mesh(ground_body, Vector3(13.6, 0.12, 7.2), Vector3(-17.2, 0.04, 0.8), dirt_path_mat)
 
-	# Suối & Hồ nước phản chiếu lấp lánh bên trái
+	# Suối & Hồ nước trong xanh nằm gọn giữa 2 bờ đá (x: -10.2 .. -2.2, z: -2.4 .. +8.6) ở mặt phẳng sạch y=0.03
 	var water_mesh := MeshInstance3D.new()
 	water_mesh.name = "HamletPond"
 	var plane := PlaneMesh.new()
-	plane.size = Vector2(14.0, 10.5)
-	plane.subdivide_width = 40
-	plane.subdivide_depth = 40
+	plane.size = Vector2(8.0, 11.0)
+	plane.subdivide_width = 24
+	plane.subdivide_depth = 24
 	water_mesh.mesh = plane
-	water_mesh.position = Vector3(-8.2, 0.06, 3.6)
+	water_mesh.position = Vector3(-6.2, 0.03, 3.1)
 	var water_shader := load("res://assets/shaders/water_hd2d.gdshader") as Shader
 	if water_shader:
 		var smat := ShaderMaterial.new()
@@ -550,37 +551,101 @@ func _build_terrain_and_walls() -> void:
 		water_mesh.material_override = smat
 	_hamlet_root.add_child(water_mesh)
 
-	# Cây cầu đá vòm cong bậc thang + thác nước trắng nhỏ chảy xuống hồ (giống hệt trung tâm trái ảnh Windferry!)
+	# Viền kè đá bo quanh bờ hồ (trái, phải, phía sau) để ranh giới nước - bờ sắc nét tự nhiên!
+	_add_box_mesh(_hamlet_root, Vector3(0.55, 0.24, 11.2), Vector3(-10.35, 0.08, 3.1), stone_wall_mat)
+	_add_box_mesh(_hamlet_root, Vector3(0.55, 0.24, 11.2), Vector3(-2.05, 0.08, 3.1), stone_wall_mat)
+	_add_box_mesh(_hamlet_root, Vector3(8.8, 0.28, 0.55), Vector3(-6.2, 0.10, -2.45), stone_wall_mat)
+
+	# Cây cầu đá vòm cong bắc ngang qua suối (x: -10.4 .. -2.0 tại z = 1.4) CÓ COLLIDER ĐẦY ĐỦ!
 	var bridge_root := Node3D.new()
 	bridge_root.name = "StoneBridge"
 	bridge_root.position = Vector3(-6.2, 0.0, 1.4)
 	_hamlet_root.add_child(bridge_root)
-	# 5 bậc vòm cong dần lên đỉnh cầu ở giữa
-	var arch_xs: Array[float] = [-2.4, -1.2, 0.0, 1.2, 2.4]
-	var arch_ys: Array[float] = [0.22, 0.54, 0.78, 0.54, 0.22]
+
+	# 7 bậc vòm cong uốn mượt từ mép đường 2 bờ (y=0.10) lên đỉnh cầu (y=0.91)
+	var arch_xs: Array[float] = [-3.6, -2.4, -1.2, 0.0, 1.2, 2.4, 3.6]
+	var arch_ys: Array[float] = [0.16, 0.42, 0.65, 0.76, 0.65, 0.42, 0.16]
 	for ai in range(arch_xs.size()):
 		var ax: float = arch_xs[ai]
 		var ay: float = arch_ys[ai]
-		_add_box_mesh(bridge_root, Vector3(1.35, 0.36, 3.0), Vector3(ax, ay, 0.0), stone_cobble_mat)
-		# Thành lan can cầu uốn cong theo vòm
+		_add_box_mesh(bridge_root, Vector3(1.30, 0.30, 3.0), Vector3(ax, ay, 0.0), stone_cobble_mat)
 		for bz: float in [-1.42, 1.42]:
-			_add_box_mesh(bridge_root, Vector3(1.35, 0.72, 0.28), Vector3(ax, ay + 0.42, bz), stone_wall_mat)
-	# Hai mố chân cầu đá xây chắc xuống mặt nước
-	_add_box_mesh(bridge_root, Vector3(1.6, 1.1, 3.3), Vector3(-2.6, 0.35, 0.0), stone_wall_mat)
-	_add_box_mesh(bridge_root, Vector3(1.6, 1.1, 3.3), Vector3(2.6, 0.35, 0.0), stone_wall_mat)
+			_add_box_mesh(bridge_root, Vector3(1.30, 0.68, 0.26), Vector3(ax, ay + 0.40, bz), stone_wall_mat)
+	# Hai mố chân cầu đá xây chắc xuống lòng suối
+	_add_box_mesh(bridge_root, Vector3(1.4, 0.9, 3.2), Vector3(-3.8, 0.22, 0.0), stone_wall_mat)
+	_add_box_mesh(bridge_root, Vector3(1.4, 0.9, 3.2), Vector3(3.8, 0.22, 0.0), stone_wall_mat)
 
-	# Thác nước nhỏ bọt trắng chảy từ chân tường đá xuống sau cầu (chi tiết đặc trưng trong ảnh mẫu)
+	# COLLIDER VẬT LÝ CHO CẦU ĐÁ: 2 dốc lên/xuống khớp từng milimet (0.04m -> 0.91m) + sàn đỉnh cầu + 2 thành lan can!
+	var bridge_body := StaticBody3D.new()
+	bridge_body.name = "BridgeCollider"
+	bridge_root.add_child(bridge_body)
+
+	# Dốc lên bên trái (local x: -4.5 -> -0.6)
+	var left_ramp := CollisionShape3D.new()
+	var lr_box := BoxShape3D.new()
+	lr_box.size = Vector3(4.0, 0.24, 2.75)
+	left_ramp.shape = lr_box
+	left_ramp.position = Vector3(-2.55, 0.36, 0.0)
+	left_ramp.rotation_degrees = Vector3(0.0, 0.0, 12.5)
+	bridge_body.add_child(left_ramp)
+
+	# Mặt sàn phẳng đỉnh cầu ở giữa (top y = 0.91m khớp mặt đá)
+	var mid_deck := CollisionShape3D.new()
+	var md_box := BoxShape3D.new()
+	md_box.size = Vector3(1.8, 0.24, 2.75)
+	mid_deck.shape = md_box
+	mid_deck.position = Vector3(0.0, 0.79, 0.0)
+	bridge_body.add_child(mid_deck)
+
+	# Dốc xuống bên phải (local x: +0.6 -> +4.5)
+	var right_ramp := CollisionShape3D.new()
+	var rr_box := BoxShape3D.new()
+	rr_box.size = Vector3(4.0, 0.24, 2.75)
+	right_ramp.shape = rr_box
+	right_ramp.position = Vector3(2.55, 0.36, 0.0)
+	right_ramp.rotation_degrees = Vector3(0.0, 0.0, -12.5)
+	bridge_body.add_child(right_ramp)
+
+	# 2 Thành lan can cầu chắn không cho đi xuyên ngang qua thân cầu
+	for rail_z: float in [-1.52, 1.52]:
+		var rail_col := CollisionShape3D.new()
+		var r_box := BoxShape3D.new()
+		r_box.size = Vector3(8.2, 1.9, 0.30)
+		rail_col.shape = r_box
+		rail_col.position = Vector3(0.0, 0.95, rail_z)
+		bridge_body.add_child(rail_col)
+
+	# Rào chắn vô hình dọc mép mặt hồ phía trên & phía dưới cầu (chỉ đi qua suối bằng CẦU ĐÁ, không lội xuyên mặt nước!)
+	var pond_guard := StaticBody3D.new()
+	pond_guard.name = "PondWaterBarrier"
+	_hamlet_root.add_child(pond_guard)
+	# Khu vực nước phía trên cầu (z: -2.4 .. -0.1)
+	var pg_top := CollisionShape3D.new()
+	var pgt_box := BoxShape3D.new()
+	pgt_box.size = Vector3(8.0, 2.0, 2.3)
+	pg_top.shape = pgt_box
+	pg_top.position = Vector3(-6.2, 1.0, -1.25)
+	pond_guard.add_child(pg_top)
+	# Khu vực nước phía dưới cầu (z: +2.9 .. +8.6)
+	var pg_bot := CollisionShape3D.new()
+	var pgb_box := BoxShape3D.new()
+	pgb_box.size = Vector3(8.0, 2.0, 5.7)
+	pg_bot.shape = pgb_box
+	pg_bot.position = Vector3(-6.2, 1.0, 5.75)
+	pond_guard.add_child(pg_bot)
+
+	# Thác nước nhỏ trong mát dịu mắt chảy từ chân bờ đá phía sau cầu xuống hồ
 	var fall_mat := StandardMaterial3D.new()
-	fall_mat.albedo_color = Color(0.76, 0.88, 1.0, 0.85)
+	fall_mat.albedo_color = Color(0.55, 0.80, 0.94, 0.68)
 	fall_mat.emission_enabled = true
-	fall_mat.emission = Color(0.55, 0.75, 0.96)
-	fall_mat.emission_energy_multiplier = 0.85
+	fall_mat.emission = Color(0.36, 0.64, 0.86)
+	fall_mat.emission_energy_multiplier = 0.35
 	fall_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	_add_box_mesh(_hamlet_root, Vector3(2.6, 0.9, 0.25), Vector3(-5.8, 0.45, -2.2), fall_mat)
-	# Khúc gỗ nhỏ bắc mép hồ bên trái phản chiếu ánh đèn vàng
+	_add_box_mesh(_hamlet_root, Vector3(2.2, 0.75, 0.18), Vector3(-6.2, 0.38, -2.35), fall_mat)
+	# Khúc gỗ nhỏ bắc mép hồ bên trái
 	var log_mat := _make_textured_material(Color(0.30, 0.19, 0.12), Color(0.20, 0.12, 0.07), 0.88, "wood")
-	var jetty := _add_box_mesh(_hamlet_root, Vector3(2.2, 0.16, 1.1), Vector3(-11.2, 0.12, 3.2), log_mat)
-	jetty.rotation_degrees.y = -22.0
+	var jetty := _add_box_mesh(_hamlet_root, Vector3(1.8, 0.14, 0.95), Vector3(-9.4, 0.12, 4.4), log_mat)
+	jetty.rotation_degrees.y = -18.0
 
 	# Tường kè đá tầng 2 chạy dài phía sau với mũ đá nhô ra
 	_add_box_mesh(_hamlet_root, Vector3(58.0, 2.7, 1.6), Vector3(0.0, 1.35, -9.2), stone_wall_mat)
@@ -606,7 +671,7 @@ func _build_terrain_and_walls() -> void:
 	# Bậc thang đá cổ + dốc va chạm mượt (ramp collider) đi lên tầng 2 ở bên phải
 	for step_i in range(7):
 		_add_box_mesh(
-			self,
+			_hamlet_root,
 			Vector3(3.8, 0.40, 1.25),
 			Vector3(10.6, 0.20 + float(step_i) * 0.39, -7.2 - float(step_i) * 0.45),
 			stone_cobble_mat
@@ -1003,12 +1068,12 @@ func _build_trees_and_foliage() -> void:
 	for bp in bush_positions:
 		_spawn_foliage_sprite(bush_tex, bp, 0.068, 0.72)
 
-	# Cỏ cao & khóm hoa ven suối và ở tiền cảnh (Foreground) để tạo chiều sâu Tilt-Shift DOF cực đẹp
+	# Cỏ cao & khóm hoa ven 2 bờ suối (không mọc giữa lòng hồ!) và ở tiền cảnh tạo Tilt-Shift DOF
 	var grass_positions: Array[Vector3] = [
-		Vector3(-15.5, 0.0, 6.2), Vector3(-12.2, 0.0, 7.6), Vector3(-8.5, 0.0, 8.3),
-		Vector3(-3.8, 0.0, 7.8), Vector3(0.5, 0.0, 8.2), Vector3(4.5, 0.0, 7.6),
+		Vector3(-15.5, 0.0, 6.2), Vector3(-12.2, 0.0, 7.6), Vector3(-11.2, 0.0, 6.4),
+		Vector3(-1.2, 0.0, 6.8), Vector3(0.5, 0.0, 8.2), Vector3(4.5, 0.0, 7.6),
 		Vector3(9.2, 0.0, 8.0), Vector3(13.8, 0.0, 7.5), Vector3(17.5, 0.0, 6.8),
-		Vector3(-3.2, 0.0, 3.8), Vector3(-1.8, 0.0, 5.2), Vector3(-14.2, 0.0, 4.2),
+		Vector3(-1.3, 0.0, 3.6), Vector3(-1.4, 0.0, 5.2), Vector3(-11.6, 0.0, 4.2),
 		Vector3(-11.5, 0.0, -4.8), Vector3(4.2, 0.0, -5.5), Vector3(13.0, 0.0, -4.6),
 	]
 	for i in range(grass_positions.size()):
