@@ -744,199 +744,409 @@ static func _draw_hero_weapon_pose(img: Image, weapon_type: String, attacking: b
 					_fill_rect(img, 11 + lean, 34 + bob, 2, 4, accent_col)
 
 
-## Quái vật & Boss HD-2D độ phân giải cao có đổ bóng nhiều sắc độ và viền sắc nét
+## 7 LOẠI QUÁI ANIME CHIBI + 5 BOSS HUYỀN THOẠI (chuẩn ảnh mẫu Chronicles of Windferry!)
 static func _make_enemy_frame(archetype: String, step: int, attacking: bool, tint: Color) -> ImageTexture:
-	var is_boss := archetype == "boss"
-	var is_tank := archetype == "tank"
-	var w := 60 if is_boss else (44 if is_tank else 36)
-	var h := 62 if is_boss else (46 if is_tank else 38)
+	# Ánh xạ tương thích cho các archetype cũ nếu còn được gọi
+	var vid: String = archetype
+	match archetype:
+		"melee": vid = "bandit"
+		"ranged": vid = "ghost"
+		"charger": vid = "wolf"
+		"tank": vid = "warrior"
+		"boss": vid = "boss_darklord"
+
+	var is_boss: bool = vid.begins_with("boss_")
+	var is_heavy: bool = (vid == "warrior" or vid == "golem")
+	var w: int = 72 if is_boss else (52 if is_heavy else 44)
+	var h: int = 74 if is_boss else (54 if is_heavy else 46)
 	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
 	img.fill(Color(0, 0, 0, 0))
 
-	var bob := 1 if (step % 2 == 1) else 0
-	var outline := Color(0.09, 0.06, 0.12)
+	var bob: int = 1 if (step % 2 == 1) else 0
+	var wing_dy: int = -3 if (step == 0) else (3 if (step == 2) else 0)
+	var sway: int = -1 if (step == 0) else (1 if (step == 2) else 0)
+	var outline := Color(0.09, 0.06, 0.14)
+	var gold := Color(0.99, 0.82, 0.28)
+	var skin_c := Color(0.99, 0.89, 0.81)
 
-	match archetype:
-		"melee":
-			# Goblin Chiến Binh đội mũ sắt gỉ, khăn đỏ, cầm đoản đao sắc
-			var skin_d := Color(0.22, 0.42, 0.18) * tint
-			var skin_m := Color(0.36, 0.62, 0.28) * tint
-			var skin_h := Color(0.54, 0.78, 0.38) * tint
-			var armor_d := Color(0.30, 0.20, 0.16) * tint
-			var armor_m := Color(0.48, 0.33, 0.24) * tint
-			var steel := Color(0.56, 0.60, 0.68)
-			var eye := Color(1.0, 0.25, 0.18)
-
-			# Tai nhọn dài đặc trưng
-			_fill_rect(img, 5, 11 + bob, 6, 3, skin_m)
-			_fill_rect(img, 25, 11 + bob, 6, 3, skin_d)
-			# Đầu + Mũ sắt chóp nhọn
-			_fill_circle(img, 18, 13 + bob, 6, skin_m)
-			_fill_rect(img, 14, 9 + bob, 6, 3, skin_h)
-			_fill_rect(img, 11, 6 + bob, 14, 5, steel)
-			_fill_rect(img, 15, 3 + bob, 6, 4, steel.darkened(0.2))
-			# Mắt đỏ phát sáng & răng nanh
-			_fill_rect(img, 14, 13 + bob, 2, 2, eye)
-			_fill_rect(img, 20, 13 + bob, 2, 2, eye)
-			img.set_pixel(16, 17 + bob, Color.WHITE)
-			img.set_pixel(19, 17 + bob, Color.WHITE)
-			# Khăn cổ đỏ & Giáp da đinh tán
-			_fill_rect(img, 11, 19 + bob, 14, 3, Color(0.75, 0.18, 0.18))
-			_fill_rect(img, 10, 22 + bob, 16, 9, armor_d)
-			_fill_rect(img, 12, 22 + bob, 12, 7, armor_m)
-			_fill_rect(img, 10, 27 + bob, 16, 2, Color(0.2, 0.12, 0.08))
-			# Chân
-			var l_off := -1 if step == 0 else 0
-			var r_off := -1 if step == 2 else 0
-			_fill_rect(img, 11, 31 + l_off, 5, 5, armor_d)
-			_fill_rect(img, 20, 31 + r_off, 5, 5, armor_d)
-			# Đoản đao răng cưa
+	match vid:
+		# =====================================================================
+		# 7 LOẠI QUÁI ANIME ĐA DẠNG (HÀNG TRÊN ẢNH MẪU)
+		# =====================================================================
+		"slime":
+			# 1. TINH LINH SLIME: Giọt nước lam trong suốt long lanh + 2 slime mini bay 2 bên + nhún đàn hồi!
+			var sq: int = 2 if (step == 1) else (-1 if (step == 2) else 0)
+			var b_d := Color(0.14, 0.42, 0.90) * tint
+			var b_m := Color(0.32, 0.68, 1.0) * tint
+			var b_h := Color(0.72, 0.92, 1.0) * tint
+			# 2 bé slime mini bay nhảy 2 bên
+			_fill_circle(img, 7, 30 - bob, 4, b_m)
+			img.set_pixel(6, 29 - bob, Color.WHITE)
+			_fill_circle(img, 36, 28 + bob, 4, b_m)
+			img.set_pixel(35, 27 + bob, Color.WHITE)
+			# Đỉnh giọt nước uốn cong
+			_fill_rect(img, 20 + sway, 10 + sq, 4, 7, b_m)
+			_fill_rect(img, 22 + sway, 8 + sq, 3, 4, b_h)
+			# Thân slime tròn múp đàn hồi
+			_fill_circle(img, 22, 27 + sq, 12, b_d)
+			_fill_circle(img, 22, 26 + sq, 10, b_m)
+			_fill_rect(img, 14, 20 + sq, 7, 4, b_h)
+			_fill_rect(img, 15, 19 + sq, 3, 2, Color.WHITE)
+			# Mắt anime dễ thương long lanh & nụ cười
+			_fill_rect(img, 16, 25 + sq, 3, 4, Color(0.08, 0.14, 0.34))
+			_fill_rect(img, 25, 25 + sq, 3, 4, Color(0.08, 0.14, 0.34))
+			img.set_pixel(17, 25 + sq, Color.WHITE)
+			img.set_pixel(26, 25 + sq, Color.WHITE)
+			_fill_rect(img, 20, 29 + sq, 4, 2, Color(0.95, 0.56, 0.72))
 			if attacking:
-				_fill_rect(img, 25, 18 + bob, 9, 4, Color(0.88, 0.92, 1.0))
-				_fill_rect(img, 24, 17 + bob, 2, 6, Color(0.85, 0.68, 0.22))
-			else:
-				_fill_rect(img, 26, 20 + bob, 3, 9, steel)
+				_fill_circle(img, 22, 27 + sq, 13, Color(0.55, 0.88, 1.0, 0.35))
 
-		"ranged":
-			# Đại Pháp Sư Hắc Ám: Mũ phù thủy chóp cong, áo choàng tím viền vàng, cầu pha lê lơ lửng
-			var robe_d := Color(0.22, 0.11, 0.38) * tint
-			var robe_m := Color(0.38, 0.20, 0.62) * tint
-			var robe_h := Color(0.56, 0.34, 0.82) * tint
-			var gold := Color(0.95, 0.76, 0.24)
-			var orb_col := Color(0.28, 0.92, 1.0) if not attacking else Color(1.0, 0.35, 0.85)
+		"wolf":
+			# 2. SÓI MA: Bạch lang yêu khí lam rực, mắt xanh phát sáng, đuôi lửa lam vẫy mạnh khi lao húc!
+			var fur_w := Color(0.94, 0.96, 1.0) * tint
+			var fur_s := Color(0.68, 0.78, 0.92) * tint
+			var dark_b := Color(0.16, 0.24, 0.54) * tint
+			var flame_b := Color(0.32, 0.78, 1.0)
+			var stride: int = 2 if (step == 0) else (-2 if (step == 2) else 0)
+			# Đuôi lửa lam bồng bềnh sau lưng
+			_fill_circle(img, 7, 22 + bob + sway, 6, flame_b)
+			_fill_circle(img, 9, 24 + bob + sway, 4, fur_w)
+			# Thân sói thon gọn linh hoạt
+			_fill_rect(img, 10, 21 + bob, 20, 10, fur_w)
+			_fill_rect(img, 10, 21 + bob, 16, 4, dark_b)
+			_fill_rect(img, 12, 28 + bob, 16, 3, fur_s)
+			# Đầu sói & bờm trắng + đôi tai dựng nhọn
+			_fill_circle(img, 28, 18 + bob, 7, fur_w)
+			_fill_rect(img, 22, 9 + bob, 4, 6, dark_b)
+			_fill_rect(img, 23, 10 + bob, 2, 4, fur_w)
+			_fill_rect(img, 28, 9 + bob, 4, 6, dark_b)
+			_fill_rect(img, 29, 10 + bob, 2, 4, fur_w)
+			_fill_rect(img, 32, 18 + bob, 6, 4, fur_w) # Mõm sói
+			_fill_rect(img, 29, 16 + bob, 3, 2, flame_b if not attacking else Color(1.0, 0.35, 0.25))
+			# 4 chân sói phi nhanh
+			_fill_rect(img, 11 + stride, 30, 4, 10, fur_s)
+			_fill_rect(img, 17 - stride, 31, 4, 9, dark_b)
+			_fill_rect(img, 25 - stride, 30, 4, 10, fur_w)
+			_fill_rect(img, 30 + stride, 31, 4, 9, dark_b)
 
-			# Mũ phù thủy cong mềm
-			_fill_rect(img, 14, 2 + bob, 7, 3, robe_h)
-			_fill_rect(img, 12, 5 + bob, 10, 4, robe_m)
-			_fill_rect(img, 10, 9 + bob, 15, 3, robe_d)
-			_fill_rect(img, 7, 11 + bob, 21, 3, robe_m)
-			_fill_rect(img, 10, 10 + bob, 15, 2, gold)
-			# Mặt tối bí ẩn + cặp mắt phép sáng rực
-			_fill_rect(img, 12, 14 + bob, 11, 6, Color(0.06, 0.04, 0.10))
-			_fill_rect(img, 14, 16 + bob, 2, 2, orb_col)
-			_fill_rect(img, 19, 16 + bob, 2, 2, orb_col)
-			# Áo choàng lơ lửng có hoa văn vàng
-			_fill_rect(img, 10, 20 + bob, 15, 14, robe_d)
-			_fill_rect(img, 11, 20 + bob, 12, 12, robe_m)
-			_fill_rect(img, 12, 20 + bob, 4, 10, robe_h)
-			_fill_rect(img, 16, 20 + bob, 3, 14, gold)
-			# Trượng gỗ cổ & quả cầu phép tỏa sáng
-			_fill_rect(img, 27, 10 + bob, 3, 24, Color(0.42, 0.26, 0.14))
-			_fill_circle(img, 28, 8 + bob, 4, orb_col)
-			_fill_circle(img, 27, 7 + bob, 2, Color.WHITE)
+		"bandit":
+			# 3. ĐẠO TẶC: Nón lá tre rộng vành, khăn đỏ, áo xanh lam & SONG KIẾM sắc bén!
+			var hat_d := Color(0.62, 0.42, 0.16) * tint
+			var hat_m := Color(0.86, 0.64, 0.28) * tint
+			var hat_h := Color(0.98, 0.84, 0.48) * tint
+			var tunic := Color(0.16, 0.22, 0.44) * tint
+			var scarf := Color(0.84, 0.16, 0.20)
+			# Nón lá tre chóp nhọn rộng vành đặc trưng
+			_fill_rect(img, 17, 6 + bob, 10, 3, hat_h)
+			_fill_rect(img, 12, 9 + bob, 20, 3, hat_m)
+			_fill_rect(img, 7, 12 + bob, 30, 4, hat_d)
+			_fill_rect(img, 9, 12 + bob, 26, 2, hat_m)
+			# Mặt chibi & khăn cổ đỏ
+			_fill_rect(img, 16, 16 + bob, 12, 7, skin_c)
+			_fill_rect(img, 18, 18 + bob, 2, 2, outline)
+			_fill_rect(img, 24, 18 + bob, 2, 2, outline)
+			_fill_rect(img, 15, 22 + bob, 14, 3, scarf)
+			# Áo võ phục xanh lam + đai vàng
+			_fill_rect(img, 14, 25 + bob, 16, 11, tunic)
+			_fill_rect(img, 14, 31 + bob, 16, 2, gold)
+			# Chân
+			var l_dy: int = -2 if (step == 0) else 0
+			var r_dy: int = -2 if (step == 2) else 0
+			_fill_rect(img, 15, 36 + l_dy, 5, 7, Color(0.14, 0.12, 0.20))
+			_fill_rect(img, 24, 36 + r_dy, 5, 7, Color(0.14, 0.12, 0.20))
+			# Song kiếm vung hai bên!
+			var sw_col := Color(0.86, 0.94, 1.0) if not attacking else Color(1.0, 0.84, 0.35)
+			_fill_rect(img, 3, 25 + bob - (4 if attacking else 0), 11, 3, sw_col)
+			_fill_rect(img, 30, 25 + bob - (4 if attacking else 0), 11, 3, sw_col)
+			_fill_rect(img, 12, 24 + bob, 2, 5, gold)
+			_fill_rect(img, 30, 24 + bob, 2, 5, gold)
 
-		"charger":
-			# Chiến Thú Bờm Lửa (Bò mộng bóng tối sừng ngà, bờm lửa cam, mắt rực)
-			var fur_d := Color(0.48, 0.14, 0.12) * tint
-			var fur_m := Color(0.76, 0.26, 0.16) * tint
-			var fur_h := Color(0.95, 0.46, 0.22) * tint
-			var mane := Color(1.0, 0.72, 0.20)
-			var horn := Color(0.96, 0.92, 0.80)
+		"ghost":
+			# 4. BÓNG MA: Thiếu nữ ma mị tóc tím dài lơ lửng + lửa ma tím & bùa chú bay quanh!
+			var fl: int = -2 if (step == 1) else (-1 if (step == 2) else 0)
+			var hair_p := Color(0.20, 0.08, 0.36) * tint
+			var robe_l := Color(0.84, 0.72, 0.98) * tint
+			var robe_p := Color(0.52, 0.22, 0.82) * tint
+			var fire_p := Color(0.82, 0.34, 1.0) if not attacking else Color(1.0, 0.42, 0.85)
+			# 3 Ngọn lửa ma tím & lá bùa bay quanh
+			_fill_circle(img, 7, 17 + fl + sway, 4, fire_p)
+			_fill_circle(img, 37, 20 + fl - sway, 4, fire_p)
+			_fill_rect(img, 34, 30 + fl, 4, 6, Color(0.98, 0.92, 0.74))
+			img.set_pixel(35, 32 + fl, Color(0.88, 0.18, 0.22))
+			# Tóc tím dài buông xõa
+			_fill_rect(img, 12, 13 + fl, 20, 22, hair_p)
+			_fill_circle(img, 22, 14 + fl, 8, hair_p)
+			# Mặt anime bí ẩn mắt tím phát sáng
+			_fill_rect(img, 17, 13 + fl, 10, 7, Color(0.96, 0.92, 0.98))
+			_fill_rect(img, 18, 16 + fl, 2, 2, fire_p)
+			_fill_rect(img, 24, 16 + fl, 2, 2, fire_p)
+			# Kimono ma mị lơ lửng
+			_fill_rect(img, 14, 21 + fl, 16, 15, robe_l)
+			_fill_rect(img, 11, 22 + fl, 5, 9, robe_p)
+			_fill_rect(img, 28, 22 + fl, 5, 9, robe_p)
+			_fill_rect(img, 15, 28 + fl, 14, 3, robe_p)
+			_fill_rect(img, 16, 36 + fl, 12, 4, Color(0.68, 0.36, 0.96, 0.65))
 
-			# Bờm lửa sau lưng
-			_fill_circle(img, 14, 14 + bob, 7, mane)
-			# Thân cơ bắp lực lưỡng
-			_fill_rect(img, 7, 13 + bob, 21, 14, fur_d)
-			_fill_rect(img, 8, 12 + bob, 19, 12, fur_m)
-			_fill_rect(img, 10, 12 + bob, 13, 4, fur_h)
-			# Cặp sừng nhọn húc về trước
-			_fill_rect(img, 25, 9 + bob, 7, 3, horn)
-			_fill_rect(img, 28, 7 + bob, 5, 3, Color.WHITE)
-			_fill_rect(img, 5, 10 + bob, 5, 3, horn.darkened(0.15))
-			# Mắt giận dữ
-			_fill_rect(img, 22, 16 + bob, 3, 2, Color(1.0, 0.95, 0.2))
-			# 4 chân móng guốc mạnh mẽ
-			var stride := 2 if (step == 0) else (-2 if step == 2 else 0)
-			_fill_rect(img, 8 + stride, 27, 5, 8, fur_d)
-			_fill_rect(img, 21 - stride, 27, 5, 8, fur_d)
-			_fill_rect(img, 8 + stride, 33, 5, 3, Color(0.18, 0.14, 0.16))
-			_fill_rect(img, 21 - stride, 33, 5, 3, Color(0.18, 0.14, 0.16))
+		"kitsune":
+			# 5. HỒ LY: Bạch hồ yêu có tai cáo đỏ trắng, vòng hào quang vàng & 3 đuôi bông vẫy!
+			var fur_w := Color(0.98, 0.96, 0.98) * tint
+			var fur_s := Color(0.84, 0.78, 0.86) * tint
+			var red_m := Color(0.90, 0.18, 0.22)
+			var wag: int = -2 if (step == 0) else (2 if (step == 2) else 0)
+			# 3 đuôi hồ ly khổng lồ chóp đỏ vẫy phía sau
+			_fill_circle(img, 9, 17 + bob + wag, 6, fur_w)
+			_fill_circle(img, 6, 14 + bob + wag, 3, red_m)
+			_fill_circle(img, 8, 26 + bob - wag, 6, fur_w)
+			_fill_circle(img, 6, 28 + bob - wag, 3, fur_s)
+			_fill_circle(img, 14, 22 + bob + wag, 5, fur_w)
+			# Vòng hào quang vàng nhỏ sau đầu
+			_fill_rect(img, 21, 5 + bob, 12, 2, gold)
+			# Đầu cáo trắng + tai lớn viền đỏ
+			_fill_circle(img, 27, 16 + bob, 7, fur_w)
+			_fill_rect(img, 21, 6 + bob, 4, 7, fur_w)
+			_fill_rect(img, 22, 7 + bob, 2, 5, red_m)
+			_fill_rect(img, 29, 6 + bob, 4, 7, fur_w)
+			_fill_rect(img, 30, 7 + bob, 2, 5, red_m)
+			_fill_rect(img, 26, 15 + bob, 2, 2, Color(1.0, 0.62, 0.16))
+			_fill_rect(img, 31, 15 + bob, 2, 2, Color(1.0, 0.62, 0.16))
+			# Thân yêu hồ + khăn đỏ chuông vàng + 4 chân mảnh
+			_fill_rect(img, 18, 22 + bob, 14, 9, fur_w)
+			_fill_rect(img, 22, 22 + bob, 10, 3, red_m)
+			_fill_rect(img, 28, 24 + bob, 3, 3, gold)
+			_fill_rect(img, 19, 31, 3, 10, fur_s)
+			_fill_rect(img, 28, 31, 3, 10, fur_w)
+			_fill_rect(img, 19, 39, 3, 2, red_m)
+			_fill_rect(img, 28, 39, 3, 2, red_m)
 
-		"tank":
-			# Hộ Vệ Giáp Sắt Khổng Lồ (Mũ trụ có khe lửa, giáp vai gai, đại khiên thập tự vàng)
-			var steel_d := Color(0.20, 0.24, 0.30) * tint
-			var steel_m := Color(0.42, 0.48, 0.58) * tint
-			var steel_h := Color(0.68, 0.75, 0.84) * tint
-			var gold := Color(0.92, 0.72, 0.22)
-			var visor := Color(1.0, 0.48, 0.12)
+		"warrior":
+			# 6. CHIẾN BINH (52x54 — Tank có 3 Khiên): Giáp Samurai đen-đỏ-vàng, mũ sừng, thương dài & Đại Khiên Đỏ!
+			var arm_d := Color(0.14, 0.11, 0.18) * tint
+			var arm_r := Color(0.76, 0.14, 0.18) * tint
+			var flame := Color(1.0, 0.36, 0.22)
+			# Mũ chiến binh có sừng vàng
+			_fill_rect(img, 15, 4 + bob, 3, 7, gold)
+			_fill_rect(img, 32, 4 + bob, 3, 7, gold)
+			_fill_rect(img, 16, 9 + bob, 18, 9, arm_d)
+			_fill_rect(img, 17, 10 + bob, 16, 3, arm_r)
+			_fill_rect(img, 19, 14 + bob, 12, 6, skin_c)
+			_fill_rect(img, 21, 16 + bob, 2, 2, Color(0.95, 0.18, 0.22))
+			_fill_rect(img, 27, 16 + bob, 2, 2, Color(0.95, 0.18, 0.22))
+			# Thân chiến giáp đen đỏ viền vàng rực
+			_fill_rect(img, 12, 20 + bob, 26, 20, arm_d)
+			_fill_rect(img, 14, 21 + bob, 22, 16, arm_r)
+			_fill_rect(img, 12, 20 + bob, 26, 3, gold)
+			_fill_rect(img, 14, 31 + bob, 22, 3, gold)
+			# Ngọn thương rực sáng bên trái
+			_fill_rect(img, 6, 8 + bob - (4 if attacking else 0), 3, 36, Color(0.42, 0.24, 0.14))
+			_fill_rect(img, 5, 3 + bob - (4 if attacking else 0), 5, 8, flame)
+			# ĐẠI KHIÊN THẬP TỰ ĐỎ VÀNG khổng lồ bên phải
+			_fill_rect(img, 34, 18 + bob, 13, 24, arm_d)
+			_fill_rect(img, 35, 19 + bob, 11, 22, arm_r)
+			_fill_rect(img, 39, 20 + bob, 3, 20, gold)
+			_fill_rect(img, 35, 28 + bob, 11, 3, gold)
+			# Đôi chân bọc giáp
+			_fill_rect(img, 15, 40, 8, 10, arm_d)
+			_fill_rect(img, 27, 40, 8, 10, arm_d)
+			_fill_rect(img, 16, 46, 7, 3, arm_r)
+			_fill_rect(img, 28, 46, 7, 3, arm_r)
 
-			# Lông mũ trụ đỏ
-			_fill_rect(img, 18, 2 + bob, 8, 5, Color(0.82, 0.16, 0.20))
-			# Mũ trụ thép
-			_fill_rect(img, 13, 6 + bob, 18, 10, steel_d)
-			_fill_rect(img, 15, 7 + bob, 14, 8, steel_m)
-			_fill_rect(img, 16, 7 + bob, 6, 3, steel_h)
-			_fill_rect(img, 16, 11 + bob, 12, 2, visor)
-			# Cầu vai khổng lồ & Thân giáp tấm
-			_fill_rect(img, 6, 15 + bob, 31, 10, steel_d)
-			_fill_rect(img, 7, 16 + bob, 10, 8, steel_m)
-			_fill_rect(img, 26, 16 + bob, 10, 8, steel_m)
-			_fill_rect(img, 8, 16 + bob, 5, 3, steel_h)
-			_fill_rect(img, 11, 18 + bob, 22, 16, steel_d)
-			_fill_rect(img, 13, 19 + bob, 18, 13, steel_m)
-			_fill_rect(img, 19, 19 + bob, 6, 13, gold)
-			# Đại khiên bảo vệ bên hông
-			_fill_rect(img, 31, 14 + bob, 10, 21, steel_d)
-			_fill_rect(img, 32, 15 + bob, 8, 19, Color(0.28, 0.34, 0.44))
-			_fill_rect(img, 35, 16 + bob, 2, 17, gold)
-			_fill_rect(img, 32, 23 + bob, 8, 2, gold)
-			# Chân trụ bọc thép
-			_fill_rect(img, 12, 34, 8, 9, steel_d)
-			_fill_rect(img, 24, 34, 8, 9, steel_d)
-			_fill_rect(img, 13, 35, 5, 4, steel_h)
+		"golem":
+			# 7. THỦ VỆ ĐÁ (52x54 — Tank 4 Khiên): Golem đá cổ đại phủ rêu xanh & Lõi Cổ Ngữ Ngọc Lam phát sáng!
+			var st_d := Color(0.42, 0.44, 0.46) * tint
+			var st_m := Color(0.66, 0.68, 0.68) * tint
+			var st_h := Color(0.84, 0.86, 0.84) * tint
+			var moss := Color(0.28, 0.56, 0.26)
+			var rune := Color(0.28, 0.95, 0.96) if not attacking else Color(1.0, 0.84, 0.28)
+			# Đầu khối đá + mắt cổ ngữ xanh ngọc
+			_fill_rect(img, 19, 6 + bob, 14, 10, st_m)
+			_fill_rect(img, 20, 6 + bob, 12, 3, moss)
+			_fill_rect(img, 22, 11 + bob, 3, 2, rune)
+			_fill_rect(img, 27, 11 + bob, 3, 2, rune)
+			# Vai đá khổng lồ & thân cổ thạch có Lõi Rune Ngọc Lam ở ngực
+			_fill_rect(img, 5, 15 + bob, 13, 18, st_d)
+			_fill_rect(img, 6, 16 + bob, 11, 15, st_m)
+			_fill_rect(img, 7, 15 + bob, 8, 3, moss)
+			_fill_circle(img, 11, 24 + bob, 3, rune)
+			_fill_rect(img, 34, 15 + bob, 13, 18, st_d)
+			_fill_rect(img, 35, 16 + bob, 11, 15, st_m)
+			_fill_rect(img, 36, 15 + bob, 8, 3, moss)
+			_fill_circle(img, 40, 24 + bob, 3, rune)
+			_fill_rect(img, 16, 16 + bob, 20, 22, st_d)
+			_fill_rect(img, 18, 17 + bob, 16, 19, st_m)
+			_fill_rect(img, 19, 17 + bob, 10, 4, st_h)
+			_fill_circle(img, 26, 25 + bob, 4, rune)
+			_fill_circle(img, 26, 25 + bob, 2, Color.WHITE)
+			# Đôi chân đá nặng nề
+			_fill_rect(img, 13, 38, 11, 12, st_d)
+			_fill_rect(img, 28, 38, 11, 12, st_d)
+			_fill_rect(img, 15, 39, 7, 5, st_m)
+			_fill_rect(img, 30, 39, 7, 5, st_m)
 
-		"boss":
-			# BOSS CHÚA TỂ HẮC ÁM MALAKOR (60x62): Vương miện sừng vàng, áo choàng đỏ rách,
-			# giáp hắc thạch phát sáng lõi tim đỏ rực, và thanh Ma Kiếm Khổng Lồ rực lửa.
-			var armor_d := Color(0.14, 0.10, 0.22) * tint
-			var armor_m := Color(0.28, 0.20, 0.40) * tint
-			var armor_h := Color(0.46, 0.36, 0.62) * tint
-			var cape_d := Color(0.42, 0.06, 0.12) * tint
-			var cape_m := Color(0.74, 0.12, 0.20) * tint
-			var gold := Color(0.98, 0.80, 0.26)
-			var core := Color(1.0, 0.24, 0.38) if not attacking else Color(1.0, 0.90, 0.28)
+		# =====================================================================
+		# 5 BOSS HUYỀN THOẠI (MỖI MÀN 1 CON BOSS ĐẶC TRƯNG — 72x74 PIXEL!)
+		# =====================================================================
+		"boss_kitsune":
+			# BOSS MÀN 1: HỒ LY YÊU VƯƠNG (Cửu Vĩ Hồ Hoàng Kim — 5 đuôi lớn xòe quạt + Vòng mặt trời!)
+			var fur_w := Color(0.99, 0.97, 0.98) * tint
+			var red_c := Color(0.92, 0.16, 0.22)
+			var aura_g := Color(1.0, 0.82, 0.28)
+			# 5 chiếc đuôi khổng lồ xòe quạt đằng sau!
+			for ti in range(5):
+				var tx: int = 12 + ti * 12
+				var ty: int = 24 + absi(ti - 2) * 5 + wing_dy
+				_fill_circle(img, tx, ty, 9, fur_w)
+				_fill_circle(img, tx, ty - 5, 5, red_c)
+			# Vòng mặt trời hoàng kim sau lưng
+			_fill_circle(img, 36, 22 + bob, 14, Color(1.0, 0.84, 0.28, 0.45))
+			_fill_rect(img, 24, 7 + bob, 24, 3, aura_g)
+			# Đầu yêu hồ vương & đôi tai lớn uy nghi
+			_fill_circle(img, 36, 23 + bob, 10, fur_w)
+			_fill_rect(img, 26, 10 + bob, 6, 10, fur_w)
+			_fill_rect(img, 28, 12 + bob, 3, 7, red_c)
+			_fill_rect(img, 40, 10 + bob, 6, 10, fur_w)
+			_fill_rect(img, 41, 12 + bob, 3, 7, red_c)
+			_fill_rect(img, 31, 22 + bob, 4, 3, Color(1.0, 0.25, 0.20))
+			_fill_rect(img, 38, 22 + bob, 4, 3, Color(1.0, 0.25, 0.20))
+			# Chiến bào đỏ trắng hoàng kim
+			_fill_rect(img, 22, 33 + bob, 28, 28, fur_w)
+			_fill_rect(img, 20, 34 + bob, 10, 22, red_c)
+			_fill_rect(img, 42, 34 + bob, 10, 22, red_c)
+			_fill_rect(img, 24, 43 + bob, 24, 4, aura_g)
+			_fill_rect(img, 25, 60, 8, 10, red_c)
+			_fill_rect(img, 39, 60, 8, 10, red_c)
 
-			# Áo choàng đế vương rộng tung bay phía sau
-			_fill_rect(img, 7, 15 + bob, 42, 36, cape_d)
-			_fill_rect(img, 9, 17 + bob, 38, 32, cape_m)
-			_fill_rect(img, 11, 19 + bob, 6, 26, Color(0.90, 0.22, 0.28))
+		"boss_dragon":
+			# BOSS MÀN 2: LONG VƯƠNG THẦN (Bạch Long Thần Thủy uốn lượn trong sóng biển xanh biếc — Ảnh mẫu #2!)
+			var dr_w := Color(0.95, 0.98, 1.0) * tint
+			var dr_b := Color(0.24, 0.62, 0.98) * tint
+			var dr_d := Color(0.10, 0.30, 0.68) * tint
+			var wave := Color(0.45, 0.88, 1.0)
+			# Vòng sóng nước biển xanh lam xoáy tròn quanh thân rồng!
+			_fill_circle(img, 18, 52 + bob, 13, dr_b)
+			_fill_circle(img, 54, 52 - bob, 13, dr_b)
+			_fill_circle(img, 36, 58 + bob, 16, wave)
+			_fill_circle(img, 36, 61 + bob, 12, dr_d)
+			# Thân Bạch Long uốn lượn hình chữ S hùng vĩ!
+			_fill_circle(img, 17, 36 + wing_dy, 10, dr_w)
+			_fill_circle(img, 17, 36 + wing_dy, 6, dr_b)
+			_fill_circle(img, 26, 46 + bob, 10, dr_w)
+			_fill_circle(img, 44, 44 - bob, 10, dr_w)
+			_fill_circle(img, 52, 30 - wing_dy, 9, dr_w)
+			_fill_circle(img, 42, 20 + bob, 10, dr_w)
+			# Bờm rồng xanh trắng tung bay + Sừng rồng hoàng kim!
+			_fill_rect(img, 28, 5 + bob, 4, 12, gold)
+			_fill_rect(img, 42, 5 + bob, 4, 12, gold)
+			_fill_rect(img, 24, 8 + bob, 5, 4, gold)
+			_fill_rect(img, 45, 8 + bob, 5, 4, gold)
+			_fill_circle(img, 36, 20 + bob, 11, dr_w)
+			_fill_rect(img, 22, 16 + bob, 10, 8, dr_b) # Bờm trái
+			_fill_rect(img, 44, 16 + bob, 10, 8, dr_b) # Bờm phải
+			# Mõm rồng & đôi mắt Thiên Long rực sáng + râu rồng!
+			_fill_rect(img, 28, 22 + bob, 16, 8, dr_w)
+			_fill_rect(img, 30, 19 + bob, 4, 3, Color(0.28, 0.96, 1.0) if not attacking else Color(1.0, 0.95, 0.35))
+			_fill_rect(img, 39, 19 + bob, 4, 3, Color(0.28, 0.96, 1.0) if not attacking else Color(1.0, 0.95, 0.35))
+			_fill_rect(img, 18, 27 + bob + sway, 10, 2, wave)
+			_fill_rect(img, 44, 27 + bob - sway, 10, 2, wave)
 
-			# Vương miện sừng ác quỷ bằng vàng
-			_fill_rect(img, 17, 4 + bob, 4, 10, gold)
-			_fill_rect(img, 35, 4 + bob, 4, 10, gold)
-			_fill_rect(img, 25, 2 + bob, 6, 8, gold)
-			_fill_rect(img, 20, 8 + bob, 16, 6, gold.darkened(0.15))
+		"boss_darklord":
+			# BOSS MÀN 3: MA VƯƠNG HẮC ÁM (Tóc bạc dài, đôi cánh dơi hắc ám tím đen khổng lồ, lửa tím — Ảnh mẫu #1!)
+			var arm_d := Color(0.11, 0.08, 0.18) * tint
+			var arm_p := Color(0.32, 0.14, 0.48) * tint
+			var flame_p := Color(0.76, 0.28, 1.0) if not attacking else Color(1.0, 0.42, 0.92)
+			var hair_w := Color(0.92, 0.90, 0.98)
+			# Đôi cánh dơi hắc ám khổng lồ vỗ mạnh (wing_dy)!
+			_fill_rect(img, 2, 16 + wing_dy, 24, 7, arm_d)
+			_fill_rect(img, 4, 22 + wing_dy, 22, 18, arm_p)
+			_fill_rect(img, 2, 20 + wing_dy, 5, 22, arm_d)
+			_fill_rect(img, 46, 16 + wing_dy, 24, 7, arm_d)
+			_fill_rect(img, 46, 22 + wing_dy, 22, 18, arm_p)
+			_fill_rect(img, 65, 20 + wing_dy, 5, 22, arm_d)
+			# Ngọn lửa tím hắc ám cuộn dưới chân
+			_fill_circle(img, 16, 56 + bob, 7, flame_p)
+			_fill_circle(img, 56, 56 - bob, 7, flame_p)
+			# Sừng ác ma + Tóc bạc dài + Mặt lạnh lùng mắt tím đỏ
+			_fill_rect(img, 27, 5 + bob, 4, 9, arm_d)
+			_fill_rect(img, 41, 5 + bob, 4, 9, arm_d)
+			_fill_circle(img, 36, 19 + bob, 10, hair_w)
+			_fill_rect(img, 30, 17 + bob, 12, 9, skin_c)
+			_fill_rect(img, 32, 20 + bob, 3, 2, flame_p)
+			_fill_rect(img, 38, 20 + bob, 3, 2, flame_p)
+			# Chiến giáp hắc ám viền vàng đỏ + Lưỡi hái xích hắc viêm!
+			_fill_rect(img, 23, 27 + bob, 26, 28, arm_d)
+			_fill_rect(img, 26, 28 + bob, 20, 22, arm_p)
+			_fill_rect(img, 22, 27 + bob, 28, 4, gold)
+			_fill_circle(img, 36, 36 + bob, 4, flame_p)
+			_fill_rect(img, 25, 55, 9, 14, arm_d)
+			_fill_rect(img, 38, 55, 9, 14, arm_d)
+			# Lưỡi hái / Ma kiếm tím rực bên tay phải
+			_fill_rect(img, 54, 14 + bob + (6 if attacking else 0), 6, 42, flame_p)
+			_fill_rect(img, 56, 16 + bob + (6 if attacking else 0), 2, 38, Color.WHITE)
 
-			# Đầu giáp hắc ám + cặp mắt rực sáng
-			_fill_rect(img, 19, 12 + bob, 18, 12, armor_d)
-			_fill_rect(img, 21, 13 + bob, 14, 9, armor_m)
-			_fill_rect(img, 22, 16 + bob, 4, 3, core)
-			_fill_rect(img, 30, 16 + bob, 4, 3, core)
+		"boss_archmage":
+			# BOSS MÀN 4: PHÁP SƯ VĨNH HẰNG (Áo trắng hoàng kim, Vòng Thánh Cổ Ngữ khổng lồ & 4 Thần Kiếm bay — Ảnh mẫu #3!)
+			var robe_w := Color(0.99, 0.98, 0.96) * tint
+			var gold_hi := Color(1.0, 0.92, 0.44)
+			var fl: int = -2 if (step == 1) else (-1 if (step == 2) else 0)
+			# VÒNG PHÁP TRẬN HOÀNG KIM KHỔNG LỒ ĐẰNG SAU LƯNG!
+			_fill_circle(img, 36, 30 + fl, 24, Color(1.0, 0.84, 0.26, 0.25))
+			_fill_rect(img, 14, 29 + fl, 44, 2, gold)
+			_fill_rect(img, 35, 8 + fl, 2, 44, gold)
+			# 4 Quả cầu tinh tú & 4 Thần Kiếm Hoàng Kim lơ lửng 2 bên!
+			_fill_circle(img, 12, 18 + fl + sway, 4, gold_hi)
+			_fill_circle(img, 60, 18 + fl - sway, 4, gold_hi)
+			_fill_rect(img, 9, 30 + fl + sway, 4, 24, gold_hi if attacking else gold)
+			_fill_rect(img, 7, 36 + fl + sway, 8, 2, Color.WHITE)
+			_fill_rect(img, 59, 30 + fl - sway, 4, 24, gold_hi if attacking else gold)
+			_fill_rect(img, 57, 36 + fl - sway, 8, 2, Color.WHITE)
+			# Tóc trắng dài + Vương miện vàng + Mặt thánh nữ
+			_fill_rect(img, 24, 18 + fl, 24, 34, Color(0.90, 0.92, 0.98))
+			_fill_circle(img, 36, 21 + fl, 10, Color(0.96, 0.97, 1.0))
+			_fill_rect(img, 29, 9 + fl, 14, 4, gold)
+			_fill_rect(img, 34, 6 + fl, 4, 5, gold_hi)
+			_fill_rect(img, 30, 19 + fl, 12, 9, skin_c)
+			_fill_rect(img, 32, 22 + fl, 3, 2, Color(0.32, 0.78, 1.0))
+			_fill_rect(img, 38, 22 + fl, 3, 2, Color(0.32, 0.78, 1.0))
+			# Pháp bào trắng-vàng thánh khiết lơ lửng
+			_fill_rect(img, 24, 29 + fl, 24, 30, robe_w)
+			_fill_rect(img, 26, 30 + fl, 20, 4, gold)
+			_fill_rect(img, 33, 30 + fl, 6, 28, gold_hi)
+			_fill_rect(img, 22, 54 + fl, 28, 5, gold)
 
-			# Cầu vai gai lớn + Giáp ngực có Lõi năng lượng Ma Thạch
-			_fill_rect(img, 10, 21 + bob, 36, 11, armor_d)
-			_fill_rect(img, 11, 22 + bob, 12, 9, armor_m)
-			_fill_rect(img, 33, 22 + bob, 12, 9, armor_m)
-			_fill_rect(img, 12, 22 + bob, 7, 3, armor_h)
-			_fill_rect(img, 15, 24 + bob, 26, 22, armor_d)
-			_fill_rect(img, 17, 25 + bob, 22, 19, armor_m)
-			# Lõi năng lượng ngực phát sáng rực
-			_fill_circle(img, 28, 33 + bob, 5, core)
-			_fill_circle(img, 28, 33 + bob, 2, Color.WHITE)
-			# Đai lưng hoàng kim
-			_fill_rect(img, 16, 41 + bob, 24, 3, gold)
-
-			# Thanh Đại Ma Kiếm khổng lồ bên tay phải
-			var sword_y := 6 + bob if not attacking else 14 + bob
-			_fill_rect(img, 46, sword_y, 8, 36, core if attacking else Color(0.45, 0.52, 0.68))
-			_fill_rect(img, 48, sword_y + 2, 4, 32, Color(1.0, 0.94, 0.85) if attacking else Color(0.84, 0.90, 1.0))
-			_fill_rect(img, 43, sword_y + 34, 14, 4, gold)
-
-			# Chân chiến giáp
-			_fill_rect(img, 17, 46, 9, 12, armor_d)
-			_fill_rect(img, 30, 46, 9, 12, armor_d)
-			_fill_rect(img, 18, 47, 5, 5, armor_h)
-			_fill_rect(img, 31, 47, 5, 5, armor_h)
+		_: # "boss_emperor" — BOSS MÀN 5: THIÊN MA CUỒNG ĐẾ (Cánh rồng lửa đỏ khổng lồ, tóc trắng, Đại Ma Kiếm Lửa — Ảnh mẫu #4!)
+			var arm_d := Color(0.12, 0.06, 0.09) * tint
+			var crim_d := Color(0.56, 0.06, 0.12) * tint
+			var crim_m := Color(0.96, 0.18, 0.22)
+			var fire_h := Color(1.0, 0.78, 0.26)
+			var hair_w := Color(0.95, 0.94, 0.98)
+			# ĐÔI CÁNH THIÊN MA ĐỎ RỰC KHỔNG LỒ VỖ MẠNH!
+			_fill_rect(img, 1, 13 + wing_dy, 26, 7, arm_d)
+			_fill_rect(img, 3, 20 + wing_dy, 24, 20, crim_d)
+			_fill_rect(img, 6, 24 + wing_dy, 16, 12, crim_m)
+			_fill_rect(img, 45, 13 + wing_dy, 26, 7, arm_d)
+			_fill_rect(img, 45, 20 + wing_dy, 24, 20, crim_d)
+			_fill_rect(img, 50, 24 + wing_dy, 16, 12, crim_m)
+			# Vương miện hỏa ma + Tóc bạc tung bay + Mắt đỏ huyết nguyệt
+			_fill_rect(img, 27, 4 + bob, 4, 10, crim_m)
+			_fill_rect(img, 41, 4 + bob, 4, 10, crim_m)
+			_fill_rect(img, 33, 2 + bob, 6, 9, fire_h)
+			_fill_circle(img, 36, 18 + bob, 10, hair_w)
+			_fill_rect(img, 30, 16 + bob, 12, 9, skin_c)
+			_fill_rect(img, 32, 19 + bob, 3, 2, crim_m)
+			_fill_rect(img, 38, 19 + bob, 3, 2, crim_m)
+			# Hoàng giáp Ma Đế đen-đỏ-vàng + lõi hỏa ngục
+			_fill_rect(img, 21, 26 + bob, 30, 30, arm_d)
+			_fill_rect(img, 24, 28 + bob, 24, 24, crim_d)
+			_fill_rect(img, 20, 26 + bob, 32, 4, gold)
+			_fill_circle(img, 36, 36 + bob, 5, crim_m)
+			_fill_circle(img, 36, 36 + bob, 2, fire_h)
+			_fill_rect(img, 24, 55, 9, 14, arm_d)
+			_fill_rect(img, 39, 55, 9, 14, arm_d)
+			# ĐẠI MA KIẾM HỎA NGỤC KHỔNG LỒ CHÁY RỰC LỬA ĐỎ!
+			var sy: int = 8 + bob + (8 if attacking else 0)
+			_fill_rect(img, 53, sy, 10, 44, crim_m)
+			_fill_rect(img, 55, sy + 2, 6, 40, fire_h)
+			_fill_rect(img, 57, sy + 4, 2, 34, Color.WHITE)
+			_fill_rect(img, 50, sy + 42, 16, 4, gold)
 
 	_apply_clean_outline(img, outline)
 	return ImageTexture.create_from_image(img)

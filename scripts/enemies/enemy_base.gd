@@ -39,8 +39,10 @@ func _ready() -> void:
 		stats = EnemyStats.new()
 	max_hp = stats.max_hp
 	current_hp = max_hp
-	# Gán Khiên Giáp (Shield) cho Quái Tank (3 Khiên) & Boss Malakor (5 Khiên)
-	if stats.archetype == "tank":
+	# Gán Khiên Giáp (Shield) theo chỉ số từng quái Tank (3-4 Khiên) & từng Boss Màn 1-5 (3-6 Khiên)
+	if stats.shield_points > 0:
+		max_shield = stats.shield_points
+	elif stats.archetype == "tank":
 		max_shield = 3
 	elif stats.archetype == "boss":
 		max_shield = 5
@@ -69,28 +71,49 @@ func _build_visuals() -> void:
 		anim_sprite.name = "AnimatedSprite3D"
 		add_child(anim_sprite)
 
-	var y_offset := 1.42 if stats.archetype == "boss" else (1.05 if stats.archetype == "tank" else 0.84)
+	var sprite_key: String = stats.visual_id if stats.visual_id != "" else stats.archetype
+	var y_offset: float = 1.44 if stats.archetype == "boss" else (1.08 if stats.archetype == "tank" else 0.90)
+	var px_sz: float = (0.039 if stats.archetype == "boss" else 0.041) * stats.sprite_scale
 	anim_sprite.position = Vector3(0.0, y_offset * stats.sprite_scale, 0.0)
-	anim_sprite.pixel_size = 0.045 * stats.sprite_scale
+	anim_sprite.pixel_size = px_sz
 	anim_sprite.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
 	anim_sprite.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 	anim_sprite.shaded = true
 	anim_sprite.alpha_cut = SpriteBase3D.ALPHA_CUT_DISCARD
 	anim_sprite.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_DOUBLE_SIDED
-	anim_sprite.sprite_frames = stats.custom_sprite_frames if stats.custom_sprite_frames else PixelArtGenerator.get_enemy_sprite_frames(stats.archetype, stats.sprite_tint)
+	anim_sprite.sprite_frames = stats.custom_sprite_frames if stats.custom_sprite_frames else PixelArtGenerator.get_enemy_sprite_frames(sprite_key, stats.sprite_tint)
 	anim_sprite.play("idle")
 
-	# Lớp viền sáng Rim-Light an toàn 100% trên D3D12 (Boss tỏa viền đỏ rực uy nghi, quái thường tỏa viền ánh trăng)
+	# Lớp viền sáng Rim-Light theo màu nguyên tố riêng của từng Quái / Boss Huyền Thoại
+	var acol: Color = stats.aura_color
 	_rim_halo_sprite = Sprite3D.new()
 	_rim_halo_sprite.name = "RimLightHalo"
 	_rim_halo_sprite.position = Vector3(0.0, y_offset * stats.sprite_scale, -0.025)
-	_rim_halo_sprite.pixel_size = 0.0485 * stats.sprite_scale
+	_rim_halo_sprite.pixel_size = px_sz * 1.07
 	_rim_halo_sprite.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
 	_rim_halo_sprite.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 	_rim_halo_sprite.shaded = false
-	_rim_halo_sprite.modulate = Color(1.0, 0.24, 0.34, 0.58) if stats.archetype == "boss" else Color(0.56, 0.80, 1.0, 0.34)
+	_rim_halo_sprite.modulate = Color(acol.r, acol.g, acol.b, 0.68 if stats.archetype == "boss" else 0.40)
 	_rim_halo_sprite.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(_rim_halo_sprite)
+
+	# Vòng pháp trận hào quang dưới chân cho 5 Boss Huyền Thoại!
+	if stats.archetype == "boss":
+		var boss_ring := MeshInstance3D.new()
+		var btm := TorusMesh.new()
+		btm.inner_radius = 1.45
+		btm.outer_radius = 1.65
+		boss_ring.mesh = btm
+		boss_ring.position = Vector3(0.0, 0.09, 0.0)
+		var bmat := StandardMaterial3D.new()
+		bmat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		bmat.albedo_color = Color(acol.r, acol.g, acol.b, 0.85)
+		bmat.emission_enabled = true
+		bmat.emission = acol
+		bmat.emission_energy_multiplier = 3.8
+		bmat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		boss_ring.material_override = bmat
+		add_child(boss_ring)
 
 	# Bóng tròn mềm tiếp đất dưới chân quái/Boss
 	var csh := MeshInstance3D.new()
@@ -319,11 +342,20 @@ func _execute_boss_attack(player: Node3D, dir_to_player: Vector3) -> void:
 		var fan_count := 3 if boss_phase == 1 else (5 if boss_phase == 2 else 7)
 		_schedule_ranged_shot(dir_to_player, 0.25, fan_count)
 	else:
-		# Đòn 3: Vòng xung kích 8 hướng (Pha 2 & 3) hoặc chém nặng (Pha 1)
+		# Đòn 3: Kỹ năng nguyên tố đặc trưng của từng Boss Màn 1-5 + Vòng xung kích 360°!
+		var b_style: String = "crimson_arc"
+		match stats.visual_id:
+			"boss_dragon": b_style = "azure_dragon"
+			"boss_darklord": b_style = "purple_butterflies"
+			"boss_archmage": b_style = "golden_pillars"
+			"boss_emperor": b_style = "crimson_arc"
+			"boss_kitsune": b_style = "crimson_arc"
+		CombatVFX3D.spawn_skin_skill_vfx(get_parent(), global_position, dir_to_player, b_style, stats.aura_color)
 		if boss_phase >= 2:
 			_schedule_nova_ring(0.30, 8 if boss_phase == 2 else 12)
 		else:
-			_schedule_melee_hit(player, 0.30, stats.attack_range + 0.8, stats.attack_damage * 1.15)
+			_schedule_nova_ring(0.30, 6)
+			_schedule_melee_hit(player, 0.30, stats.attack_range + 0.9, stats.attack_damage * 1.15)
 
 
 func _schedule_melee_hit(player: Node3D, delay: float, hit_radius: float, dmg: float) -> void:
@@ -367,7 +399,7 @@ func _spawn_projectile(dir: Vector3) -> void:
 	proj.direction = dir
 	proj.damage = stats.attack_damage * 0.85
 	proj.speed = 8.5 if stats.archetype != "boss" else (9.5 + boss_phase * 1.2)
-	proj.orb_color = Color(0.6, 0.25, 1.0) if stats.archetype != "boss" else Color(1.0, 0.25, 0.45)
+	proj.orb_color = stats.projectile_color
 	get_parent().add_child(proj)
 	proj.global_position = global_position + Vector3(0.0, 0.85, 0.0)
 

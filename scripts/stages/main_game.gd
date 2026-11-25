@@ -78,11 +78,12 @@ func _on_npc_service_requested(role: String) -> void:
 func _on_boss_appeared_cinematic(boss_node: EnemyBase) -> void:
 	if boss_node == null or not is_instance_valid(boss_node):
 		return
-	# Làm chậm nhẹ chiến trường trong lúc camera lia điện ảnh vào Boss
+	# Làm chậm nhẹ chiến trường trong lúc camera lia điện ảnh vào Boss của từng màn!
 	Engine.time_scale = 0.25
+	var b_sub: String = boss_node.stats.boss_subtitle if boss_node.stats.boss_subtitle != "" else "Boss Huyền Thoại Giáng Lâm!"
 	ui_controller.play_boss_cinematic_overlay(
 		boss_node.stats.enemy_name.to_upper(),
-		"Ma Vương Hắc Ám • Tam Cảnh Chiến Thần — Huyết Nguyệt Giáng Lâm!",
+		b_sub,
 		2.2
 	)
 	if stage_manager.camera_rig:

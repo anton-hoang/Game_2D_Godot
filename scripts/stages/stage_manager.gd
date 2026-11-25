@@ -234,9 +234,16 @@ func _spawn_current_wave() -> void:
 	var total_w := current_stage_data.waves.size()
 	GameManager.set_wave(wave_num, total_w)
 
-	var is_boss_wave := wave_dict.has("boss")
+	var boss_key: String = ""
+	for wk in wave_dict.keys():
+		var wks: String = str(wk)
+		if StageDatabase.is_boss_id(wks):
+			boss_key = wks
+			break
+	var is_boss_wave: bool = (boss_key != "")
 	if is_boss_wave:
-		wave_banner_requested.emit("ĐỢT CUỐI: BOSS XUẤT HIỆN!", "Chúa Tể Hắc Ám Malakor đã giáng lâm")
+		var preview_stats := StageDatabase.get_enemy_stats(boss_key, current_stage_data.stage_id)
+		wave_banner_requested.emit("ĐỢT CUỐI: BOSS " + preview_stats.enemy_name.to_upper() + "!", preview_stats.boss_subtitle)
 		AudioManager.play_sfx("boss_roar")
 	else:
 		wave_banner_requested.emit("ĐỢT QUÁI " + str(wave_num) + " / " + str(total_w), "Tiêu diệt toàn bộ kẻ địch để mở cổng!")
@@ -245,11 +252,13 @@ func _spawn_current_wave() -> void:
 	alive_enemies_count = 0
 
 	for archetype in wave_dict.keys():
+		var arch_str: String = str(archetype)
+		var is_b: bool = StageDatabase.is_boss_id(arch_str)
 		var count := int(wave_dict[archetype])
 		for i in range(count):
-			var enemy := _instantiate_enemy(str(archetype), current_stage_data.stage_id)
+			var enemy := _instantiate_enemy(arch_str, current_stage_data.stage_id)
 			var base_pos := SPAWN_POINTS[spawn_idx % SPAWN_POINTS.size()]
-			if str(archetype) == "boss":
+			if is_b:
 				base_pos = Vector3(8.0, 0.3, 1.2)
 			else:
 				base_pos += Vector3(randf_range(-1.2, 1.2), 0.0, randf_range(-0.9, 0.9))
@@ -259,7 +268,7 @@ func _spawn_current_wave() -> void:
 			alive_enemies_count += 1
 			spawn_idx += 1
 
-			if str(archetype) == "boss":
+			if is_b:
 				boss_appeared.emit(enemy)
 				GameManager.boss_spawned.emit(enemy)
 
@@ -342,7 +351,11 @@ func _on_wave_cleared() -> void:
 	else:
 		# Mở cổng sang đợt tiếp theo
 		var next_wave_dict: Dictionary = current_stage_data.waves[current_wave_index]
-		var next_is_boss := next_wave_dict.has("boss")
+		var next_is_boss: bool = false
+		for nwk in next_wave_dict.keys():
+			if StageDatabase.is_boss_id(str(nwk)):
+				next_is_boss = true
+				break
 		wave_portal.set_portal_active(true, current_wave_index + 1, next_is_boss)
 		wave_banner_requested.emit("ĐÃ DỌN SẠCH ĐỢT " + str(current_wave_index) + "!", "Bước vào Cổng Ánh Sáng bên phải để sang đợt kế tiếp")
 
