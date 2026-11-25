@@ -5,8 +5,9 @@
 [resource]
 script = ExtResource("1_stage")
 stage_id = 5
-stage_name = "Màn 5: Nguyệt Thực & Chúa Tể Malakor"
-stage_subtitle = "4 Đợt quái + BOSS CUỐI CHƯƠNG (3 Pha chiến đấu)"
+stage_name = "Màn 5: Tế Đàn Nguyệt Thực Malakor"
+stage_subtitle = "4 Đợt quái + BOSS CUỐI CHƯƠNG (3 Pha trên Đấu Trường Đá Cổ)"
+map_theme = "eclipse_citadel"
 time_of_day = "crimson_eclipse"
 target_clear_time = 150.0
 waves = Array[Dictionary]([{

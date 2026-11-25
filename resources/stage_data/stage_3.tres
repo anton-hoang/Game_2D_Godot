@@ -5,8 +5,9 @@
 [resource]
 script = ExtResource("1_stage")
 stage_id = 3
-stage_name = "Màn 3: Cơn Mưa Đêm Thị Trấn"
-stage_subtitle = "4 Đợt quái — Hộ vệ giáp sắt (Tank) cản đường"
+stage_name = "Màn 3: Khu Chợ Đêm Trong Cơn Mưa"
+stage_subtitle = "4 Đợt quái — Sạp hàng đèn lồng đỏ, đài phun nước & hố bẫy"
+map_theme = "rainy_market"
 time_of_day = "rainy_night"
 target_clear_time = 105.0
 waves = Array[Dictionary]([{

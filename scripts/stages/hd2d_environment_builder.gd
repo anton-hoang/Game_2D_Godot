@@ -1,4 +1,4 @@
-class_name HD2DEnvironmentBuilder
+﻿class_name HD2DEnvironmentBuilder
 extends Node3D
 ## Dựng cảnh làng cổ 2.5D HD-2D nâng cấp (phong cách Windferry Hamlet / Octopath Traveler):
 ## - Bầu trời đêm có Mặt Trăng phát sáng & các vì sao lấp lánh + Dãy núi mờ phía xa.
@@ -14,23 +14,67 @@ var rain_particles: GPUParticles3D
 var firefly_particles: GPUParticles3D
 var moon_node: MeshInstance3D
 var stars_root: Node3D
+var _hamlet_root: Node3D
+var _stage_map_root: Node3D
 var _lantern_lights: Array[OmniLight3D] = []
 var _lantern_base_energies: Array[float] = []
 var _window_materials: Array[StandardMaterial3D] = []
 var current_time_of_day: String = "midnight"
+var current_map_theme: String = "hamlet_hub"
 var _flicker_time: float = 0.0
 
 
 func _ready() -> void:
 	_build_lighting_and_postfx()
 	_build_night_sky_and_mountains()
+	_build_atmosphere_particles()
+
+	_hamlet_root = Node3D.new()
+	_hamlet_root.name = "HamletHubMap"
+	add_child(_hamlet_root)
 	_build_terrain_and_walls()
 	_build_cottages()
 	_build_village_props()
 	_build_lanterns()
 	_build_trees_and_foliage()
-	_build_atmosphere_particles()
+
+	_stage_map_root = Node3D.new()
+	_stage_map_root.name = "ActiveStageMap"
+	add_child(_stage_map_root)
+
+	build_map_for_theme("hamlet_hub")
 	apply_time_of_day(current_time_of_day)
+
+
+## Chuyển đổi hoàn toàn kiến trúc bản đồ theo từng màn chơi:
+## "hamlet_hub" (Làng cổ có 3 nhà mở nội thất) hoặc 5 bản đồ chiến đấu riêng biệt!
+func build_map_for_theme(theme: String) -> void:
+	current_map_theme = theme
+	if _stage_map_root:
+		for child in _stage_map_root.get_children():
+			child.queue_free()
+
+	if theme == "hamlet_hub":
+		if _hamlet_root:
+			_hamlet_root.visible = true
+			_hamlet_root.process_mode = Node.PROCESS_MODE_INHERIT
+			_set_colliders_disabled(_hamlet_root, false)
+		spawn_breakable_props()
+	else:
+		if _hamlet_root:
+			_hamlet_root.visible = false
+			_hamlet_root.process_mode = Node.PROCESS_MODE_DISABLED
+			_set_colliders_disabled(_hamlet_root, true)
+		StageMapLayouts.build_stage_map(self, _stage_map_root, theme)
+
+
+func _set_colliders_disabled(root_node: Node, disabled: bool) -> void:
+	for child in root_node.get_children():
+		if child is CollisionShape3D:
+			(child as CollisionShape3D).disabled = disabled
+		elif child is Area3D:
+			(child as Area3D).monitoring = not disabled
+		_set_colliders_disabled(child, disabled)
 
 
 func _process(delta: float) -> void:
@@ -277,7 +321,7 @@ func _build_terrain_and_walls() -> void:
 	# Mặt đất tầng dưới (Đấu trường chính)
 	var ground_body := StaticBody3D.new()
 	ground_body.name = "ArenaGround"
-	add_child(ground_body)
+	_hamlet_root.add_child(ground_body)
 	var ground_col := CollisionShape3D.new()
 	var box_shape := BoxShape3D.new()
 	box_shape.size = Vector3(60.0, 2.0, 30.0)
@@ -304,13 +348,13 @@ func _build_terrain_and_walls() -> void:
 		var smat := ShaderMaterial.new()
 		smat.shader = water_shader
 		water_mesh.material_override = smat
-	add_child(water_mesh)
+	_hamlet_root.add_child(water_mesh)
 
 	# Cây cầu đá vòm có bậc cong & lan can trụ đá giống ảnh mẫu Windferry
 	var bridge_root := Node3D.new()
 	bridge_root.name = "StoneBridge"
 	bridge_root.position = Vector3(-7.6, 0.0, 0.7)
-	add_child(bridge_root)
+	_hamlet_root.add_child(bridge_root)
 	_add_box_mesh(bridge_root, Vector3(5.6, 0.35, 3.4), Vector3(0.0, 0.16, 0.0), stone_wall_mat)
 	_add_box_mesh(bridge_root, Vector3(3.4, 0.58, 3.4), Vector3(0.0, 0.32, 0.0), stone_cobble_mat)
 	# Lan can 2 bên cầu có trụ đá đầu cầu
@@ -321,16 +365,16 @@ func _build_terrain_and_walls() -> void:
 			_add_box_mesh(bridge_root, Vector3(0.45, 1.15, 0.48), Vector3(bx, 0.62, bz), stone_trim_mat)
 
 	# Tường kè đá tầng 2 chạy dài phía sau với mũ đá nhô ra
-	_add_box_mesh(self, Vector3(58.0, 2.7, 1.6), Vector3(0.0, 1.35, -9.2), stone_wall_mat)
-	_add_box_mesh(self, Vector3(58.0, 0.24, 1.95), Vector3(0.0, 2.72, -9.15), stone_trim_mat)
+	_add_box_mesh(_hamlet_root, Vector3(58.0, 2.7, 1.6), Vector3(0.0, 1.35, -9.2), stone_wall_mat)
+	_add_box_mesh(_hamlet_root, Vector3(58.0, 0.24, 1.95), Vector3(0.0, 2.72, -9.15), stone_trim_mat)
 	# Trụ đá tăng cường dọc tường kè
 	for px: float in [-20.0, -12.0, -4.0, 4.0, 16.0, 24.0]:
-		_add_box_mesh(self, Vector3(0.85, 2.8, 0.55), Vector3(px, 1.4, -8.35), stone_trim_mat)
+		_add_box_mesh(_hamlet_root, Vector3(0.85, 2.8, 0.55), Vector3(px, 1.4, -8.35), stone_trim_mat)
 
 	# Nền tầng 2 phía sau tường đá (có CollisionShape3D để Player đi bộ lên tham quan và vào 3 ngôi nhà!)
 	var upper_body := StaticBody3D.new()
 	upper_body.name = "UpperTerraceGround"
-	add_child(upper_body)
+	_hamlet_root.add_child(upper_body)
 	var upper_col := CollisionShape3D.new()
 	var upper_box := BoxShape3D.new()
 	upper_box.size = Vector3(58.0, 2.6, 16.0)
@@ -351,7 +395,7 @@ func _build_terrain_and_walls() -> void:
 		)
 	var ramp_body := StaticBody3D.new()
 	ramp_body.name = "StairsRamp"
-	add_child(ramp_body)
+	_hamlet_root.add_child(ramp_body)
 	var ramp_col := CollisionShape3D.new()
 	var ramp_shape := BoxShape3D.new()
 	ramp_shape.size = Vector3(3.8, 0.35, 4.6)
@@ -360,8 +404,8 @@ func _build_terrain_and_walls() -> void:
 	ramp_col.rotation_degrees = Vector3(34.0, 0.0, 0.0)
 	ramp_body.add_child(ramp_col)
 
-	_add_box_mesh(self, Vector3(0.38, 1.9, 3.6), Vector3(8.55, 1.15, -8.5), stone_wall_mat)
-	_add_box_mesh(self, Vector3(0.38, 1.9, 3.6), Vector3(12.65, 1.15, -8.5), stone_wall_mat)
+	_add_box_mesh(_hamlet_root, Vector3(0.38, 1.9, 3.6), Vector3(8.55, 1.15, -8.5), stone_wall_mat)
+	_add_box_mesh(_hamlet_root, Vector3(0.38, 1.9, 3.6), Vector3(12.65, 1.15, -8.5), stone_wall_mat)
 
 	# BẪY ĐỊA HÌNH 3D: Suối nước sâu bên trái (đánh bay quái rơi xuống suối chịu sát thương) & 2 Hố gai sắt
 	var water_haz := HazardZone3D.new()
@@ -370,7 +414,7 @@ func _build_terrain_and_walls() -> void:
 	water_haz.zone_size = Vector3(11.5, 1.2, 6.2)
 	water_haz.damage_per_tick = 22
 	water_haz.position = Vector3(-8.4, 0.0, 4.8)
-	add_child(water_haz)
+	_hamlet_root.add_child(water_haz)
 
 	for sp_pos: Vector3 in [Vector3(12.8, 0.0, 4.8), Vector3(0.5, 0.0, -5.2)]:
 		var spike_haz := HazardZone3D.new()
@@ -378,7 +422,7 @@ func _build_terrain_and_walls() -> void:
 		spike_haz.zone_size = Vector3(2.8, 1.0, 2.4)
 		spike_haz.damage_per_tick = 28
 		spike_haz.position = sp_pos
-		add_child(spike_haz)
+		_hamlet_root.add_child(spike_haz)
 
 
 func _build_cottages() -> void:
@@ -390,14 +434,14 @@ func _build_cottages() -> void:
 	# Dây cờ vải nhiều màu treo giữa nhà giữa và nhà bên phải (chi tiết đắt giá giống ảnh Windferry!)
 	var rope_mat := StandardMaterial3D.new()
 	rope_mat.albedo_color = Color(0.32, 0.24, 0.18)
-	_add_box_mesh(self, Vector3(7.2, 0.06, 0.06), Vector3(9.4, 5.1, -10.8), rope_mat)
+	_add_box_mesh(_hamlet_root, Vector3(7.2, 0.06, 0.06), Vector3(9.4, 5.1, -10.8), rope_mat)
 	var flag_colors := [Color(0.22, 0.42, 0.78), Color(0.92, 0.88, 0.78), Color(0.82, 0.24, 0.24), Color(0.92, 0.88, 0.78), Color(0.24, 0.56, 0.34)]
 	for fi in range(flag_colors.size()):
 		var fmat := StandardMaterial3D.new()
 		fmat.albedo_color = flag_colors[fi]
 		fmat.roughness = 0.85
 		var sag: float = sin(float(fi + 1) / 6.0 * PI) * 0.45
-		_add_box_mesh(self, Vector3(0.85, 1.05, 0.08), Vector3(6.8 + float(fi) * 1.25, 4.55 - sag, -10.8), fmat)
+		_add_box_mesh(_hamlet_root, Vector3(0.85, 1.05, 0.08), Vector3(6.8 + float(fi) * 1.25, 4.55 - sag, -10.8), fmat)
 
 
 ## Dựng ngôi nhà gỗ 2 phần tách biệt:
@@ -406,7 +450,7 @@ func _build_cottages() -> void:
 func _create_cottage(pos: Vector3, plaster_col: Color, roof_col: Color, has_chimney: bool, room_title: String, chest_gold: int) -> void:
 	var house := Node3D.new()
 	house.position = pos
-	add_child(house)
+	_hamlet_root.add_child(house)
 
 	var wall_mat := _make_textured_material(plaster_col, plaster_col.darkened(0.16), 0.85, "brick")
 	var stone_base_mat := _make_textured_material(Color(0.30, 0.30, 0.34), Color(0.20, 0.20, 0.24), 0.84, "cobble")
@@ -570,7 +614,7 @@ func _build_village_props() -> void:
 	# Ghế băng gỗ ven bờ suối bên trái
 	var bench := Node3D.new()
 	bench.position = Vector3(-13.8, 0.0, -2.5)
-	add_child(bench)
+	_hamlet_root.add_child(bench)
 	_add_box_mesh(bench, Vector3(2.2, 0.14, 0.65), Vector3(0.0, 0.55, 0.0), wood_mat)
 	_add_box_mesh(bench, Vector3(2.2, 0.55, 0.12), Vector3(0.0, 0.90, -0.28), wood_mat)
 	_add_box_mesh(bench, Vector3(0.16, 0.55, 0.55), Vector3(-0.85, 0.27, 0.0), iron_mat)
@@ -578,11 +622,11 @@ func _build_village_props() -> void:
 
 	# Hàng rào gỗ cổ dọc 2 bên rìa làng
 	for fx: float in [-20.5, -18.5, -16.5, 17.5, 19.5, 21.5]:
-		_add_box_mesh(self, Vector3(0.18, 1.25, 0.18), Vector3(fx, 0.62, -6.8), wood_mat)
-	_add_box_mesh(self, Vector3(4.5, 0.14, 0.10), Vector3(-18.5, 0.95, -6.8), wood_mat)
-	_add_box_mesh(self, Vector3(4.5, 0.14, 0.10), Vector3(-18.5, 0.50, -6.8), wood_mat)
-	_add_box_mesh(self, Vector3(4.5, 0.14, 0.10), Vector3(19.5, 0.95, -6.8), wood_mat)
-	_add_box_mesh(self, Vector3(4.5, 0.14, 0.10), Vector3(19.5, 0.50, -6.8), wood_mat)
+		_add_box_mesh(_hamlet_root, Vector3(0.18, 1.25, 0.18), Vector3(fx, 0.62, -6.8), wood_mat)
+	_add_box_mesh(_hamlet_root, Vector3(4.5, 0.14, 0.10), Vector3(-18.5, 0.95, -6.8), wood_mat)
+	_add_box_mesh(_hamlet_root, Vector3(4.5, 0.14, 0.10), Vector3(-18.5, 0.50, -6.8), wood_mat)
+	_add_box_mesh(_hamlet_root, Vector3(4.5, 0.14, 0.10), Vector3(19.5, 0.95, -6.8), wood_mat)
+	_add_box_mesh(_hamlet_root, Vector3(4.5, 0.14, 0.10), Vector3(19.5, 0.50, -6.8), wood_mat)
 
 	spawn_breakable_props()
 
@@ -607,7 +651,7 @@ func spawn_breakable_props() -> void:
 		var br := BreakableProp3D.new()
 		br.prop_kind = str(sp[0])
 		br.position = sp[1]
-		add_child(br)
+		_hamlet_root.add_child(br)
 
 
 func _build_lanterns() -> void:
@@ -637,7 +681,7 @@ func _build_lanterns() -> void:
 	for p in lantern_positions:
 		var post := Node3D.new()
 		post.position = p
-		add_child(post)
+		_hamlet_root.add_child(post)
 		_add_box_mesh(post, Vector3(0.28, 0.22, 0.28), Vector3(0.0, 0.11, 0.0), post_mat) # Đế cột
 		_add_box_mesh(post, Vector3(0.16, 2.25, 0.16), Vector3(0.0, 1.15, 0.0), post_mat) # Thân cột
 		_add_box_mesh(post, Vector3(0.62, 0.12, 0.16), Vector3(0.22, 2.22, 0.0), post_mat) # Tay treo đèn
@@ -721,7 +765,7 @@ func _spawn_foliage_sprite(tex: Texture2D, pos: Vector3, px_size: float, y_lift:
 	sp.alpha_cut = SpriteBase3D.ALPHA_CUT_DISCARD
 	sp.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_DOUBLE_SIDED
 	sp.position = pos + Vector3(0.0, y_lift, 0.0)
-	add_child(sp)
+	_hamlet_root.add_child(sp)
 	return sp
 
 
@@ -832,3 +876,152 @@ func _make_textured_material(c1: Color, c2: Color, rough: float, pattern: String
 	mat.uv1_scale = Vector3(0.42, 0.42, 0.42)
 	mat.roughness = rough
 	return mat
+
+
+## ============================================================================
+## CÁC HÀM TIỆN ÍCH DÙNG CHUNG CHO 5 BẢN ĐỒ MÀN CHƠI (StageMapLayouts)
+## ============================================================================
+
+func _create_arena_ground(root: Node3D, mat: Material) -> void:
+	var ground_body := StaticBody3D.new()
+	ground_body.name = "StageArenaGround"
+	root.add_child(ground_body)
+	var col := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(60.0, 2.0, 32.0)
+	col.shape = box
+	col.position = Vector3(0.0, -1.0, 0.0)
+	ground_body.add_child(col)
+	_add_box_mesh(ground_body, Vector3(60.0, 2.0, 32.0), Vector3(0.0, -1.0, 0.0), mat)
+
+
+func _create_water_plane(root: Node3D, sz: Vector2, pos: Vector3) -> void:
+	var water_mesh := MeshInstance3D.new()
+	var plane := PlaneMesh.new()
+	plane.size = sz
+	plane.subdivide_width = 32
+	plane.subdivide_depth = 32
+	water_mesh.mesh = plane
+	water_mesh.position = pos
+	var water_shader := load("res://assets/shaders/water_hd2d.gdshader") as Shader
+	if water_shader:
+		var smat := ShaderMaterial.new()
+		smat.shader = water_shader
+		water_mesh.material_override = smat
+	root.add_child(water_mesh)
+
+
+func _create_lantern_post(root: Node3D, pos: Vector3, light_col: Color, energy: float) -> void:
+	var post_mat := StandardMaterial3D.new()
+	post_mat.albedo_color = Color(0.14, 0.13, 0.16)
+	var bulb_mat := StandardMaterial3D.new()
+	bulb_mat.albedo_color = light_col
+	bulb_mat.emission_enabled = true
+	bulb_mat.emission = light_col
+	bulb_mat.emission_energy_multiplier = 3.5
+	_window_materials.append(bulb_mat)
+
+	var post := Node3D.new()
+	post.position = pos
+	root.add_child(post)
+	_add_box_mesh(post, Vector3(0.16, 2.2, 0.16), Vector3(0.0, 1.1, 0.0), post_mat)
+	_add_box_mesh(post, Vector3(0.55, 0.12, 0.16), Vector3(0.20, 2.15, 0.0), post_mat)
+	_add_box_mesh(post, Vector3(0.32, 0.40, 0.32), Vector3(0.38, 1.85, 0.0), bulb_mat)
+
+	var light := OmniLight3D.new()
+	light.position = Vector3(0.38, 1.80, 0.0)
+	light.light_color = light_col
+	light.light_energy = energy
+	light.omni_range = 8.5
+	light.shadow_enabled = true
+	post.add_child(light)
+	_lantern_lights.append(light)
+	_lantern_base_energies.append(energy)
+
+
+func _create_brazier(root: Node3D, pos: Vector3, fire_col: Color) -> void:
+	var iron := StandardMaterial3D.new()
+	iron.albedo_color = Color(0.16, 0.16, 0.20)
+	iron.metallic = 0.65
+	var fire_mat := StandardMaterial3D.new()
+	fire_mat.albedo_color = fire_col
+	fire_mat.emission_enabled = true
+	fire_mat.emission = fire_col
+	fire_mat.emission_energy_multiplier = 4.5
+	_window_materials.append(fire_mat)
+
+	var b := Node3D.new()
+	b.position = pos
+	root.add_child(b)
+	_add_box_mesh(b, Vector3(0.75, 0.85, 0.75), Vector3(0.0, 0.42, 0.0), iron)
+	_add_box_mesh(b, Vector3(0.95, 0.28, 0.95), Vector3(0.0, 0.95, 0.0), iron)
+	_add_box_mesh(b, Vector3(0.58, 0.52, 0.58), Vector3(0.0, 1.22, 0.0), fire_mat)
+
+	var light := OmniLight3D.new()
+	light.position = Vector3(0.0, 1.65, 0.0)
+	light.light_color = fire_col
+	light.light_energy = 3.1
+	light.omni_range = 9.5
+	light.shadow_enabled = true
+	b.add_child(light)
+	_lantern_lights.append(light)
+	_lantern_base_energies.append(3.1)
+
+
+func _create_campfire(root: Node3D, pos: Vector3, stone_mat: Material, wood_mat: Material) -> void:
+	var camp := Node3D.new()
+	camp.position = pos
+	root.add_child(camp)
+	for i in range(6):
+		var a := float(i) * (TAU / 6.0)
+		_add_box_mesh(camp, Vector3(0.38, 0.26, 0.38), Vector3(cos(a) * 0.72, 0.13, sin(a) * 0.72), stone_mat)
+	_add_box_mesh(camp, Vector3(0.85, 0.22, 0.22), Vector3(0.0, 0.14, 0.0), wood_mat)
+	_add_box_mesh(camp, Vector3(0.22, 0.22, 0.85), Vector3(0.0, 0.18, 0.0), wood_mat)
+
+	var fire_mat := StandardMaterial3D.new()
+	fire_mat.albedo_color = Color(1.0, 0.65, 0.18)
+	fire_mat.emission_enabled = true
+	fire_mat.emission = Color(1.0, 0.45, 0.10)
+	fire_mat.emission_energy_multiplier = 4.6
+	_add_box_mesh(camp, Vector3(0.52, 0.72, 0.52), Vector3(0.0, 0.48, 0.0), fire_mat)
+
+	var light := OmniLight3D.new()
+	light.position = Vector3(0.0, 1.1, 0.0)
+	light.light_color = Color(1.0, 0.58, 0.20)
+	light.light_energy = 3.4
+	light.omni_range = 10.5
+	light.shadow_enabled = true
+	camp.add_child(light)
+	_lantern_lights.append(light)
+	_lantern_base_energies.append(3.4)
+
+
+func _add_hazard(root: Node3D, h_type: String, pos: Vector3, sz: Vector3, dmg: int) -> void:
+	var hz := HazardZone3D.new()
+	hz.hazard_type = h_type
+	hz.zone_size = sz
+	hz.damage_per_tick = dmg
+	hz.position = pos
+	root.add_child(hz)
+
+
+func _spawn_foliage_sprite_to(root: Node3D, tex: Texture2D, pos: Vector3, px_size: float, y_lift: float) -> Sprite3D:
+	var sp := Sprite3D.new()
+	sp.texture = tex
+	sp.pixel_size = px_size
+	sp.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
+	sp.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+	sp.shaded = true
+	sp.alpha_cut = SpriteBase3D.ALPHA_CUT_DISCARD
+	sp.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_DOUBLE_SIDED
+	sp.position = pos + Vector3(0.0, y_lift, 0.0)
+	root.add_child(sp)
+	return sp
+
+
+func _spawn_breakables_at(root: Node3D, specs: Array) -> void:
+	for sp in specs:
+		var br := BreakableProp3D.new()
+		br.prop_kind = str(sp[0])
+		br.position = sp[1]
+		root.add_child(br)

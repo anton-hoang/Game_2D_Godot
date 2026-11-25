@@ -5,8 +5,9 @@
 [resource]
 script = ExtResource("1_stage")
 stage_id = 4
-stage_name = "Màn 4: Màn Đêm Sâu Thành Cổ"
-stage_subtitle = "4 Đợt quái — Đêm tối tĩnh mịch dưới ánh trăng & đèn lồng"
+stage_name = "Màn 4: Cổ Thành Đêm Sâu"
+stage_subtitle = "4 Đợt quái — Tường thành pháo đài, chậu lửa & hố gai chiến thuật"
+map_theme = "ancient_fortress"
 time_of_day = "midnight"
 target_clear_time = 120.0
 waves = Array[Dictionary]([{

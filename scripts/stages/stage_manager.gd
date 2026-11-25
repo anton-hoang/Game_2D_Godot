@@ -142,8 +142,8 @@ func enter_town_hub() -> void:
 	player.hp_changed.emit(player.current_hp, player.max_hp)
 	player.energy_changed.emit(player.current_energy, player.max_energy)
 
+	environment_builder.build_map_for_theme("hamlet_hub")
 	environment_builder.apply_time_of_day("midnight")
-	environment_builder.spawn_breakable_props()
 	AudioManager.play_stage_ambience("midnight")
 
 	wave_portal.set_portal_active(true, SaveManager.unlocked_stage, false)
@@ -174,9 +174,9 @@ func load_and_start_stage(stage_id: int) -> void:
 	player.hp_changed.emit(player.current_hp, player.max_hp)
 	player.energy_changed.emit(player.current_energy, player.max_energy)
 
-	# Áp dụng ánh sáng thời điểm của màn (Hoàng hôn / Đêm xanh / Mưa / Màn Đêm Sâu / Nguyệt thực)
+	# Dựng kiến trúc Map riêng của từng màn chơi + Áp dụng ánh sáng thời điểm
+	environment_builder.build_map_for_theme(current_stage_data.map_theme)
 	environment_builder.apply_time_of_day(current_stage_data.time_of_day)
-	environment_builder.spawn_breakable_props()
 	AudioManager.play_stage_ambience(current_stage_data.time_of_day)
 
 	wave_portal.set_portal_active(false)

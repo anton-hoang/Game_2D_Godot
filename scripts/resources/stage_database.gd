@@ -95,8 +95,9 @@ static func _create_default_stage_data(stage_id: int) -> StageData:
 	st.stage_id = stage_id
 	match stage_id:
 		1:
-			st.stage_name = "Màn 1: Hoàng Hôn Làng Windferry"
-			st.stage_subtitle = "3 Đợt quái — Làm quen di chuyển, combo và né đòn"
+			st.stage_name = "Màn 1: Rừng Thu Ngoại Ô Windferry"
+			st.stage_subtitle = "3 Đợt quái — Đường mòn lá vàng, trại gỗ & suối nhỏ"
+			st.map_theme = "autumn_forest"
 			st.time_of_day = "golden_hour"
 			st.target_clear_time = 75.0
 			st.waves = [
@@ -105,8 +106,9 @@ static func _create_default_stage_data(stage_id: int) -> StageData:
 				{"melee": 4, "ranged": 2},
 			]
 		2:
-			st.stage_name = "Màn 2: Đêm Xanh Bên Cầu Đá"
-			st.stage_subtitle = "3 Đợt quái — Chiến thú lao nhanh xuất hiện"
+			st.stage_name = "Màn 2: Thung Lũng Cầu Đá Ánh Trăng"
+			st.stage_subtitle = "3 Đợt quái — Hai hồ nước lớn & cầu đá đôi ở giữa"
+			st.map_theme = "moonlit_bridge"
 			st.time_of_day = "blue_night"
 			st.target_clear_time = 85.0
 			st.waves = [
@@ -115,8 +117,9 @@ static func _create_default_stage_data(stage_id: int) -> StageData:
 				{"melee": 3, "ranged": 2, "charger": 2},
 			]
 		3:
-			st.stage_name = "Màn 3: Cơn Mưa Đêm Thị Trấn"
-			st.stage_subtitle = "4 Đợt quái — Hộ vệ giáp sắt (Tank) cản đường"
+			st.stage_name = "Màn 3: Khu Chợ Đêm Trong Cơn Mưa"
+			st.stage_subtitle = "4 Đợt quái — Sạp hàng đèn lồng đỏ, đài phun nước & hố bẫy"
+			st.map_theme = "rainy_market"
 			st.time_of_day = "rainy_night"
 			st.target_clear_time = 105.0
 			st.waves = [
@@ -126,8 +129,9 @@ static func _create_default_stage_data(stage_id: int) -> StageData:
 				{"tank": 1, "ranged": 2, "charger": 2},
 			]
 		4:
-			st.stage_name = "Màn 4: Màn Đêm Sâu Thành Cổ"
-			st.stage_subtitle = "4 Đợt quái — Đêm tối tĩnh mịch dưới ánh trăng & đèn lồng"
+			st.stage_name = "Màn 4: Cổ Thành Đêm Sâu"
+			st.stage_subtitle = "4 Đợt quái — Tường thành pháo đài, chậu lửa & hố gai chiến thuật"
+			st.map_theme = "ancient_fortress"
 			st.time_of_day = "midnight"
 			st.target_clear_time = 120.0
 			st.waves = [
@@ -137,8 +141,9 @@ static func _create_default_stage_data(stage_id: int) -> StageData:
 				{"tank": 2, "ranged": 2, "charger": 2},
 			]
 		5:
-			st.stage_name = "Màn 5: Nguyệt Thực & Chúa Tể Malakor"
-			st.stage_subtitle = "4 Đợt quái + BOSS CUỐI CHƯƠNG (3 Pha chiến đấu)"
+			st.stage_name = "Màn 5: Tế Đàn Nguyệt Thực Malakor"
+			st.stage_subtitle = "4 Đợt quái + BOSS CUỐI CHƯƠNG (3 Pha trên Đấu Trường Đá Cổ)"
+			st.map_theme = "eclipse_citadel"
 			st.time_of_day = "crimson_eclipse"
 			st.target_clear_time = 150.0
 			st.waves = [

@@ -5,8 +5,9 @@
 [resource]
 script = ExtResource("1_stage")
 stage_id = 1
-stage_name = "Màn 1: Hoàng Hôn Làng Windferry"
-stage_subtitle = "3 Đợt quái — Làm quen di chuyển, combo và né đòn"
+stage_name = "Màn 1: Rừng Thu Ngoại Ô Windferry"
+stage_subtitle = "3 Đợt quái — Đường mòn lá vàng, trại gỗ & suối nhỏ"
+map_theme = "autumn_forest"
 time_of_day = "golden_hour"
 target_clear_time = 75.0
 waves = Array[Dictionary]([{
