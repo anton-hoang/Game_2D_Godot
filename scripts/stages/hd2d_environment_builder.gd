@@ -20,11 +20,15 @@ const WEATHER_NAMES: Dictionary = {
 }
 
 var world_env: WorldEnvironment
+var _sky_mat: ProceduralSkyMaterial
 var sun_light: DirectionalLight3D
 var rain_particles: GPUParticles3D
 var firefly_particles: GPUParticles3D
+var sakura_particles: GPUParticles3D
 var moon_node: MeshInstance3D
+var _moon_halo: MeshInstance3D
 var stars_root: Node3D
+var _mat_cache: Dictionary = {}
 var _hamlet_root: Node3D
 var _stage_map_root: Node3D
 var _lantern_lights: Array[OmniLight3D] = []
@@ -168,82 +172,92 @@ func apply_time_of_day(mode: String, smooth: bool = true) -> void:
 		return
 	var env := world_env.environment
 
-	var target_sun_col := Color(0.52, 0.65, 0.94)
-	var target_sun_energy := 0.68
-	var target_sun_rot := Vector3(-40.0, 28.0, 0.0)
-	var target_bg := Color(0.06, 0.10, 0.19)
-	var target_amb_col := Color(0.18, 0.25, 0.40)
-	var target_amb_energy := 0.52
-	var target_fog_col := Color(0.18, 0.23, 0.36)
-	var target_fog_density := 0.017
-	var target_bloom := 0.36
-	var target_lantern := 2.8
+	var target_sun_col := Color(0.62, 0.74, 0.98)
+	var target_sun_energy := 0.78
+	var target_sun_rot := Vector3(-38.0, 28.0, 0.0)
+	var target_bg := Color(0.08, 0.13, 0.25)
+	var target_sky_top := Color(0.06, 0.10, 0.24)
+	var target_sky_hor := Color(0.24, 0.30, 0.48)
+	var target_amb_col := Color(0.24, 0.31, 0.48)
+	var target_amb_energy := 0.62
+	var target_fog_col := Color(0.22, 0.28, 0.44)
+	var target_fog_density := 0.014
+	var target_bloom := 0.44
+	var target_lantern := 2.7
 	var is_night := true
-	var moon_col := Color(0.90, 0.95, 1.0)
+	var moon_col := Color(0.95, 0.96, 1.0)
 	var has_rain := false
-	var firefly_count := 95
+	var firefly_count := 80
 
 	match mode:
 		"golden_hour":
-			target_sun_col = Color(1.0, 0.70, 0.36)
-			target_sun_energy = 1.60
+			target_sun_col = Color(1.0, 0.76, 0.46)
+			target_sun_energy = 1.52
 			target_sun_rot = Vector3(-24.0, -38.0, 0.0)
-			target_bg = Color(0.32, 0.19, 0.24)
-			target_amb_col = Color(0.56, 0.36, 0.28)
-			target_amb_energy = 0.78
-			target_fog_col = Color(0.68, 0.42, 0.30)
-			target_fog_density = 0.013
-			target_bloom = 0.30
-			target_lantern = 1.65
+			target_bg = Color(0.42, 0.25, 0.32)
+			target_sky_top = Color(0.24, 0.18, 0.38)
+			target_sky_hor = Color(0.96, 0.58, 0.46)
+			target_amb_col = Color(0.66, 0.46, 0.42)
+			target_amb_energy = 0.86
+			target_fog_col = Color(0.78, 0.52, 0.44)
+			target_fog_density = 0.011
+			target_bloom = 0.38
+			target_lantern = 1.75
 			is_night = false
-			moon_col = Color(1.0, 0.90, 0.70)
+			moon_col = Color(1.0, 0.92, 0.76)
 			has_rain = false
 			firefly_count = 45
 		"midnight":
-			target_sun_col = Color(0.36, 0.48, 0.90)
-			target_sun_energy = 0.44
-			target_sun_rot = Vector3(-48.0, 20.0, 0.0)
-			target_bg = Color(0.02, 0.03, 0.08)
-			target_amb_col = Color(0.09, 0.14, 0.27)
-			target_amb_energy = 0.36
-			target_fog_col = Color(0.07, 0.11, 0.22)
-			target_fog_density = 0.021
-			target_bloom = 0.46
-			target_lantern = 3.65
+			target_sun_col = Color(0.48, 0.60, 0.96)
+			target_sun_energy = 0.56
+			target_sun_rot = Vector3(-46.0, 20.0, 0.0)
+			target_bg = Color(0.04, 0.06, 0.14)
+			target_sky_top = Color(0.03, 0.05, 0.14)
+			target_sky_hor = Color(0.16, 0.22, 0.38)
+			target_amb_col = Color(0.16, 0.22, 0.38)
+			target_amb_energy = 0.48
+			target_fog_col = Color(0.13, 0.18, 0.32)
+			target_fog_density = 0.017
+			target_bloom = 0.48
+			target_lantern = 3.45
 			is_night = true
-			moon_col = Color(0.90, 0.96, 1.0)
+			moon_col = Color(0.94, 0.97, 1.0)
 			has_rain = false
-			firefly_count = 130
+			firefly_count = 115
 		"rainy_night":
-			target_sun_col = Color(0.42, 0.58, 0.86)
-			target_sun_energy = 0.50
+			target_sun_col = Color(0.52, 0.68, 0.92)
+			target_sun_energy = 0.58
 			target_sun_rot = Vector3(-42.0, 26.0, 0.0)
-			target_bg = Color(0.04, 0.07, 0.14)
-			target_amb_col = Color(0.14, 0.21, 0.34)
-			target_amb_energy = 0.42
-			target_fog_col = Color(0.14, 0.21, 0.34)
-			target_fog_density = 0.026
-			target_bloom = 0.40
-			target_lantern = 3.2
+			target_bg = Color(0.06, 0.10, 0.19)
+			target_sky_top = Color(0.05, 0.09, 0.18)
+			target_sky_hor = Color(0.20, 0.28, 0.42)
+			target_amb_col = Color(0.20, 0.28, 0.42)
+			target_amb_energy = 0.52
+			target_fog_col = Color(0.18, 0.26, 0.40)
+			target_fog_density = 0.021
+			target_bloom = 0.44
+			target_lantern = 3.1
 			is_night = true
-			moon_col = Color(0.68, 0.82, 0.98)
+			moon_col = Color(0.76, 0.88, 1.0)
 			has_rain = true
 			firefly_count = 60
 		"crimson_eclipse":
-			target_sun_col = Color(0.98, 0.26, 0.36)
-			target_sun_energy = 0.72
+			target_sun_col = Color(1.0, 0.38, 0.46)
+			target_sun_energy = 0.80
 			target_sun_rot = Vector3(-38.0, 14.0, 0.0)
-			target_bg = Color(0.10, 0.02, 0.06)
-			target_amb_col = Color(0.28, 0.08, 0.14)
-			target_amb_energy = 0.46
-			target_fog_col = Color(0.32, 0.08, 0.15)
-			target_fog_density = 0.022
-			target_bloom = 0.48
-			target_lantern = 3.4
+			target_bg = Color(0.14, 0.04, 0.10)
+			target_sky_top = Color(0.09, 0.03, 0.12)
+			target_sky_hor = Color(0.54, 0.16, 0.26)
+			target_amb_col = Color(0.36, 0.14, 0.22)
+			target_amb_energy = 0.56
+			target_fog_col = Color(0.42, 0.14, 0.24)
+			target_fog_density = 0.018
+			target_bloom = 0.50
+			target_lantern = 3.25
 			is_night = true
-			moon_col = Color(1.0, 0.20, 0.26)
+			moon_col = Color(1.0, 0.30, 0.36)
 			has_rain = true
-			firefly_count = 110
+			firefly_count = 95
 
 	_set_night_sky_visible(is_night, moon_col)
 	_set_lantern_power(target_lantern)
@@ -268,6 +282,11 @@ func apply_time_of_day(mode: String, smooth: bool = true) -> void:
 		_weather_tween.tween_property(env, "fog_light_color", target_fog_col, dur)
 		_weather_tween.tween_property(env, "fog_density", target_fog_density, dur)
 		_weather_tween.tween_property(env, "glow_bloom", target_bloom, dur)
+		if _sky_mat:
+			_weather_tween.tween_property(_sky_mat, "sky_top_color", target_sky_top, dur)
+			_weather_tween.tween_property(_sky_mat, "sky_horizon_color", target_sky_hor, dur)
+			_weather_tween.tween_property(_sky_mat, "ground_horizon_color", target_fog_col, dur)
+			_weather_tween.tween_property(_sky_mat, "ground_bottom_color", target_bg, dur)
 	else:
 		sun_light.light_color = target_sun_col
 		sun_light.light_energy = target_sun_energy
@@ -278,6 +297,11 @@ func apply_time_of_day(mode: String, smooth: bool = true) -> void:
 		env.fog_light_color = target_fog_col
 		env.fog_density = target_fog_density
 		env.glow_bloom = target_bloom
+		if _sky_mat:
+			_sky_mat.sky_top_color = target_sky_top
+			_sky_mat.sky_horizon_color = target_sky_hor
+			_sky_mat.ground_horizon_color = target_fog_col
+			_sky_mat.ground_bottom_color = target_bg
 
 	weather_lighting_changed.emit(mode, str(WEATHER_NAMES.get(mode, mode)))
 
@@ -291,6 +315,12 @@ func _set_night_sky_visible(is_night: bool, moon_tint: Color) -> void:
 		if mat:
 			mat.albedo_color = moon_tint
 			mat.emission = moon_tint
+	if _moon_halo:
+		_moon_halo.visible = is_night
+		var hmat := _moon_halo.material_override as StandardMaterial3D
+		if hmat:
+			hmat.albedo_color = Color(moon_tint.r, moon_tint.g, moon_tint.b, 0.16)
+			hmat.emission = moon_tint
 
 
 func _set_lantern_power(energy: float) -> void:
@@ -308,36 +338,50 @@ func _build_lighting_and_postfx() -> void:
 	world_env = WorldEnvironment.new()
 	world_env.name = "WorldEnvironment"
 	var env := Environment.new()
-	env.background_mode = Environment.BG_COLOR
-	env.background_color = Color(0.03, 0.05, 0.10)
+	# Bầu trời chuyển sắc Anime Fantasy mềm mại bằng ProceduralSkyMaterial!
+	var sky := Sky.new()
+	_sky_mat = ProceduralSkyMaterial.new()
+	_sky_mat.sky_top_color = Color(0.06, 0.10, 0.24)
+	_sky_mat.sky_horizon_color = Color(0.26, 0.30, 0.50)
+	_sky_mat.sky_curve = 0.22
+	_sky_mat.ground_bottom_color = Color(0.05, 0.08, 0.15)
+	_sky_mat.ground_horizon_color = Color(0.22, 0.26, 0.42)
+	_sky_mat.sun_angle_max = 18.0
+	sky.sky_material = _sky_mat
+	env.background_mode = Environment.BG_SKY
+	env.sky = sky
+	env.background_color = Color(0.06, 0.10, 0.22)
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color(0.12, 0.16, 0.28)
-	env.ambient_light_energy = 0.42
+	env.ambient_light_color = Color(0.22, 0.28, 0.44)
+	env.ambient_light_energy = 0.58
 	env.tonemap_mode = Environment.TONE_MAPPER_ACES
-	env.tonemap_exposure = 1.12
+	env.tonemap_exposure = 1.16
 
-	# Hậu kỳ HD-2D điện ảnh: Glow / Bloom ấm rực rỡ cho đèn lồng, cửa sổ & vũ khí
+	# Hậu kỳ HD-2D mơ màng mềm mại: Bloom ấm dịu tỏa quanh đèn lồng, hoa anh đào & mặt trăng
 	env.glow_enabled = true
-	env.glow_intensity = 1.35
-	env.glow_strength = 1.18
-	env.glow_bloom = 0.42
+	env.glow_intensity = 1.15
+	env.glow_strength = 1.10
+	env.glow_bloom = 0.46
 	env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT
-	env.glow_hdr_threshold = 0.72
+	env.glow_hdr_threshold = 0.68
 
-	# Hậu kỳ Fog chiều sâu huyền ảo
+	# Sương mù thung lũng ôm nhẹ mặt nước & đồi núi phía xa tạo chiều sâu mềm mịn
 	env.fog_enabled = true
-	env.fog_light_color = Color(0.10, 0.14, 0.24)
-	env.fog_density = 0.020
-	env.fog_aerial_perspective = 0.48
+	env.fog_light_color = Color(0.18, 0.24, 0.38)
+	env.fog_density = 0.015
+	env.fog_aerial_perspective = 0.58
+	env.fog_height = -0.4
+	env.fog_height_density = 0.07
 
-	# Hậu kỳ SSAO & Chỉnh màu điện ảnh đậm chất kiếm hiệp / cổ trang HD-2D
+	# SSAO mềm + bảng màu điện ảnh dịu mắt chuẩn Anime Fantasy
 	env.ssao_enabled = true
-	env.ssao_radius = 1.45
-	env.ssao_intensity = 1.65
+	env.ssao_radius = 1.85
+	env.ssao_intensity = 1.15
+	env.ssao_power = 1.4
 
 	env.adjustment_enabled = true
-	env.adjustment_contrast = 1.14
-	env.adjustment_saturation = 1.24
+	env.adjustment_contrast = 1.07
+	env.adjustment_saturation = 1.20
 
 	world_env.environment = env
 	add_child(world_env)
@@ -345,71 +389,125 @@ func _build_lighting_and_postfx() -> void:
 	sun_light = DirectionalLight3D.new()
 	sun_light.name = "DirectionalLight3D"
 	sun_light.shadow_enabled = true
-	sun_light.directional_shadow_max_distance = 75.0
-	sun_light.shadow_blur = 1.3
+	sun_light.directional_shadow_max_distance = 78.0
+	sun_light.shadow_blur = 2.4 # Đổ bóng viền mềm mượt không còn răng cưa gắt!
 	add_child(sun_light)
 
 
-## Bầu trời đêm: Mặt trăng tròn tỏa hào quang, dải sao lấp lánh & dãy núi mờ phía chân trời
+## Bầu trời đêm thơ mộng: Mặt trăng có quầng sáng mờ, dải sao, mây trôi & dãy đồi tròn mềm nhiều tầng!
 func _build_night_sky_and_mountains() -> void:
-	# Mặt trăng lớn trên bầu trời đêm phía xa
+	# Mặt trăng lớn dịu sáng kèm quầng hào quang mềm phía sau
 	moon_node = MeshInstance3D.new()
 	moon_node.name = "NightMoon"
 	var moon_sphere := SphereMesh.new()
-	moon_sphere.radius = 2.8
-	moon_sphere.height = 5.6
+	moon_sphere.radius = 3.1
+	moon_sphere.height = 6.2
 	moon_node.mesh = moon_sphere
-	moon_node.position = Vector3(-16.0, 17.5, -42.0)
+	moon_node.position = Vector3(-15.5, 17.8, -42.0)
 	var moon_mat := StandardMaterial3D.new()
 	moon_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	moon_mat.albedo_color = Color(0.90, 0.95, 1.0)
+	moon_mat.albedo_color = Color(0.95, 0.96, 1.0)
 	moon_mat.emission_enabled = true
-	moon_mat.emission = Color(0.85, 0.92, 1.0)
-	moon_mat.emission_energy_multiplier = 2.6
+	moon_mat.emission = Color(0.92, 0.95, 1.0)
+	moon_mat.emission_energy_multiplier = 2.4
 	moon_node.material_override = moon_mat
 	add_child(moon_node)
 
-	# Các vì sao lấp lánh trên nền trời đêm
+	_moon_halo = MeshInstance3D.new()
+	var halo_sm := SphereMesh.new()
+	halo_sm.radius = 5.4
+	halo_sm.height = 10.8
+	_moon_halo.mesh = halo_sm
+	_moon_halo.position = moon_node.position + Vector3(0.0, 0.0, -0.5)
+	var halo_mat := StandardMaterial3D.new()
+	halo_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	halo_mat.albedo_color = Color(0.88, 0.92, 1.0, 0.16)
+	halo_mat.emission_enabled = true
+	halo_mat.emission = Color(0.84, 0.90, 1.0)
+	halo_mat.emission_energy_multiplier = 1.4
+	halo_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_moon_halo.material_override = halo_mat
+	add_child(_moon_halo)
+
+	# Các vì sao lấp lánh trên nền trời
 	stars_root = Node3D.new()
 	stars_root.name = "NightStars"
 	add_child(stars_root)
 	var star_mat := StandardMaterial3D.new()
 	star_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	star_mat.albedo_color = Color(0.92, 0.96, 1.0)
+	star_mat.albedo_color = Color(0.94, 0.97, 1.0)
 	star_mat.emission_enabled = true
-	star_mat.emission = Color(0.88, 0.94, 1.0)
-	star_mat.emission_energy_multiplier = 2.2
+	star_mat.emission = Color(0.90, 0.95, 1.0)
+	star_mat.emission_energy_multiplier = 2.0
 
 	var star_quad := QuadMesh.new()
-	star_quad.size = Vector2(0.18, 0.18)
+	star_quad.size = Vector2(0.16, 0.16)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 202611
 	for i in range(65):
 		var st := MeshInstance3D.new()
 		st.mesh = star_quad
 		st.material_override = star_mat
-		st.position = Vector3(rng.randf_range(-42.0, 42.0), rng.randf_range(10.0, 26.0), rng.randf_range(-48.0, -34.0))
-		var s := rng.randf_range(0.6, 1.7)
+		st.position = Vector3(rng.randf_range(-44.0, 44.0), rng.randf_range(11.0, 26.0), rng.randf_range(-48.0, -34.0))
+		var s := rng.randf_range(0.6, 1.5)
 		st.scale = Vector3(s, s, 1.0)
 		stars_root.add_child(st)
 
-	# Dãy núi & đồi thông mờ phía hậu cảnh tạo chiều sâu nhiều lớp
-	var mountain_mat := StandardMaterial3D.new()
-	mountain_mat.albedo_color = Color(0.08, 0.11, 0.18)
-	mountain_mat.roughness = 0.95
-	var peaks := [
-		[Vector3(-28.0, 4.0, -32.0), Vector3(24.0, 14.0, 10.0)],
-		[Vector3(-8.0, 5.0, -35.0), Vector3(28.0, 17.0, 12.0)],
-		[Vector3(16.0, 4.5, -33.0), Vector3(26.0, 15.0, 11.0)],
-		[Vector3(34.0, 3.8, -31.0), Vector3(22.0, 13.0, 10.0)],
+	# Dải mây mờ bồng bềnh trên nền trời phía xa
+	var cloud_mat := StandardMaterial3D.new()
+	cloud_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	cloud_mat.albedo_color = Color(0.76, 0.72, 0.88, 0.18)
+	cloud_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	for cp: Vector3 in [Vector3(-24.0, 15.0, -39.0), Vector3(-4.0, 18.2, -41.0), Vector3(14.0, 16.0, -40.0), Vector3(28.0, 14.5, -38.0)]:
+		var cl := MeshInstance3D.new()
+		var csm := SphereMesh.new()
+		csm.radius = 1.0
+		csm.height = 2.0
+		cl.mesh = csm
+		cl.position = cp
+		cl.scale = Vector3(9.5, 1.8, 2.2)
+		cl.material_override = cloud_mat
+		add_child(cl)
+
+	# 2 Tầng dãy đồi núi uốn lượn BO TRÒN MỀM MẠI (thay hoàn toàn chóp tam giác cứng!)
+	var far_hill_mat := StandardMaterial3D.new()
+	far_hill_mat.albedo_color = Color(0.14, 0.17, 0.30)
+	far_hill_mat.roughness = 0.96
+	var near_hill_mat := StandardMaterial3D.new()
+	near_hill_mat.albedo_color = Color(0.10, 0.15, 0.24)
+	near_hill_mat.roughness = 0.95
+
+	var hill_sm := SphereMesh.new()
+	hill_sm.radius = 1.0
+	hill_sm.height = 2.0
+	hill_sm.radial_segments = 24
+	hill_sm.rings = 12
+
+	var far_hills := [
+		[Vector3(-32.0, -1.5, -38.0), Vector3(22.0, 12.5, 9.0)],
+		[Vector3(-10.0, -1.0, -41.0), Vector3(26.0, 15.5, 10.0)],
+		[Vector3(14.0, -1.2, -39.0), Vector3(24.0, 14.0, 10.0)],
+		[Vector3(35.0, -1.8, -37.0), Vector3(20.0, 11.5, 9.0)],
 	]
-	for pk in peaks:
+	for fh in far_hills:
 		var m := MeshInstance3D.new()
-		var pr := PrismMesh.new()
-		pr.size = pk[1]
-		m.mesh = pr
-		m.position = pk[0]
-		m.material_override = mountain_mat
+		m.mesh = hill_sm
+		m.position = fh[0]
+		m.scale = fh[1]
+		m.material_override = far_hill_mat
+		add_child(m)
+
+	var near_hills := [
+		[Vector3(-24.0, -2.5, -30.0), Vector3(17.0, 8.8, 7.5)],
+		[Vector3(0.0, -2.8, -32.0), Vector3(20.0, 9.4, 8.0)],
+		[Vector3(23.0, -2.5, -30.0), Vector3(18.0, 8.6, 7.5)],
+	]
+	for nh in near_hills:
+		var m := MeshInstance3D.new()
+		m.mesh = hill_sm
+		m.position = nh[0]
+		m.scale = nh[1]
+		m.material_override = near_hill_mat
 		add_child(m)
 
 
@@ -820,7 +918,30 @@ func _build_lanterns() -> void:
 		_add_box_mesh(post, Vector3(0.16, 2.25, 0.16), Vector3(0.0, 1.15, 0.0), post_mat) # Thân cột
 		_add_box_mesh(post, Vector3(0.62, 0.12, 0.16), Vector3(0.22, 2.22, 0.0), post_mat) # Tay treo đèn
 		_add_box_mesh(post, Vector3(0.42, 0.10, 0.42), Vector3(0.42, 2.12, 0.0), post_mat) # Chóp lồng đèn
-		_add_box_mesh(post, Vector3(0.32, 0.42, 0.32), Vector3(0.42, 1.86, 0.0), bulb_mat) # Lồng kính sáng
+		# Quả cầu đèn lồng bo tròn phát sáng + quầng sáng halo mềm mịn
+		var bulb_m := MeshInstance3D.new()
+		var bsm := SphereMesh.new()
+		bsm.radius = 0.21
+		bsm.height = 0.42
+		bulb_m.mesh = bsm
+		bulb_m.position = Vector3(0.42, 1.86, 0.0)
+		bulb_m.material_override = bulb_mat
+		post.add_child(bulb_m)
+		var halo_m := MeshInstance3D.new()
+		var hsm := SphereMesh.new()
+		hsm.radius = 0.48
+		hsm.height = 0.96
+		halo_m.mesh = hsm
+		halo_m.position = Vector3(0.42, 1.86, 0.0)
+		var hmat := StandardMaterial3D.new()
+		hmat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		hmat.albedo_color = Color(1.0, 0.76, 0.34, 0.18)
+		hmat.emission_enabled = true
+		hmat.emission = Color(1.0, 0.70, 0.28)
+		hmat.emission_energy_multiplier = 1.6
+		hmat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		halo_m.material_override = hmat
+		post.add_child(halo_m)
 
 		var light := OmniLight3D.new()
 		light.position = Vector3(0.42, 1.82, 0.0)
@@ -836,13 +957,14 @@ func _build_lanterns() -> void:
 func _build_trees_and_foliage() -> void:
 	var tree_tex := PixelArtGenerator.get_prop_texture("tree")
 	var autumn_tex := PixelArtGenerator.get_prop_texture("tree_autumn")
+	var sakura_tex := PixelArtGenerator.get_prop_texture("sakura")
 	var pine_tex := PixelArtGenerator.get_prop_texture("pine")
 	var bush_tex := PixelArtGenerator.get_prop_texture("bush")
 	var grass_tex := PixelArtGenerator.get_prop_texture("grass_tuft")
 	var flower_tex := PixelArtGenerator.get_prop_texture("flower_cluster")
 
-	# Cây cổ thụ khổng lồ thân chữ Y sừng sững giữa 2 ngôi nhà (đúng hệt vị trí ảnh Windferry!)
-	var giant_tree := _spawn_foliage_sprite(tree_tex, Vector3(-4.5, 2.6, -15.2), 0.165, 6.2)
+	# Cây Hoa Anh Đào cổ thụ khổng lồ nở hồng rực rỡ thơ mộng giữa 2 ngôi nhà!
+	var giant_tree := _spawn_foliage_sprite(sakura_tex, Vector3(-4.5, 2.6, -15.2), 0.142, 6.2)
 	giant_tree.name = "GiantVillageTree"
 
 	# Dải cỏ rậm rạp tiền cảnh sát camera để hiệu ứng Tilt-Shift Near DOF làm mờ mềm mịn y hệt mép dưới ảnh mẫu!
@@ -851,16 +973,16 @@ func _build_trees_and_foliage() -> void:
 		_spawn_foliage_sprite(bush_tex, Vector3(fgx, 0.0, 9.6 + randf_range(-0.6, 0.8)), 0.092, 0.95)
 
 	var tree_specs := [
-		[tree_tex, Vector3(-18.5, 2.6, -12.0), 0.095, 3.6],
-		[autumn_tex, Vector3(9.8, 2.6, -15.2), 0.10, 3.8],
-		[tree_tex, Vector3(21.5, 2.6, -11.8), 0.095, 3.6],
+		[sakura_tex, Vector3(-18.5, 2.6, -12.0), 0.088, 3.8],
+		[sakura_tex, Vector3(9.8, 2.6, -15.2), 0.092, 4.0],
+		[sakura_tex, Vector3(21.5, 2.6, -11.8), 0.088, 3.8],
 		[pine_tex, Vector3(-23.0, 2.6, -18.0), 0.11, 4.0],
 		[pine_tex, Vector3(-14.0, 2.6, -20.5), 0.12, 4.4],
 		[pine_tex, Vector3(2.5, 2.6, -21.0), 0.125, 4.6],
 		[pine_tex, Vector3(15.0, 2.6, -20.0), 0.115, 4.2],
 		[pine_tex, Vector3(24.5, 2.6, -18.5), 0.11, 4.0],
-		[tree_tex, Vector3(-20.5, 0.0, -4.8), 0.088, 3.3],
-		[autumn_tex, Vector3(21.0, 0.0, -4.5), 0.088, 3.3],
+		[tree_tex, Vector3(-20.5, 0.0, -4.8), 0.080, 3.4],
+		[autumn_tex, Vector3(21.0, 0.0, -4.5), 0.080, 3.4],
 	]
 	for ts in tree_specs:
 		_spawn_foliage_sprite(ts[0], ts[1], ts[2], ts[3])
@@ -899,7 +1021,7 @@ func _spawn_foliage_sprite(tex: Texture2D, pos: Vector3, px_size: float, y_lift:
 	sp.texture = tex
 	sp.pixel_size = px_size
 	sp.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
-	sp.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+	sp.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	sp.shaded = true
 	sp.alpha_cut = SpriteBase3D.ALPHA_CUT_DISCARD
 	sp.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_DOUBLE_SIDED
@@ -969,6 +1091,39 @@ func _build_atmosphere_particles() -> void:
 	rain_particles.draw_pass_1 = rain_quad
 	add_child(rain_particles)
 
+	# Cánh hoa Anh Đào hồng pastel bay lất phất lãng mạn khắp không gian!
+	sakura_particles = GPUParticles3D.new()
+	sakura_particles.name = "SakuraPetals"
+	sakura_particles.amount = 72
+	sakura_particles.lifetime = 6.5
+	sakura_particles.position = Vector3(0.0, 9.5, -2.0)
+
+	var sak_mat := ParticleProcessMaterial.new()
+	sak_mat.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+	sak_mat.emission_box_extents = Vector3(26.0, 2.5, 14.0)
+	sak_mat.direction = Vector3(-0.45, -1.0, 0.15)
+	sak_mat.spread = 28.0
+	sak_mat.initial_velocity_min = 0.85
+	sak_mat.initial_velocity_max = 1.65
+	sak_mat.gravity = Vector3(-0.18, -0.35, 0.06)
+	sak_mat.angular_velocity_min = -90.0
+	sak_mat.angular_velocity_max = 90.0
+	sakura_particles.process_material = sak_mat
+
+	var sak_quad := QuadMesh.new()
+	sak_quad.size = Vector2(0.18, 0.12)
+	var sak_draw := StandardMaterial3D.new()
+	sak_draw.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	sak_draw.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+	sak_draw.albedo_color = Color(1.0, 0.78, 0.88, 0.88)
+	sak_draw.emission_enabled = true
+	sak_draw.emission = Color(1.0, 0.72, 0.84)
+	sak_draw.emission_energy_multiplier = 0.95
+	sak_draw.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	sak_quad.material = sak_draw
+	sakura_particles.draw_pass_1 = sak_quad
+	add_child(sakura_particles)
+
 
 func _add_box_mesh(parent: Node3D, size: Vector3, pos: Vector3, mat: Material) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
@@ -982,51 +1137,114 @@ func _add_box_mesh(parent: Node3D, size: Vector3, pos: Vector3, mat: Material) -
 
 
 func _make_textured_material(c1: Color, c2: Color, rough: float, pattern: String) -> StandardMaterial3D:
-	# Nâng cấp texture pixel art 32x32 sắc nét với nhiều biến thể sắc độ từng viên gạch/đá cuội/ngói giống ảnh Windferry
-	var img := Image.create(32, 32, false, Image.FORMAT_RGBA8)
-	var c_hi := c1.lightened(0.14)
-	var c_mid_d := c1.darkened(0.10)
-	var c_warm := Color(clampf(c1.r + 0.05, 0.0, 1.0), clampf(c1.g + 0.03, 0.0, 1.0), c1.b)
-	for y in range(32):
-		for x in range(32):
-			var col := c1
-			if pattern == "brick":
-				var row := y / 6
-				var offset := (row % 2) * 6
-				var brick_id := ((x + offset) / 12) + row * 7
-				var base_b := c_warm if (brick_id % 3 == 0) else (c_mid_d if (brick_id % 4 == 1) else c1)
-				if (y % 6 == 0) or ((x + offset) % 12 == 0):
-					col = c2
-				elif (y % 6 == 1) and ((x + offset) % 12 > 1):
-					col = base_b.lightened(0.12)
-				else:
-					col = base_b
-			elif pattern == "cobble":
-				var row := y / 5
-				var offset := (row % 2) * 3
-				var stone_id := ((x + offset) / 6) * 5 + row * 11
-				if (y % 5 == 0) or ((x + offset) % 6 == 0):
-					col = c2
-				elif stone_id % 4 == 0:
-					col = c_hi
-				elif stone_id % 3 == 0:
-					col = c_mid_d
-				else:
-					col = c_warm
-			elif pattern == "wood":
-				col = c2 if (y % 4 == 0) else (c_hi if ((x + y * 3) % 11 == 0) else c1)
-			else:
-				var n := (x * 7 + y * 13 + x * y) % 9
-				col = c2 if n <= 2 else (c_hi if n >= 7 else c1)
-			img.set_pixel(x, y, col)
+	# Bộ tạo chất liệu tranh vẽ mềm mại 128x128 + Normal Map 3D + lọc Anisotropic mịn (không còn ô vuông gắt!)
+	var cache_key: String = "%s_%s_%.2f_%s" % [c1.to_html(false), c2.to_html(false), rough, pattern]
+	if _mat_cache.has(cache_key):
+		return _mat_cache[cache_key]
 
+	var sz: int = 128
+	var img := Image.create(sz, sz, false, Image.FORMAT_RGBA8)
+	var hmap: PackedFloat32Array = PackedFloat32Array()
+	hmap.resize(sz * sz)
+
+	var c_hi := c1.lightened(0.16)
+	var c_warm := Color(clampf(c1.r + 0.05, 0.0, 1.0), clampf(c1.g + 0.035, 0.0, 1.0), clampf(c1.b + 0.01, 0.0, 1.0))
+
+	for y in range(sz):
+		var fy: float = float(y) / float(sz)
+		for x in range(sz):
+			var fx: float = float(x) / float(sz)
+			# Sóng nhiễu hữu cơ tuần hoàn mượt (seamless multi-wave) không bao giờ bị lộ vết cắt tile
+			var w_a: float = sin(fx * TAU * 2.0 + cos(fy * TAU * 2.0) * 0.9) * 0.5 + 0.5
+			var w_b: float = cos(fy * TAU * 4.0 - sin(fx * TAU * 3.0) * 0.8) * 0.5 + 0.5
+			var w_c: float = sin((fx + fy) * TAU * 6.0) * 0.5 + 0.5
+			var organic: float = w_a * 0.50 + w_b * 0.32 + w_c * 0.18
+
+			var h_val: float = organic
+			var col: Color = c2.lerp(c1, organic)
+
+			if pattern == "cobble":
+				# Đá cuội lát đường bo tròn mềm mại với khe rêu dịu
+				var rows: float = 5.0
+				var cols: float = 5.0
+				var ry: float = fy * rows
+				var row_i: int = int(floor(ry))
+				var rx: float = fx * cols + (0.5 if (row_i % 2 == 1) else 0.0)
+				var col_i: int = int(floor(rx))
+				var lx: float = absf(fposmod(rx, 1.0) - 0.5) * 2.0
+				var ly: float = absf(fposmod(ry, 1.0) - 0.5) * 2.0
+				# Góc bo tròn siêu mịn (superellipse)
+				var edge: float = pow(lx, 3.2) + pow(ly, 3.2)
+				var stone_mask: float = clampf(1.0 - smoothstep(0.55, 0.96, edge), 0.0, 1.0)
+				var tone_var: float = fposmod(sin(float(row_i * 19 + col_i * 37)) * 43758.54, 1.0)
+				var stone_col: Color = c1.lerp(c_warm, tone_var * 0.55).lerp(c_hi, organic * 0.35)
+				col = c2.lerp(stone_col, stone_mask)
+				h_val = stone_mask * (0.72 + organic * 0.28)
+			elif pattern == "brick":
+				# Tường đá cổ bo vát nhẹ với vữa mềm tự nhiên
+				var ry: float = fy * 6.0
+				var row_i: int = int(floor(ry))
+				var rx: float = fx * 3.0 + (0.5 if (row_i % 2 == 1) else 0.0)
+				var col_i: int = int(floor(rx))
+				var lx: float = absf(fposmod(rx, 1.0) - 0.5) * 2.0
+				var ly: float = absf(fposmod(ry, 1.0) - 0.5) * 2.0
+				var m_x: float = 1.0 - smoothstep(0.84, 0.98, lx)
+				var m_y: float = 1.0 - smoothstep(0.78, 0.96, ly)
+				var b_mask: float = m_x * m_y
+				var tv: float = fposmod(sin(float(row_i * 13 + col_i * 29)) * 9123.17, 1.0)
+				var b_col: Color = c1.lerp(c_warm, tv * 0.48).lerp(c_hi, (1.0 - ly) * 0.22 + organic * 0.22)
+				col = c2.lerp(b_col, b_mask)
+				h_val = b_mask * (0.75 + organic * 0.25)
+			elif pattern == "wood":
+				# Vân gỗ ấm mượt chạy dài
+				var plank: float = absf(fposmod(fy * 6.0, 1.0) - 0.5) * 2.0
+				var p_mask: float = 1.0 - smoothstep(0.86, 0.99, plank)
+				var grain: float = sin((fy * 28.0 + sin(fx * TAU * 2.0) * 0.7) * PI) * 0.5 + 0.5
+				col = c2.lerp(c1.lerp(c_hi, grain * 0.38), p_mask)
+				h_val = p_mask * (0.65 + grain * 0.35)
+			elif pattern == "grass":
+				# Thảm cỏ anime vẽ tay mềm mịn có mảng sáng tối & chấm cỏ non
+				var meadow: float = smoothstep(0.18, 0.85, organic)
+				col = c2.lerp(c1, meadow).lerp(c_hi, smoothstep(0.62, 0.92, w_b * w_c) * 0.45)
+				h_val = organic * 0.65 + w_c * 0.35
+			else:
+				# Đường đất tự nhiên mịn màng
+				var smooth_d: float = smoothstep(0.15, 0.85, organic)
+				col = c2.lerp(c1, smooth_d).lerp(c_warm, w_a * 0.25)
+				h_val = organic * 0.7
+
+			img.set_pixel(x, y, col)
+			hmap[y * sz + x] = h_val
+
+	# Sinh Normal Map mượt từ bảng chiều cao để mặt đất & tường bắt ánh đèn lồng lung linh!
+	var n_img := Image.create(sz, sz, false, Image.FORMAT_RGBA8)
+	var strength: float = 2.2
+	for y in range(sz):
+		var ym: int = (y - 1 + sz) % sz
+		var yp: int = (y + 1) % sz
+		for x in range(sz):
+			var xm: int = (x - 1 + sz) % sz
+			var xp: int = (x + 1) % sz
+			var dx: float = (hmap[y * sz + xp] - hmap[y * sz + xm]) * strength
+			var dy: float = (hmap[yp * sz + x] - hmap[ym * sz + x]) * strength
+			var nvec := Vector3(-dx, -dy, 1.0).normalized()
+			n_img.set_pixel(x, y, Color(nvec.x * 0.5 + 0.5, nvec.y * 0.5 + 0.5, nvec.z * 0.5 + 0.5, 1.0))
+
+	img.generate_mipmaps()
+	n_img.generate_mipmaps()
 	var tex := ImageTexture.create_from_image(img)
+	var ntex := ImageTexture.create_from_image(n_img)
+
 	var mat := StandardMaterial3D.new()
 	mat.albedo_texture = tex
-	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+	mat.normal_enabled = true
+	mat.normal_texture = ntex
+	mat.normal_scale = 0.52
+	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	mat.uv1_triplanar = true
-	mat.uv1_scale = Vector3(0.46, 0.46, 0.46)
+	mat.uv1_scale = Vector3(0.32, 0.32, 0.32)
 	mat.roughness = rough
+	_mat_cache[cache_key] = mat
 	return mat
 
 
@@ -1078,7 +1296,14 @@ func _create_lantern_post(root: Node3D, pos: Vector3, light_col: Color, energy: 
 	root.add_child(post)
 	_add_box_mesh(post, Vector3(0.16, 2.2, 0.16), Vector3(0.0, 1.1, 0.0), post_mat)
 	_add_box_mesh(post, Vector3(0.55, 0.12, 0.16), Vector3(0.20, 2.15, 0.0), post_mat)
-	_add_box_mesh(post, Vector3(0.32, 0.40, 0.32), Vector3(0.38, 1.85, 0.0), bulb_mat)
+	var lbulb := MeshInstance3D.new()
+	var lbsm := SphereMesh.new()
+	lbsm.radius = 0.20
+	lbsm.height = 0.40
+	lbulb.mesh = lbsm
+	lbulb.position = Vector3(0.38, 1.85, 0.0)
+	lbulb.material_override = bulb_mat
+	post.add_child(lbulb)
 
 	var light := OmniLight3D.new()
 	light.position = Vector3(0.38, 1.80, 0.0)
@@ -1162,7 +1387,7 @@ func _spawn_foliage_sprite_to(root: Node3D, tex: Texture2D, pos: Vector3, px_siz
 	sp.texture = tex
 	sp.pixel_size = px_size
 	sp.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
-	sp.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+	sp.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	sp.shaded = true
 	sp.alpha_cut = SpriteBase3D.ALPHA_CUT_DISCARD
 	sp.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_DOUBLE_SIDED

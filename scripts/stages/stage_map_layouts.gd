@@ -67,15 +67,17 @@ static func _build_autumn_forest(b: HD2DEnvironmentBuilder, root: Node3D) -> voi
 	b.create_curved_wooden_gate(root, Vector3(-14.5, 0.0, 1.2), 82.0, "RỪNG THU QUAN")
 	b.create_red_lantern_string(root, Vector3(-9.5, 3.8, -5.2), Vector3(8.5, 3.8, -5.2), 6)
 
-	# Rừng cây lá thu vàng cam dày đặc tạo không khí chiều thu rực rỡ
+	# Rừng cây lá thu vàng cam xen kẽ Hoa Anh Đào hồng pastel thơ mộng!
 	var autumn_tex := PixelArtGenerator.get_prop_texture("tree_autumn")
+	var sakura_tex := PixelArtGenerator.get_prop_texture("sakura")
 	var tree_tex := PixelArtGenerator.get_prop_texture("tree")
 	var bush_tex := PixelArtGenerator.get_prop_texture("bush")
 	var flower_tex := PixelArtGenerator.get_prop_texture("flower_cluster")
 
 	for x_pos: float in [-20.0, -15.5, -11.0, -5.0, 0.0, 4.8, 12.5, 17.5, 21.5]:
-		var tex := autumn_tex if (int(abs(x_pos)) % 2 == 0) else tree_tex
-		b._spawn_foliage_sprite_to(root, tex, Vector3(x_pos, 0.8, -11.2 + randf_range(-1.5, 1.0)), 0.11, 4.1)
+		var idx_m: int = int(absf(x_pos)) % 3
+		var tex := sakura_tex if idx_m == 0 else (autumn_tex if idx_m == 1 else tree_tex)
+		b._spawn_foliage_sprite_to(root, tex, Vector3(x_pos, 0.8, -11.2 + randf_range(-1.5, 1.0)), 0.095, 4.1)
 	for x_fg: float in [-16.0, -9.0, -2.0, 4.0, 9.0, 16.0]:
 		b._spawn_foliage_sprite_to(root, flower_tex, Vector3(x_fg, 0.0, 7.8), 0.068, 0.58)
 	for bx: float in [-14.0, -6.5, 3.5, 12.0]:
@@ -128,8 +130,10 @@ static func _build_moonlit_bridge(b: HD2DEnvironmentBuilder, root: Node3D) -> vo
 	b.create_red_lantern_string(root, Vector3(-12.0, 4.4, -3.8), Vector3(12.0, 4.4, -3.8), 7)
 
 	var pine_tex := PixelArtGenerator.get_prop_texture("pine")
+	var sakura_tex := PixelArtGenerator.get_prop_texture("sakura")
 	for px: float in [-22.0, -12.0, -6.0, 0.0, 6.0, 12.0, 22.0]:
-		b._spawn_foliage_sprite_to(root, pine_tex, Vector3(px, 0.0, -12.5), 0.12, 4.4)
+		var t_use := sakura_tex if (absf(px) == 6.0 or absf(px) == 12.0) else pine_tex
+		b._spawn_foliage_sprite_to(root, t_use, Vector3(px, 0.0, -12.5), 0.105 if t_use == sakura_tex else 0.12, 4.3)
 
 	b._spawn_breakables_at(root, [
 		["barrel", Vector3(-9.0, 0.2, -2.5)],

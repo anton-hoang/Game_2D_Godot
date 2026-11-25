@@ -188,9 +188,11 @@ static func get_prop_texture(prop_type: String) -> ImageTexture:
 	var img: Image
 	match prop_type:
 		"tree":
-			img = _make_tree_image(false)
+			img = _make_tree_image("green")
 		"tree_autumn":
-			img = _make_tree_image(true)
+			img = _make_tree_image("autumn")
+		"sakura":
+			img = _make_tree_image("sakura")
 		"pine":
 			img = _make_pine_image()
 		"bush":
@@ -1152,44 +1154,58 @@ static func _make_enemy_frame(archetype: String, step: int, attacking: bool, tin
 	return ImageTexture.create_from_image(img)
 
 
-## Cây cổ thụ tán rộng nhiều tầng sáng tối (hỗ trợ cả bản lá xanh đêm & lá thu vàng)
-static func _make_tree_image(autumn: bool) -> Image:
-	var w := 64
-	var h := 80
+## Cây cổ thụ tán rộng nhiều tầng mềm mại (hỗ trợ lá xanh, lá thu vàng cam & Hoa Anh Đào hồng pastel!)
+static func _make_tree_image(style: String) -> Image:
+	var w: int = 80
+	var h: int = 96
 	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
 	img.fill(Color(0, 0, 0, 0))
 
-	var trunk_d := Color(0.18, 0.11, 0.08)
-	var trunk_m := Color(0.30, 0.19, 0.13)
-	var trunk_h := Color(0.42, 0.28, 0.18)
+	var trunk_d := Color(0.20, 0.12, 0.10)
+	var trunk_m := Color(0.32, 0.20, 0.16)
+	var trunk_h := Color(0.45, 0.30, 0.22)
 
-	var l1 := Color(0.08, 0.19, 0.13) if not autumn else Color(0.36, 0.14, 0.09)
-	var l2 := Color(0.14, 0.30, 0.19) if not autumn else Color(0.58, 0.26, 0.12)
-	var l3 := Color(0.22, 0.44, 0.25) if not autumn else Color(0.82, 0.46, 0.16)
-	var l4 := Color(0.35, 0.58, 0.32) if not autumn else Color(0.95, 0.70, 0.24)
+	var l1 := Color(0.09, 0.22, 0.16)
+	var l2 := Color(0.16, 0.36, 0.24)
+	var l3 := Color(0.28, 0.52, 0.32)
+	var l4 := Color(0.46, 0.70, 0.42)
+	if style == "autumn":
+		l1 = Color(0.42, 0.15, 0.10)
+		l2 = Color(0.68, 0.28, 0.12)
+		l3 = Color(0.90, 0.50, 0.18)
+		l4 = Color(1.0, 0.78, 0.34)
+	elif style == "sakura":
+		l1 = Color(0.62, 0.28, 0.44)
+		l2 = Color(0.86, 0.48, 0.64)
+		l3 = Color(0.98, 0.70, 0.80)
+		l4 = Color(1.0, 0.90, 0.94)
 
-	# Thân cây cổ thụ xù xì & rễ bạnh
-	_fill_rect(img, 26, 42, 12, 34, trunk_d)
-	_fill_rect(img, 28, 44, 7, 30, trunk_m)
-	_fill_rect(img, 29, 45, 3, 26, trunk_h)
-	_fill_rect(img, 20, 70, 24, 6, trunk_d)
-	_fill_rect(img, 23, 68, 18, 5, trunk_m)
-	# Nhánh cây vươn chữ Y như cây cổ thụ lớn giữa làng trong ảnh mẫu
-	_fill_rect(img, 18, 34, 8, 12, trunk_d)
-	_fill_rect(img, 38, 34, 8, 12, trunk_d)
+	# Thân cây cổ thụ uốn lượn mềm mại & rễ bạnh tự nhiên
+	_fill_rect(img, 33, 52, 14, 39, trunk_d)
+	_fill_rect(img, 35, 54, 8, 35, trunk_m)
+	_fill_rect(img, 36, 56, 4, 28, trunk_h)
+	_fill_rect(img, 24, 84, 32, 8, trunk_d)
+	_fill_rect(img, 28, 82, 24, 6, trunk_m)
+	_fill_rect(img, 22, 42, 11, 14, trunk_d)
+	_fill_rect(img, 47, 42, 11, 14, trunk_d)
 
-	# Tán lá nhiều tầng (Layered foliage clusters)
-	_fill_circle(img, 32, 28, 23, l1)
-	_fill_circle(img, 18, 34, 15, l1)
-	_fill_circle(img, 46, 34, 15, l1)
-	_fill_circle(img, 32, 24, 19, l2)
-	_fill_circle(img, 20, 30, 12, l2)
-	_fill_circle(img, 44, 30, 12, l2)
-	_fill_circle(img, 29, 19, 13, l3)
-	_fill_circle(img, 40, 23, 10, l3)
-	_fill_circle(img, 21, 25, 9, l3)
-	_fill_circle(img, 28, 14, 8, l4)
-	_fill_circle(img, 38, 18, 6, l4)
+	# Tán lá nhiều tầng bồng bềnh mềm mại (painterly cloud clusters)
+	_fill_circle(img, 40, 35, 29, l1)
+	_fill_circle(img, 22, 42, 19, l1)
+	_fill_circle(img, 58, 42, 19, l1)
+	_fill_circle(img, 40, 30, 24, l2)
+	_fill_circle(img, 24, 38, 16, l2)
+	_fill_circle(img, 56, 38, 16, l2)
+	_fill_circle(img, 35, 24, 17, l3)
+	_fill_circle(img, 50, 29, 14, l3)
+	_fill_circle(img, 25, 32, 12, l3)
+	_fill_circle(img, 34, 18, 11, l4)
+	_fill_circle(img, 48, 22, 9, l4)
+	_fill_circle(img, 24, 27, 7, l4)
+	# Điểm sáng cánh hoa rơi rải quanh tán cây Anh Đào
+	if style == "sakura":
+		for pp: Vector2i in [Vector2i(12, 56), Vector2i(66, 52), Vector2i(18, 66), Vector2i(62, 68), Vector2i(46, 58)]:
+			_fill_circle(img, pp.x, pp.y, 2, l4)
 	return img
 
 
