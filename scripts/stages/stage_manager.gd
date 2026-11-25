@@ -12,12 +12,14 @@ signal npc_interacted(npc_data: Dictionary)
 signal bounty_board_opened
 signal relic_selection_requested
 signal hub_portal_entered
+signal endless_portal_entered
 
 var environment_builder: HD2DEnvironmentBuilder
 var player: PlayerController
 var companion_pet: SpiritCompanion3D
 var camera_rig: CameraRig3D
 var wave_portal: WavePortal3D
+var tower_portal: WavePortal3D
 var entities_root: Node3D
 var town_npcs_root: Node3D
 
@@ -25,6 +27,7 @@ var current_stage_data: StageData
 var current_wave_index: int = 0
 var alive_enemies_count: int = 0
 var is_in_town_hub: bool = false
+var _endless_floor: int = 0
 
 const SPAWN_POINTS: Array[Vector3] = [
 	Vector3(-14.5, 0.2, 1.5),
@@ -89,6 +92,16 @@ func _setup_scene_hierarchy() -> void:
 		add_child(wave_portal)
 	wave_portal.position = Vector3(7.5, 0.05, 1.5)
 	wave_portal.portal_entered.connect(_on_portal_entered)
+
+	# CỔNG THÁP VÔ TẬN (CỬU THIÊN THÍ LUYỆN THÁP) đặt ngay khu vực bờ trái Làng Cổ Windferry!
+	tower_portal = WavePortal3D.new()
+	tower_portal.name = "EndlessTowerPortal3D"
+	add_child(tower_portal)
+	tower_portal.position = Vector3(-13.8, 0.05, 4.2)
+	tower_portal.portal_entered.connect(func() -> void:
+		if is_in_town_hub:
+			endless_portal_entered.emit()
+	)
 
 	_build_town_npcs()
 
@@ -181,10 +194,71 @@ func enter_town_hub() -> void:
 	wave_portal.set_portal_active(true, SaveManager.unlocked_stage, false)
 	wave_portal._label_3d.text = "CỔNG CHIẾN ĐẤU (MÀN " + str(SaveManager.unlocked_stage) + ")\n(Bước vào để chọn màn đánh quái)"
 	wave_portal._label_3d.modulate = Color(1.0, 0.86, 0.35)
+
+	# Kích hoạt Cổng Tháp Vô Tận sắc tím hoàng kim bên bờ trái Làng Cổ Windferry!
+	if tower_portal:
+		tower_portal.set_portal_active(true, 1, true)
+		var best_fl: int = SaveManager.best_endless_floor
+		tower_portal._label_3d.text = "✦ CỬU THIÊN THÍ LUYỆN THÁP ✦\n(Tháp Vô Tận • Kỷ lục: Tầng %d)" % best_fl
+		tower_portal._label_3d.modulate = Color(0.88, 0.62, 1.0)
 	wave_banner_requested.emit(
 		"LÀNG CỔ WINDFERRY (KHU VỰC YÊN BÌNH)",
-		"Nói chuyện NPC bằng [E] • Leo cầu thang bên phải vào 3 nhà mở Rương • Vào Cổng Ánh Sáng để đánh quái"
+		"Nói chuyện NPC bằng [E] • Cổng Phải: 5 Màn Chiến Đấu • Cổng Trái: Tháp Vô Tận!"
 	)
+
+
+## BẮT ĐẦU LEO CỬU THIÊN THÍ LUYỆN THÁP (THÁP VÔ TẬN — Mỗi 3 tầng gặp 1 Boss Huyền Thoại ngẫu nhiên!)
+func start_endless_tower() -> void:
+	_clear_entities()
+	is_in_town_hub = false
+	_endless_floor = 1
+	if town_npcs_root:
+		town_npcs_root.visible = false
+		town_npcs_root.process_mode = Node.PROCESS_MODE_DISABLED
+	if tower_portal:
+		tower_portal.set_portal_active(false)
+
+	player._is_dead = false
+	player._apply_save_upgrades()
+	player.reset_stage_relics()
+	player.global_position = Vector3(1.5, 0.2, 2.2)
+	if companion_pet and is_instance_valid(companion_pet):
+		companion_pet.global_position = player.global_position + Vector3(-1.2, 1.6, -0.4)
+		companion_pet.reset_stage_passives()
+	player.hp_changed.emit(player.current_hp, player.max_hp)
+	player.energy_changed.emit(player.current_energy, player.max_energy)
+	player.current_ultimate = player.max_ultimate
+	player.ultimate_changed.emit(player.current_ultimate, player.max_ultimate)
+
+	AudioManager.play_bgm("battle", true)
+	wave_portal.set_portal_active(false)
+	GameManager.start_endless_tower()
+	_prepare_and_spawn_endless_floor(1)
+
+
+func _prepare_and_spawn_endless_floor(floor_num: int) -> void:
+	_endless_floor = floor_num
+	GameManager.set_endless_floor(floor_num)
+	# Xoay vòng qua 5 đấu trường HD-2D tuyệt đẹp mỗi khi lên tầng!
+	var themes: Array[String] = ["autumn_forest", "moonlit_bridge", "rainy_market", "ancient_fortress", "eclipse_citadel"]
+	var chosen_theme: String = themes[(floor_num - 1) % themes.size()]
+	environment_builder.build_map_for_theme(chosen_theme)
+	environment_builder.apply_random_time_of_day(true)
+
+	# Đặt lại vị trí nhân vật về giữa sân gọn gàng khi chuyển tầng
+	player.global_position = Vector3(0.0, 0.2, 2.0)
+	if companion_pet and is_instance_valid(companion_pet):
+		companion_pet.global_position = player.global_position + Vector3(-1.2, 1.6, -0.4)
+	wave_portal.set_portal_active(false)
+
+	var is_boss_floor: bool = (floor_num % 3 == 0)
+	var sub_txt: String = "ĐỢT BOSS HUYỀN THOẠI NGẪU NHIÊN! (Thưởng lớn Vàng + Hồn Yêu)" if is_boss_floor else ("Kỷ lục hiện tại: Tầng %d • Diệt hết quái để nhận Bùa Cổ Ngữ!" % SaveManager.best_endless_floor)
+	wave_banner_requested.emit("CỬU THIÊN THÁP — TẦNG %d" % floor_num, sub_txt)
+
+	await get_tree().create_timer(1.0).timeout
+	if is_instance_valid(self) and GameManager.is_stage_active and GameManager.is_endless_mode:
+		var floor_wave: Dictionary = StageDatabase.get_endless_floor_wave(floor_num)
+		_spawn_wave_dictionary(floor_wave, floor_num, true)
 
 
 ## Tải và bắt đầu màn chơi theo stage_id (1 đến 5)
@@ -194,6 +268,8 @@ func load_and_start_stage(stage_id: int) -> void:
 	if town_npcs_root:
 		town_npcs_root.visible = false
 		town_npcs_root.process_mode = Node.PROCESS_MODE_DISABLED
+	if tower_portal:
+		tower_portal.set_portal_active(false)
 
 	current_stage_data = StageDatabase.get_stage_data(stage_id)
 	current_wave_index = 0
@@ -242,14 +318,17 @@ func _spawn_current_wave() -> void:
 		if StageDatabase.is_boss_id(wks):
 			boss_key = wks
 			break
-	var is_boss_wave: bool = (boss_key != "")
-	if is_boss_wave:
+	if boss_key != "":
 		var preview_stats := StageDatabase.get_enemy_stats(boss_key, current_stage_data.stage_id)
 		wave_banner_requested.emit("ĐỢT CUỐI: BOSS " + preview_stats.enemy_name.to_upper() + "!", preview_stats.boss_subtitle)
 		AudioManager.play_sfx("boss_roar")
 	else:
 		wave_banner_requested.emit("ĐỢT QUÁI " + str(wave_num) + " / " + str(total_w), "Tiêu diệt toàn bộ kẻ địch để mở cổng!")
 
+	_spawn_wave_dictionary(wave_dict, current_stage_data.stage_id, false)
+
+
+func _spawn_wave_dictionary(wave_dict: Dictionary, level_num: int, is_endless: bool) -> void:
 	var spawn_idx := 0
 	alive_enemies_count = 0
 
@@ -258,7 +337,7 @@ func _spawn_current_wave() -> void:
 		var is_b: bool = StageDatabase.is_boss_id(arch_str)
 		var count := int(wave_dict[archetype])
 		for i in range(count):
-			var enemy := _instantiate_enemy(arch_str, current_stage_data.stage_id)
+			var enemy := _instantiate_enemy(arch_str, level_num, level_num if is_endless else 0)
 			var base_pos := SPAWN_POINTS[spawn_idx % SPAWN_POINTS.size()]
 			if is_b:
 				base_pos = Vector3(8.0, 0.3, 1.2)
@@ -271,11 +350,12 @@ func _spawn_current_wave() -> void:
 			spawn_idx += 1
 
 			if is_b:
+				AudioManager.play_sfx("boss_roar")
 				boss_appeared.emit(enemy)
 				GameManager.boss_spawned.emit(enemy)
 
 
-func _instantiate_enemy(archetype: String, stage_level: int) -> EnemyBase:
+func _instantiate_enemy(archetype: String, stage_level: int, endless_floor: int = 0) -> EnemyBase:
 	var enemy: EnemyBase
 	var scene_path := "res://scenes/enemies/enemy_base.tscn"
 	if ResourceLoader.exists(scene_path):
@@ -283,7 +363,7 @@ func _instantiate_enemy(archetype: String, stage_level: int) -> EnemyBase:
 		enemy = sc.instantiate() as EnemyBase
 	else:
 		enemy = EnemyBase.new()
-	enemy.stats = StageDatabase.get_enemy_stats(archetype, stage_level)
+	enemy.stats = StageDatabase.get_enemy_stats(archetype, stage_level, endless_floor)
 	return enemy
 
 
@@ -350,6 +430,29 @@ func _spawn_loot_drops(pos: Vector3, enemy_stats: EnemyStats) -> void:
 
 
 func _on_wave_cleared() -> void:
+	# CHẾ ĐỘ THÁP VÔ TẬN: Thưởng vàng + Lưu Kỷ lục tầng cao nhất + Hồi 20% máu + Mở Cổng lên tầng tiếp!
+	if GameManager.is_endless_mode:
+		var floor_gold: int = 25 + _endless_floor * 12 + (40 if (_endless_floor % 3 == 0) else 0)
+		GameManager.endless_gold_earned += floor_gold
+		SaveManager.add_gold(floor_gold)
+		GameManager.add_score(250 + _endless_floor * 80)
+		var is_new_rec: bool = SaveManager.record_endless_floor(_endless_floor, GameManager.current_score)
+		AudioManager.play_sfx("victory", 1.15)
+		if player and is_instance_valid(player):
+			player.heal(player.max_hp * 0.22)
+			player.add_energy(40.0)
+
+		var next_fl: int = _endless_floor + 1
+		var next_boss: bool = (next_fl % 3 == 0)
+		wave_portal.set_portal_active(true, next_fl, next_boss)
+		wave_portal._label_3d.text = "LÊN TẦNG %d%s\n(Bước vào chọn Bùa Cổ Ngữ!)" % [next_fl, " — BOSS!" if next_boss else ""]
+		var rec_note: String = " ★ KỶ LỤC MỚI!" if is_new_rec else ""
+		wave_banner_requested.emit(
+			"PHÁ ĐẢO TẦNG %d! (+%d LƯỢNG)%s" % [_endless_floor, floor_gold, rec_note],
+			"Bước vào Cổng Ánh Sáng để lĩnh hội Bùa Cổ Ngữ & tiến lên Tầng %d!" % next_fl
+		)
+		return
+
 	current_wave_index += 1
 	if current_wave_index >= current_stage_data.waves.size():
 		# Đã hoàn thành toàn bộ các đợt của màn chơi
@@ -373,15 +476,18 @@ func _on_portal_entered() -> void:
 	if is_in_town_hub:
 		hub_portal_entered.emit()
 	else:
-		# Sau mỗi Wave bước qua Cổng Ánh Sáng -> Hiện 3 Thẻ Bùa Cổ Ngữ Roguelite để người chơi chọn!
+		# Sau mỗi Wave hoặc mỗi Tầng Tháp Vô Tận -> Hiện 3 Thẻ Bùa Cổ Ngữ Roguelite ngẫu nhiên để cộng dồn!
 		relic_selection_requested.emit()
 
 
-## Tiếp tục sinh đợt quái kế tiếp ngay sau khi người chơi chọn xong 1 trong 3 Bùa Cổ Ngữ
+## Tiếp tục sinh đợt quái kế tiếp (hoặc Tầng Tháp Vô Tận kế tiếp) sau khi chọn xong 1 Bùa Cổ Ngữ
 func apply_relic_and_continue_wave(relic_id: String) -> void:
 	if player and is_instance_valid(player):
 		player.add_relic(relic_id)
-	_spawn_current_wave()
+	if GameManager.is_endless_mode:
+		_prepare_and_spawn_endless_floor(_endless_floor + 1)
+	else:
+		_spawn_current_wave()
 
 
 func _clear_entities() -> void:

@@ -7,6 +7,7 @@ extends CanvasLayer
 ## - Menu chính, Chọn màn (1-5), Lò rèn nâng cấp, Tạm dừng, Hộp thoại Chân dung NPC và Bảng Phong Thần S/A/B/C.
 
 signal start_stage_requested(stage_id: int)
+signal start_endless_tower_requested
 signal enter_town_hub_requested
 signal toggle_dof_requested
 signal npc_service_requested(role: String)
@@ -66,6 +67,7 @@ var _pet_gacha_result_lbl: Label
 var _pet_gacha_btn: Button
 var _pet_cards_grid: GridContainer
 var _pet_skill_cd_rem: float = 0.0
+var _relic_cards_row: HBoxContainer
 var _quest_list_box: VBoxContainer
 var _scarf_buttons_box: HBoxContainer
 var _pet_buttons_box: HBoxContainer
@@ -127,6 +129,7 @@ func _ready() -> void:
 
 	GameManager.stats_updated.connect(_on_stats_updated)
 	GameManager.stage_cleared.connect(_on_stage_cleared)
+	GameManager.endless_run_ended.connect(_on_endless_run_ended)
 	GameManager.player_died.connect(_on_player_died)
 	GameManager.boss_spawned.connect(_on_boss_spawned)
 	SaveManager.data_changed.connect(_refresh_all_menus)
@@ -340,10 +343,11 @@ func show_weapon_shop() -> void:
 		shop_panel.visible = true
 
 
-## Hiện bảng chọn 1 trong 3 Bùa Cổ Ngữ Roguelite sau mỗi đợt quái
+## Hiện bảng chọn ngẫu nhiên 3 trong 6 Bùa Cổ Ngữ Roguelite sau mỗi đợt quái / mỗi Tầng Tháp Vô Tận
 func show_relic_selection() -> void:
 	get_tree().paused = true
 	_hide_all_panels()
+	_populate_random_relic_cards()
 	if relic_panel:
 		relic_panel.visible = true
 
@@ -366,7 +370,13 @@ func update_relics_hud(relics: Dictionary) -> void:
 	if int(relics.get("fire_dash", 0)) > 0:
 		parts.append("🔥Hỏa Viêm Lv.%d" % int(relics["fire_dash"]))
 	if int(relics.get("siphon", 0)) > 0:
-		parts.append("✦Hấp Tinh Lv.%d" % int(relics["siphon"]))
+		parts.append("✦Hút Máu Lv.%d" % int(relics["siphon"]))
+	if int(relics.get("phantom_blade", 0)) > 0:
+		parts.append("⚔Phân Thân Lv.%d" % int(relics["phantom_blade"]))
+	if int(relics.get("swift_fury", 0)) > 0:
+		parts.append("🌪Trảm Tốc Lv.%d" % int(relics["swift_fury"]))
+	if int(relics.get("meteor_call", 0)) > 0:
+		parts.append("☄Thiên Thạch Lv.%d" % int(relics["meteor_call"]))
 	_relic_hud_label.text = ("Bùa Cổ Ngữ: " + "  |  ".join(parts)) if parts.size() > 0 else ""
 
 
@@ -807,8 +817,9 @@ func play_boss_cinematic_overlay(boss_title: String, boss_subtitle: String, dura
 
 
 func _build_main_menu() -> void:
-	main_menu_panel = _create_center_modal(540, 440)
+	main_menu_panel = _create_center_modal(580, 560)
 	var vbox := _get_modal_vbox(main_menu_panel)
+	vbox.add_theme_constant_override("separation", 6)
 
 	var ornament := Label.new()
 	ornament.text = "━━━━━━━━━  ❖  ━━━━━━━━━"
@@ -843,6 +854,12 @@ func _build_main_menu() -> void:
 	)
 	play_btn.name = "QuickPlayBtn"
 	vbox.add_child(play_btn)
+
+	var tower_btn := _create_button("❖ CỬU THIÊN THÍ LUYỆN THÁP — THÁP VÔ TẬN (KỶ LỤC: TẦNG 0)", func() -> void:
+		_start_endless_tower()
+	)
+	tower_btn.name = "EndlessTowerBtn"
+	vbox.add_child(tower_btn)
 
 	vbox.add_child(_create_button("❖ CHỌN CHIẾN TRƯỜNG (5 MÀN BẢN ĐỒ RIÊNG)", func() -> void:
 		_hide_all_panels()
@@ -967,7 +984,10 @@ func _build_pause_menu() -> void:
 		_toggle_pause()
 	))
 	vbox.add_child(_create_button("TÁI CHIẾN MÀN NÀY", func() -> void:
-		_start_stage(GameManager.current_stage_id)
+		if GameManager.is_endless_mode:
+			_start_endless_tower()
+		else:
+			_start_stage(GameManager.current_stage_id)
 	))
 	vbox.add_child(_create_button("VỀ CHÍNH ĐIỆN", func() -> void:
 		show_main_menu()
@@ -999,8 +1019,11 @@ func _build_result_menu() -> void:
 	vbox.add_child(_result_details_label)
 
 	_next_stage_btn = _create_button("TIẾN VÀO ẢI TIẾP THEO", func() -> void:
-		var next_id := mini(GameManager.TOTAL_STAGES, GameManager.current_stage_id + 1)
-		_start_stage(next_id)
+		if GameManager.is_endless_mode:
+			_start_endless_tower()
+		else:
+			var next_id := mini(GameManager.TOTAL_STAGES, GameManager.current_stage_id + 1)
+			_start_stage(next_id)
 	)
 	vbox.add_child(_next_stage_btn)
 
@@ -1035,7 +1058,10 @@ func _build_gameover_menu() -> void:
 	vbox.add_child(sub)
 
 	vbox.add_child(_create_button("TÁI CHIẾN MÀN NÀY", func() -> void:
-		_start_stage(GameManager.current_stage_id)
+		if GameManager.is_endless_mode:
+			_start_endless_tower()
+		else:
+			_start_stage(GameManager.current_stage_id)
 	))
 	vbox.add_child(_create_button("VÀO LÒ RÈN CƯỜNG HÓA", func() -> void:
 		_hide_all_panels()
@@ -1164,35 +1190,68 @@ func _build_relic_selection_panel() -> void:
 	cards_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	cards_row.add_theme_constant_override("separation", 18)
 	vbox.add_child(cards_row)
+	_relic_cards_row = cards_row
+	_populate_random_relic_cards()
 
-	var relic_cards := [
+
+## Chọn ngẫu nhiên 3 trong 6 Bí Tịch Cổ Ngữ cộng dồn (Hút máu, Phân Thân Kiếm Khí, Tăng Tốc Đánh, Mưa Thiên Thạch, Lôi Công, Hỏa Viêm!)
+func _populate_random_relic_cards() -> void:
+	if _relic_cards_row == null:
+		return
+	for c in _relic_cards_row.get_children():
+		c.queue_free()
+
+	var all_relics: Array = [
+		{
+			"id": "siphon",
+			"seal": "HUYẾT",
+			"title": "Hấp Tinh Hút Máu",
+			"accent": Color(0.46, 0.96, 0.62),
+			"desc": "Mỗi khi hạ gục kẻ địch, hút linh khí hồi ngay +8% Sinh Lực tối đa và +15 Chân Khí (cộng dồn nhiều tầng)!",
+		},
+		{
+			"id": "phantom_blade",
+			"seal": "PHÂN",
+			"title": "Phân Thân Kiếm Khí",
+			"accent": Color(0.38, 0.96, 1.0),
+			"desc": "Mỗi đòn đánh phóng thêm đạo Kiếm Khí phân thân xuyên gió về phía trước (mỗi tầng thêm +1 đạo kiếm khí)!",
+		},
+		{
+			"id": "swift_fury",
+			"seal": "PHONG",
+			"title": "Cuồng Phong Trảm Tốc",
+			"accent": Color(1.0, 0.86, 0.32),
+			"desc": "Tăng vĩnh viễn +18% Tốc Độ Đánh và +12% Công Lực trong trận này (cộng dồn siêu nhanh)!",
+		},
+		{
+			"id": "meteor_call",
+			"seal": "THIÊN",
+			"title": "Thiên Thạch Giáng Thế",
+			"accent": Color(1.0, 0.42, 0.16),
+			"desc": "Định kỳ tự động gọi Mưa Thiên Thạch Lửa 3D rơi từ bầu trời nổ AOE chí mạng xuống đầu quái vật!",
+		},
 		{
 			"id": "lightning",
 			"seal": "LÔI",
 			"title": "Lôi Công Kiếm Quyết",
-			"accent": Color(0.45, 0.88, 1.0),
-			"desc": "Đòn thứ 3 trong chuỗi Tam Liên Trảm giật tia sét lan sang tối đa 3 quái vật gần nhất, gây sát thương chí mạng!",
+			"accent": Color(0.48, 0.78, 1.0),
+			"desc": "Đòn thứ 3 trong chuỗi Tam Liên Trảm giật tia sét lan sang tối đa 3 quái vật gần nhất, gây chí mạng!",
 		},
 		{
 			"id": "fire_dash",
 			"seal": "HỎA",
 			"title": "Hỏa Viêm Khinh Công",
 			"accent": Color(1.0, 0.56, 0.22),
-			"desc": "Mỗi lần thi triển Thân Pháp (Dash - phím L) để lại vệt lửa cháy rực trên mặt đất thiêu đốt toàn bộ kẻ địch đuổi theo!",
-		},
-		{
-			"id": "siphon",
-			"seal": "TINH",
-			"title": "Hấp Tinh Đại Pháp",
-			"accent": Color(0.46, 0.96, 0.62),
-			"desc": "Mỗi khi hạ gục một kẻ địch, hấp thụ linh khí hồi ngay 8% Sinh Lực tối đa và +15 Chân Khí (cộng dồn theo tầng)!",
+			"desc": "Mỗi lần lướt Khinh Công (Dash - phím L) để lại vệt lửa cháy rực trên mặt đất thiêu đốt toàn bộ kẻ địch!",
 		},
 	]
+	all_relics.shuffle()
 
-	for rc in relic_cards:
+	for i in range(3):
+		var rc: Dictionary = all_relics[i]
 		var card := _create_classical_panel(Color(0.16, 0.10, 0.08, 0.98), rc["accent"])
 		card.custom_minimum_size = Vector2(252, 265)
-		cards_row.add_child(card)
+		_relic_cards_row.add_child(card)
 
 		var cv := VBoxContainer.new()
 		cv.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -2201,6 +2260,9 @@ func _refresh_all_menus() -> void:
 	var quick_btn := main_menu_panel.find_child("QuickPlayBtn", true, false) as Button
 	if quick_btn:
 		quick_btn.text = "❖ XUẤT TRẬN NGAY (ẢI MỚI NHẤT: MÀN " + str(SaveManager.unlocked_stage) + ")"
+	var tower_btn := main_menu_panel.find_child("EndlessTowerBtn", true, false) as Button
+	if tower_btn:
+		tower_btn.text = "❖ CỬU THIÊN THÍ LUYỆN THÁP — THÁP VÔ TẬN (KỶ LỤC: TẦNG %d)" % SaveManager.best_endless_floor
 
 	if _stage_buttons_box:
 		for c in _stage_buttons_box.get_children():
@@ -2217,6 +2279,10 @@ func _refresh_all_menus() -> void:
 			)
 			btn.disabled = not unlocked
 			_stage_buttons_box.add_child(btn)
+		var endless_sbtn := _create_button("✦ CỬU THIÊN THÍ LUYỆN THÁP (THÁP VÔ TẬN • KỶ LỤC: TẦNG %d)" % SaveManager.best_endless_floor, func() -> void:
+			_start_endless_tower()
+		)
+		_stage_buttons_box.add_child(endless_sbtn)
 
 	if _upgrade_info_label:
 		var lv_atk: int = int(SaveManager.upgrades.get("attack", 0))
@@ -2284,7 +2350,10 @@ func _on_stats_updated(score: int, gold: int, wave_idx: int, total_waves: int) -
 	if gold_label:
 		gold_label.text = "❖ Ngân Lượng: " + str(gold) + " Lượng"
 	if wave_label:
-		wave_label.text = "❖ Chiến Đợt: %d / %d" % [wave_idx, total_waves]
+		if GameManager.is_endless_mode:
+			wave_label.text = "❖ Thí Luyện Tháp: Tầng %d (Kỷ lục: %d)" % [wave_idx, SaveManager.best_endless_floor]
+		else:
+			wave_label.text = "❖ Chiến Đợt: %d / %d" % [wave_idx, total_waves]
 
 
 func _on_boss_spawned(boss_node: Node) -> void:
@@ -2321,16 +2390,45 @@ func _on_stage_cleared(result: Dictionary) -> void:
 	get_tree().paused = true
 	_hide_all_panels()
 	result_panel.visible = true
-	_result_title_label.text = "【 KHẢI HOÀN PHÁ ẢI %d 】" % int(result.get("stage_id", 1))
+	_result_title_label.text = "【 BẢNG PHONG THẦN • PHÁ ẢI %d 】" % int(result.get("stage_id", 1))
 	var rank_str := str(result.get("rank", "A"))
 	_result_rank_label.text = "PHONG HẠNG: " + rank_str
 	_result_rank_label.modulate = Color(1.0, 0.88, 0.25) if rank_str == "S" else (Color(0.45, 0.95, 0.55) if rank_str == "A" else Color(0.85, 0.85, 0.95))
 	_result_details_label.text = (
-		"Chiến công đạt được: %d\nThời khắc hoàn thành: %.1f giây\nBan thưởng phá ải: +%d Lượng"
-		% [int(result.get("score", 0)), float(result.get("time", 0.0)), int(result.get("gold_reward", 0))]
+		"Chiến công đạt được: %d\nThời khắc hoàn thành: %.1f giây\nBan thưởng phá ải: +%d Lượng\n✦ Kỷ Lục Tháp Vô Tận: Tầng %d"
+		% [int(result.get("score", 0)), float(result.get("time", 0.0)), int(result.get("gold_reward", 0)), SaveManager.best_endless_floor]
 	)
+	_next_stage_btn.text = "TIẾN VÀO ẢI TIẾP THEO"
 	_next_stage_btn.visible = bool(result.get("has_next_stage", false))
 	AudioManager.play_bgm("ambient", false)
+
+
+## BẢNG PHONG THẦN CỬU THIÊN THÍ LUYỆN THÁP (Lưu & vinh danh Kỷ lục Tầng cao nhất!)
+func _on_endless_run_ended(result: Dictionary) -> void:
+	get_tree().paused = true
+	_hide_all_panels()
+	boss_box.visible = false
+	result_panel.visible = true
+	var cleared_fl: int = int(result.get("floors_cleared", 0))
+	var best_fl: int = int(result.get("best_floor", 0))
+	var is_new: bool = bool(result.get("is_new_record", false))
+	_result_title_label.text = "【 BẢNG PHONG THẦN • CỬU THIÊN THÍ LUYỆN THÁP 】"
+	_result_rank_label.text = ("★ KỶ LỤC MỚI: TẦNG %d ★" % cleared_fl) if is_new else ("ĐẠT ĐẾN TẦNG %d" % int(result.get("floor_reached", 1)))
+	_result_rank_label.modulate = Color(1.0, 0.88, 0.25) if is_new else Color(0.82, 0.58, 1.0)
+	_result_details_label.text = (
+		"Số tầng chinh phục: %d Tầng\n✦ Kỷ Lục Tầng Cao Nhất (Bảng Phong Thần): Tầng %d\nChiến công tích lũy: %d  •  Thời gian: %.1f giây\nTổng Ngân Lượng cày được: +%d Lượng"
+		% [cleared_fl, best_fl, int(result.get("score", 0)), float(result.get("time", 0.0)), int(result.get("gold_earned", 0))]
+	)
+	_next_stage_btn.text = "✦ LEO LẠI THÁP VÔ TẬN"
+	_next_stage_btn.visible = true
+	AudioManager.play_bgm("ambient", false)
+
+
+func _start_endless_tower() -> void:
+	_hide_all_panels()
+	boss_box.visible = false
+	get_tree().paused = false
+	start_endless_tower_requested.emit()
 
 
 func _on_player_died() -> void:

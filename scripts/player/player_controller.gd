@@ -42,16 +42,23 @@ var _invuln_timer: float = 0.0
 var _knockback_vel: Vector3 = Vector3.ZERO
 var _is_dead: bool = false
 
-## 3 Bùa Cổ Ngữ Roguelite thu thập trong màn chơi (có thể cộng dồn nhiều tầng!):
+## 6 Bùa Cổ Ngữ Roguelite cộng dồn nhiều tầng (dùng cho cả 5 Màn & Tháp Vô Tận!):
 ## - "lightning": Lôi Công Kiếm Quyết (Đòn 3 giật tia sét lan sang 3 quái gần nhất)
 ## - "fire_dash": Hỏa Viêm Khinh Công (Dash để lại vệt lửa đốt cháy quái)
-## - "siphon": Hấp Tinh Đại Pháp (Hạ gục quái hồi 8% HP & 15 Chân Khí)
+## - "siphon": Hấp Tinh Đại Pháp (Hạ gục quái hồi 8% HP & 15 Chân Khí — Hút máu!)
+## - "phantom_blade": Phân Thân Kiếm Khí (Mỗi đòn đánh phóng thêm đạo kiếm khí xuyên gió!)
+## - "swift_fury": Cuồng Phong Trảm Tốc (+18% Tốc độ đánh & +12% Sát thương mỗi tầng!)
+## - "meteor_call": Thiên Thạch Giáng Thế (Định kỳ gọi Mưa Thiên Thạch Lửa 3D rơi từ trời nổ AOE!)
 var active_relics: Dictionary = {
 	"lightning": 0,
 	"fire_dash": 0,
 	"siphon": 0,
+	"phantom_blade": 0,
+	"swift_fury": 0,
+	"meteor_call": 0,
 }
 var _fire_trail_spawn_cd: float = 0.0
+var _meteor_call_cd: float = 2.6
 var _afterimage_cd: float = 0.0
 var _dust_cd: float = 0.0
 var _parry_window_timer: float = 0.0
@@ -158,7 +165,15 @@ func use_bag_item(item_id: String) -> bool:
 
 ## Xóa sạch các Bùa Cổ Ngữ khi bắt đầu màn mới
 func reset_stage_relics() -> void:
-	active_relics = {"lightning": 0, "fire_dash": 0, "siphon": 0}
+	active_relics = {
+		"lightning": 0,
+		"fire_dash": 0,
+		"siphon": 0,
+		"phantom_blade": 0,
+		"swift_fury": 0,
+		"meteor_call": 0,
+	}
+	_meteor_call_cd = 2.6
 
 
 ## Cộng thêm tầng Bùa Cổ Ngữ vừa chọn sau mỗi Wave
@@ -406,6 +421,14 @@ func _physics_process(delta: float) -> void:
 	if _skin_vfx_ring and _skin_vfx_ring.visible:
 		_skin_vfx_ring.rotation.y += delta * 2.4
 
+	# Bùa Cổ Ngữ Thiên Thạch Giáng Thế: Tự động gọi Mưa Thiên Thạch 3D rơi xuống đầu quái!
+	var meteor_lv: int = int(active_relics.get("meteor_call", 0))
+	if meteor_lv > 0 and GameManager.is_stage_active:
+		_meteor_call_cd -= delta
+		if _meteor_call_cd <= 0.0:
+			_trigger_relic_meteors(meteor_lv)
+			_meteor_call_cd = maxf(1.85, 3.8 - float(meteor_lv - 1) * 0.35)
+
 	if _parry_window_timer > 0.0:
 		_parry_window_timer -= delta
 		if _parry_ring_mesh:
@@ -524,14 +547,18 @@ func _perform_combo_attack() -> void:
 	var w_speed: float = float(w_data.get("speed", 1.0))
 	var w_col: Color = w_data.get("color", Color(0.85, 0.95, 1.0))
 
+	var swift_lv: int = int(active_relics.get("swift_fury", 0))
+	var swift_spd_mult: float = 1.0 + float(swift_lv) * 0.18
+	var swift_dmg_mult: float = 1.0 + float(swift_lv) * 0.12
+
 	_combo_reset_timer = 1.05
-	var base_cd := (0.20 if combo_step < 3 else 0.28) / maxf(0.65, w_speed)
+	var base_cd := (0.20 if combo_step < 3 else 0.28) / maxf(0.65, w_speed * swift_spd_mult)
 	_attack_timer = base_cd
 
 	var anim_name := "attack_" + str(combo_step)
 	anim_sprite.play(anim_name)
 
-	var dmg_mult := 1.0 if combo_step == 1 else (1.22 if combo_step == 2 else 1.65)
+	var dmg_mult := (1.0 if combo_step == 1 else (1.22 if combo_step == 2 else 1.65)) * swift_dmg_mult
 	var is_crit := combo_step == 3
 	var hit_any := false
 	var sk_atk: Dictionary = SaveManager.get_equipped_skin_data()
@@ -564,6 +591,16 @@ func _perform_combo_attack() -> void:
 			AudioManager.play_sfx("slash", 0.95 + combo_step * 0.08)
 			_show_slash_effect(w_col if combo_step < 3 else sk_col, 1.05 if combo_step < 3 else 1.48)
 			hit_any = _deal_melee_damage(attack_damage * dmg_mult, 2.35 if combo_step < 3 else 2.85, 0.85, 6.8 if combo_step < 3 else 11.8, is_crit)
+
+	# Bùa Cổ Ngữ Phân Thân Kiếm Khí: Mỗi đòn đánh phóng thêm đạo kiếm khí xuyên gió cộng dồn!
+	var phantom_lv: int = int(active_relics.get("phantom_blade", 0))
+	if phantom_lv > 0:
+		var blade_count: int = mini(5, phantom_lv)
+		var fan_deg: float = 11.0
+		for bi in range(blade_count):
+			var deg: float = -fan_deg * float(blade_count - 1) * 0.5 + float(bi) * fan_deg
+			var bdir := facing_dir.rotated(Vector3.UP, deg_to_rad(deg)).normalized()
+			_fire_player_projectile("arrow", bdir, int(round(attack_damage * (0.55 + 0.12 * float(phantom_lv)))), 22.5, Color(0.42, 0.96, 1.0), 0.0, false, combo_step == 3)
 
 	# Bùa Cổ Ngữ Lôi Công Kiếm Quyết: Đòn thứ 3 giật tia sét lan sang 3 quái gần nhất!
 	var lightning_lv: int = int(active_relics.get("lightning", 0))
@@ -770,6 +807,58 @@ func _spawn_fire_trail(level: int) -> void:
 	fz.duration = 2.8 + float(level - 1) * 0.6
 	get_parent().add_child(fz)
 	fz.global_position = global_position + Vector3(0.0, 0.05, 0.0)
+
+
+## Bùa Cổ Ngữ Thiên Thạch Giáng Thế: Gọi Mưa Thiên Thạch Lửa 3D rơi thẳng từ bầu trời nổ AOE!
+func _trigger_relic_meteors(level: int) -> void:
+	if get_parent() == null:
+		return
+	var enemies: Array[Node3D] = []
+	for node in get_tree().get_nodes_in_group("enemies"):
+		if is_instance_valid(node) and node is Node3D and node.has_method("take_damage"):
+			var n3 := node as Node3D
+			if global_position.distance_to(n3.global_position) <= 13.5:
+				enemies.append(n3)
+	if enemies.is_empty():
+		return
+
+	var count: int = mini(5, level)
+	var world: Node = get_parent()
+	var dmg: int = int(round(attack_damage * (1.35 + 0.35 * float(level - 1))))
+
+	for i in range(count):
+		var tgt: Node3D = enemies[randi() % enemies.size()]
+		var dst: Vector3 = tgt.global_position + Vector3(randf_range(-0.6, 0.6), 0.0, randf_range(-0.6, 0.6))
+		var meteor := MeshInstance3D.new()
+		var sm := SphereMesh.new()
+		sm.radius = 0.45
+		sm.height = 0.90
+		meteor.mesh = sm
+		var mmat := StandardMaterial3D.new()
+		mmat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		mmat.albedo_color = Color(1.0, 0.50, 0.14)
+		mmat.emission_enabled = true
+		mmat.emission = Color(1.0, 0.38, 0.08)
+		mmat.emission_energy_multiplier = 4.6
+		meteor.material_override = mmat
+		world.add_child(meteor)
+		meteor.global_position = dst + Vector3(-2.5, 11.5, -1.2)
+
+		var tw := meteor.create_tween()
+		tw.tween_interval(float(i) * 0.14)
+		tw.tween_property(meteor, "global_position", dst + Vector3(0.0, 0.35, 0.0), 0.32).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		tw.tween_callback(func() -> void:
+			if not is_instance_valid(world):
+				return
+			AudioManager.play_sfx("special", 0.92 + randf_range(-0.1, 0.15))
+			CombatVFX3D.spawn_shockwave_ring(world, dst, Color(1.0, 0.42, 0.12), 0.4, 3.2, 0.30)
+			CombatVFX3D.spawn_hit_sparks(world, dst, Vector3.UP, Color(1.0, 0.72, 0.22), 9)
+			for en in get_tree().get_nodes_in_group("enemies"):
+				if is_instance_valid(en) and en is Node3D and en.has_method("take_damage"):
+					if (en as Node3D).global_position.distance_to(dst) <= 2.9:
+						en.take_damage(dmg, Vector3.ZERO, true)
+			meteor.queue_free()
+		)
 
 
 ## Nhận sát thương từ quái hoặc đạn (hỗ trợ attacker để kích hoạt ĐỠ ĐÒN HOÀN HẢO & PHẢN KÍCH PHÁ GIÁP!)

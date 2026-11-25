@@ -14,14 +14,55 @@ static func is_boss_id(enemy_id: String) -> bool:
 	return enemy_id == "boss" or enemy_id.begins_with("boss_")
 
 
-static func get_enemy_stats(enemy_id: String, stage_level: int = 1) -> EnemyStats:
+static func get_enemy_stats(enemy_id: String, stage_level: int = 1, endless_floor: int = 0) -> EnemyStats:
 	var base_stats: EnemyStats = _create_default_enemy_stats(enemy_id)
+	if endless_floor > 0:
+		# Cân bằng chỉ số Tháp Vô Tận tăng mượt theo từng tầng (Tầng 1 -> Vô tận!)
+		var hp_mult: float = 0.85 + float(endless_floor - 1) * 0.14
+		var dmg_mult: float = 0.88 + float(endless_floor - 1) * 0.08
+		if is_boss_id(enemy_id):
+			hp_mult = 0.72 + float(endless_floor) * 0.11
+			dmg_mult = 0.82 + float(endless_floor) * 0.06
+		base_stats.max_hp = round(base_stats.max_hp * hp_mult)
+		base_stats.attack_damage = round(base_stats.attack_damage * dmg_mult)
+		base_stats.gold_drop = int(round(float(base_stats.gold_drop) * (1.0 + float(endless_floor - 1) * 0.12)))
+		return base_stats
+
 	# Tăng nhẹ chỉ số quái thường theo màn chơi (Boss đã có chỉ số thiết kế chuẩn riêng cho từng màn)
 	if not is_boss_id(enemy_id):
 		var scale_mult: float = 1.0 + float(stage_level - 1) * 0.12
 		base_stats.max_hp = round(base_stats.max_hp * scale_mult)
 		base_stats.attack_damage = round(base_stats.attack_damage * (1.0 + float(stage_level - 1) * 0.09))
 	return base_stats
+
+
+## Sinh đội hình quái cho từng Tầng của CỬU THIÊN THÍ LUYỆN THÁP (mỗi 3 tầng gặp 1 Boss Huyền Thoại ngẫu nhiên!)
+static func get_endless_floor_wave(floor_num: int) -> Dictionary:
+	var boss_pool: Array[String] = ["boss_kitsune", "boss_dragon", "boss_darklord", "boss_archmage", "boss_emperor"]
+	if floor_num % 3 == 0:
+		var chosen_boss: String = boss_pool[randi() % boss_pool.size()]
+		var wave: Dictionary = {chosen_boss: 1}
+		var adds: int = mini(4, 1 + (floor_num / 4))
+		var add_pool: Array[String] = ["slime", "bandit", "wolf", "ghost", "kitsune"]
+		var add_id: String = add_pool[randi() % add_pool.size()]
+		wave[add_id] = adds
+		return wave
+
+	var wave_n: Dictionary = {}
+	var total_budget: int = mini(10, 3 + floor_num / 2)
+	var pool: Array[String] = ["slime", "bandit", "wolf"]
+	if floor_num >= 2:
+		pool.append("ghost")
+		pool.append("kitsune")
+	if floor_num >= 4:
+		pool.append("warrior")
+	if floor_num >= 5:
+		pool.append("golem")
+
+	for i in range(total_budget):
+		var pick: String = pool[randi() % pool.size()]
+		wave_n[pick] = int(wave_n.get(pick, 0)) + 1
+	return wave_n
 
 
 static func get_stage_data(stage_id: int) -> StageData:

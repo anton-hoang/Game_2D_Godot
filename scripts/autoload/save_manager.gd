@@ -276,6 +276,8 @@ var upgrades: Dictionary = {
 	"speed": 0,  # Mỗi cấp +0.45 tốc độ di chuyển
 }
 var stage_records: Dictionary = {} # stage_id -> { "rank": "S", "score": 1200, "time": 45.2 }
+var best_endless_floor: int = 0
+var best_endless_score: int = 0
 
 # Dữ liệu Nhiệm vụ & Trang bị ngoại hình (Danh hiệu + Màu khăn choàng)
 var quest_progress: Dictionary = {
@@ -320,6 +322,8 @@ func save_game() -> void:
 	cfg.set_value("upgrades", "max_hp", upgrades.get("max_hp", 0))
 	cfg.set_value("upgrades", "speed", upgrades.get("speed", 0))
 	cfg.set_value("records", "stage_records", stage_records)
+	cfg.set_value("records", "best_endless_floor", best_endless_floor)
+	cfg.set_value("records", "best_endless_score", best_endless_score)
 	cfg.set_value("quests", "progress", quest_progress)
 	cfg.set_value("quests", "claimed", quest_claimed)
 	cfg.set_value("cosmetics", "unlocked_titles", unlocked_titles)
@@ -352,6 +356,8 @@ func load_game() -> void:
 	upgrades["max_hp"] = int(cfg.get_value("upgrades", "max_hp", 0))
 	upgrades["speed"] = int(cfg.get_value("upgrades", "speed", 0))
 	stage_records = cfg.get_value("records", "stage_records", {})
+	best_endless_floor = int(cfg.get_value("records", "best_endless_floor", 0))
+	best_endless_score = int(cfg.get_value("records", "best_endless_score", 0))
 	var saved_q: Dictionary = cfg.get_value("quests", "progress", {})
 	for qk in quest_progress.keys():
 		if saved_q.has(qk):
@@ -405,6 +411,17 @@ func load_game() -> void:
 func add_gold(amount: int) -> void:
 	gold = maxi(0, gold + amount)
 	save_game()
+
+
+func record_endless_floor(floor_cleared: int, score_val: int) -> bool:
+	var is_new_record: bool = false
+	if floor_cleared > best_endless_floor:
+		best_endless_floor = floor_cleared
+		is_new_record = true
+	if score_val > best_endless_score:
+		best_endless_score = score_val
+	save_game()
+	return is_new_record
 
 
 func record_stage_clear(stage_id: int, score: int, clear_time: float, rank: String, max_stages: int = 5) -> void:
@@ -803,6 +820,8 @@ func reset_save() -> void:
 	gold = 0
 	upgrades = {"attack": 0, "max_hp": 0, "speed": 0}
 	stage_records = {}
+	best_endless_floor = 0
+	best_endless_score = 0
 	quest_progress = {"goblin_slayer": 0, "treasure_hunter": 0, "river_tactician": 0, "crate_breaker": 0}
 	quest_claimed = {}
 	unlocked_titles = ["Lữ Khách Windferry"]

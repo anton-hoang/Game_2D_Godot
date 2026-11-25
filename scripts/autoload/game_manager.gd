@@ -4,6 +4,7 @@ extends Node
 
 signal stats_updated(score: int, gold: int, wave_idx: int, total_waves: int)
 signal stage_cleared(result_data: Dictionary)
+signal endless_run_ended(result_data: Dictionary)
 signal player_died
 signal boss_spawned(boss_node: Node)
 
@@ -13,6 +14,9 @@ var current_stage_id: int = 1
 var current_score: int = 0
 var stage_elapsed_time: float = 0.0
 var is_stage_active: bool = false
+var is_endless_mode: bool = false
+var endless_floor: int = 0
+var endless_gold_earned: int = 0
 var current_wave: int = 0
 var total_waves: int = 0
 var damage_taken_in_stage: float = 0.0
@@ -29,8 +33,11 @@ func _process(delta: float) -> void:
 		stage_elapsed_time += delta
 
 
-## Bắt đầu một màn chơi mới
+## Bắt đầu một màn chơi thường (1-5)
 func start_stage(stage_id: int, num_waves: int) -> void:
+	is_endless_mode = false
+	endless_floor = 0
+	endless_gold_earned = 0
 	current_stage_id = clampi(stage_id, 1, TOTAL_STAGES)
 	current_score = 0
 	stage_elapsed_time = 0.0
@@ -40,6 +47,27 @@ func start_stage(stage_id: int, num_waves: int) -> void:
 	is_stage_active = true
 	get_tree().paused = false
 	stats_updated.emit(current_score, SaveManager.gold, current_wave, total_waves)
+
+
+## Bắt đầu chế độ THÁP VÔ TẬN — CỬU THIÊN THÍ LUYỆN THÁP!
+func start_endless_tower() -> void:
+	is_endless_mode = true
+	endless_floor = 1
+	endless_gold_earned = 0
+	current_score = 0
+	stage_elapsed_time = 0.0
+	damage_taken_in_stage = 0.0
+	current_wave = 1
+	total_waves = 999
+	is_stage_active = true
+	get_tree().paused = false
+	stats_updated.emit(current_score, SaveManager.gold, endless_floor, 0)
+
+
+func set_endless_floor(floor_num: int) -> void:
+	endless_floor = floor_num
+	current_wave = floor_num
+	stats_updated.emit(current_score, SaveManager.gold, endless_floor, 0)
 
 
 ## Cập nhật đợt quái hiện tại
@@ -87,11 +115,25 @@ func complete_current_stage(target_time: float = 95.0) -> Dictionary:
 	return result
 
 
-## Xử lý khi người chơi hết máu
+## Xử lý khi người chơi hết máu (Nếu đang leo Tháp Vô Tận -> Hiện Bảng Phong Thần Tháp Vô Tận!)
 func notify_player_died() -> void:
 	if not is_stage_active:
 		return
 	is_stage_active = false
+	if is_endless_mode:
+		var cleared_floors: int = maxi(0, endless_floor - 1)
+		var is_new_best: bool = SaveManager.record_endless_floor(cleared_floors, current_score)
+		var res := {
+			"floor_reached": endless_floor,
+			"floors_cleared": cleared_floors,
+			"best_floor": SaveManager.best_endless_floor,
+			"is_new_record": is_new_best,
+			"score": current_score,
+			"time": stage_elapsed_time,
+			"gold_earned": endless_gold_earned,
+		}
+		endless_run_ended.emit(res)
+		return
 	player_died.emit()
 
 

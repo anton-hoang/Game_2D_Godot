@@ -22,6 +22,7 @@ func _ready() -> void:
 	ui_controller.bind_player(stage_manager.player)
 	ui_controller.bind_pet(stage_manager.companion_pet)
 	ui_controller.start_stage_requested.connect(_on_start_stage_requested)
+	ui_controller.start_endless_tower_requested.connect(_on_start_endless_tower_requested)
 	ui_controller.enter_town_hub_requested.connect(_on_enter_town_hub_requested)
 	ui_controller.npc_service_requested.connect(_on_npc_service_requested)
 	ui_controller.toggle_dof_requested.connect(_on_toggle_dof_requested)
@@ -33,6 +34,7 @@ func _ready() -> void:
 	stage_manager.bounty_board_opened.connect(ui_controller.show_quest_board)
 	stage_manager.relic_selection_requested.connect(ui_controller.show_relic_selection)
 	stage_manager.hub_portal_entered.connect(ui_controller.open_stage_select_from_hub)
+	stage_manager.endless_portal_entered.connect(_on_start_endless_tower_requested)
 	stage_manager.boss_appeared.connect(_on_boss_appeared_cinematic)
 
 	# Lắng nghe sự kiện Thiên Tượng đổi ánh sáng ngẫu nhiên tự động
@@ -106,6 +108,13 @@ func _on_relic_chosen(relic_id: String) -> void:
 
 func _on_start_stage_requested(stage_id: int) -> void:
 	stage_manager.load_and_start_stage(stage_id)
+	ui_controller.bind_player(stage_manager.player)
+	ui_controller.bind_pet(stage_manager.companion_pet)
+	ui_controller.update_relics_hud({})
+
+
+func _on_start_endless_tower_requested() -> void:
+	stage_manager.start_endless_tower()
 	ui_controller.bind_player(stage_manager.player)
 	ui_controller.bind_pet(stage_manager.companion_pet)
 	ui_controller.update_relics_hud({})
