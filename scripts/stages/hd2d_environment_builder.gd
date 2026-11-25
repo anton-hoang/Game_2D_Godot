@@ -631,6 +631,7 @@ func _create_cottage(pos: Vector3, plaster_col: Color, roof_col: Color, has_chim
 
 	# Biển tên phòng phía trên cửa
 	var sign_lbl := Label3D.new()
+	WuxiaFontTheme.style_label_3d(sign_lbl)
 	sign_lbl.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	sign_lbl.pixel_size = 0.0085
 	sign_lbl.font_size = 26
@@ -1227,6 +1228,7 @@ func create_curved_wooden_gate(root: Node3D, pos: Vector3, rot_y_deg: float = 0.
 	_add_box_mesh(gate, Vector3(2.7, 0.68, 0.20), Vector3(0.0, 4.42, 0.28), plaque_bg)
 
 	var p_lbl := Label3D.new()
+	WuxiaFontTheme.style_label_3d(p_lbl)
 	p_lbl.position = Vector3(0.0, 4.42, 0.40)
 	p_lbl.pixel_size = 0.008
 	p_lbl.font_size = 32

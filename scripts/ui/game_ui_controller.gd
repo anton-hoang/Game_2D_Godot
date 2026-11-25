@@ -19,6 +19,9 @@ var hp_trail_bar: ProgressBar
 var hp_label: Label
 var energy_bar: ProgressBar
 var energy_label: Label
+var ultimate_bar: ProgressBar
+var ultimate_label: Label
+var _ult_ready_pulse: float = 0.0
 var wave_label: Label
 var gold_label: Label
 var score_label: Label
@@ -150,6 +153,15 @@ func _process(delta: float) -> void:
 		else:
 			boss_hp_trail.value = boss_hp_bar.value
 
+	# Nhấp nháy hào quang vàng kim khi thanh Nộ Khí Chiêu Cuối [U/R] đã đầy 100%!
+	if ultimate_bar and ultimate_bar.max_value > 0.0:
+		if ultimate_bar.value >= ultimate_bar.max_value - 0.1:
+			_ult_ready_pulse += delta * 5.2
+			var g: float = 0.88 + sin(_ult_ready_pulse) * 0.12
+			ultimate_bar.modulate = Color(1.0, g, 0.72 + sin(_ult_ready_pulse) * 0.18, 1.0)
+		else:
+			ultimate_bar.modulate = Color.WHITE
+
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("pause"):
@@ -196,8 +208,13 @@ func bind_player(player: PlayerController) -> void:
 		player.hp_changed.connect(_on_player_hp_changed)
 	if not player.energy_changed.is_connected(_on_player_energy_changed):
 		player.energy_changed.connect(_on_player_energy_changed)
+	if not player.ultimate_changed.is_connected(_on_player_ultimate_changed):
+		player.ultimate_changed.connect(_on_player_ultimate_changed)
+	if not player.ultimate_cast.is_connected(_on_player_ultimate_cast):
+		player.ultimate_cast.connect(_on_player_ultimate_cast)
 	_on_player_hp_changed(player.current_hp, player.max_hp)
 	_on_player_energy_changed(player.current_energy, player.max_energy)
+	_on_player_ultimate_changed(player.current_ultimate, player.max_ultimate)
 
 
 ## Cập nhật nhãn thời tiết cổ trang mỗi khi ánh sáng tự động đổi ngẫu nhiên
@@ -211,6 +228,7 @@ func show_wave_banner(title: String, subtitle: String) -> void:
 	if banner_box == null:
 		return
 	banner_title.text = "「 " + title + " 」"
+	banner_title.modulate = Color(1.0, 0.88, 0.44)
 	banner_sub.text = subtitle
 	banner_box.visible = true
 	banner_box.modulate.a = 0.0
@@ -306,9 +324,12 @@ func _refresh_hero_cosmetic_hud() -> void:
 		_hero_title_label.text = "  " + SaveManager.equipped_title.to_upper()
 	if _weapon_hud_label:
 		var wd: Dictionary = SaveManager.get_equipped_weapon_data()
+		var ult_d: Dictionary = SaveManager.get_equipped_weapon_ultimate()
 		var type_vn: String = {"sword": "KIẾM", "saber": "ĐAO", "bow": "CUNG", "staff": "GẬY PHÉP"}.get(str(wd.get("type", "sword")), "KIẾM")
-		_weapon_hud_label.text = "❖ Binh Khí [%s]: %s (+%.0f Công)  •  Nhấn [I] Mở Rương Đồ" % [type_vn, str(wd.get("name", "")), float(wd.get("dmg", 0.0))]
+		_weapon_hud_label.text = "❖ Binh Khí [%s]: %s (+%.0f Công)  •  Chiêu Cuối [U]: %s" % [type_vn, str(wd.get("name", "")), float(wd.get("dmg", 0.0)), str(ult_d.get("name", ""))]
 		_weapon_hud_label.modulate = wd.get("color", Color(1.0, 0.88, 0.50))
+	if ultimate_bar and ultimate_label:
+		_on_player_ultimate_changed(ultimate_bar.value, ultimate_bar.max_value)
 
 
 func show_npc_dialogue(npc_data: Dictionary) -> void:
@@ -350,28 +371,28 @@ func _build_vignette_overlay() -> void:
 func _build_hud() -> void:
 	hud_root = Control.new()
 	hud_root.name = "HUD"
+	hud_root.theme = WuxiaFontTheme.get_ui_theme()
 	hud_root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	hud_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(hud_root)
 
 	# =========================================================================
-	# GÓC TRÊN TRÁI: KHUNG THANH MÁU CỔ TRANG CAO CẤP (Giống hệt ảnh mẫu!)
-	# Chân dung bo tròn viền vàng đồng hoa văn + Huy hiệu Sinh Lực tròn + Thanh Máu / Chân Khí sắc nét
+	# GÓC TRÊN TRÁI: KHUNG THANH MÁU • CHÂN KHÍ • CHIÊU CUỐI [U/R] CỔ TRANG CAO CẤP
 	# =========================================================================
 	var status_wrap := Control.new()
 	status_wrap.position = Vector2(18, 12)
-	status_wrap.custom_minimum_size = Vector2(420, 114)
+	status_wrap.custom_minimum_size = Vector2(445, 126)
 	status_wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hud_root.add_child(status_wrap)
 
-	# Khung chữ nhật nền gỗ đen viền vàng cổ trang phía sau 2 thanh máu/nội lực
+	# Khung chữ nhật nền gỗ đen viền vàng cổ trang phía sau 3 thanh chỉ số
 	var bars_panel := _create_classical_panel(Color(0.14, 0.08, 0.06, 0.94), Color(0.88, 0.68, 0.28, 1.0))
-	bars_panel.position = Vector2(56, 12)
-	bars_panel.custom_minimum_size = Vector2(346, 86)
+	bars_panel.position = Vector2(56, 8)
+	bars_panel.custom_minimum_size = Vector2(368, 108)
 	status_wrap.add_child(bars_panel)
 
 	var bars_col := VBoxContainer.new()
-	bars_col.add_theme_constant_override("separation", 5)
+	bars_col.add_theme_constant_override("separation", 4)
 	bars_panel.add_child(bars_col)
 
 	var name_row := HBoxContainer.new()
@@ -383,8 +404,8 @@ func _build_hud() -> void:
 
 	var hero_title := Label.new()
 	hero_title.text = SaveManager.equipped_title.to_upper()
-	hero_title.add_theme_font_size_override("font_size", 15)
-	hero_title.modulate = Color(1.0, 0.88, 0.50)
+	WuxiaFontTheme.apply_headline_style(hero_title, 15)
+	hero_title.modulate = Color(1.0, 0.90, 0.52)
 	name_row.add_child(hero_title)
 	_hero_title_label = hero_title
 
@@ -396,7 +417,7 @@ func _build_hud() -> void:
 	hp_row.add_child(hp_sp)
 
 	var hp_holder := Control.new()
-	hp_holder.custom_minimum_size = Vector2(284, 21)
+	hp_holder.custom_minimum_size = Vector2(304, 21)
 	hp_row.add_child(hp_holder)
 
 	hp_trail_bar = _create_classical_bar(Color(0.96, 0.76, 0.24), Color(0.10, 0.04, 0.05, 0.95), 21, true)
@@ -416,9 +437,23 @@ func _build_hud() -> void:
 	mp_row.add_child(mp_sp)
 
 	energy_bar = _create_classical_bar(Color(0.12, 0.64, 0.68), Color(0.05, 0.09, 0.10, 0.95), 18, true)
-	energy_bar.custom_minimum_size = Vector2(284, 18)
+	energy_bar.custom_minimum_size = Vector2(304, 18)
 	mp_row.add_child(energy_bar)
-	energy_label = _create_overlay_label(energy_bar, "CHÂN KHÍ: 100 / 100")
+	energy_label = _create_overlay_label(energy_bar, "CHÂN KHÍ (K): 100 / 100")
+
+	# Thanh Nộ Khí / CHIÊU CUỐI VŨ KHÍ [U / R] ánh hoàng kim rực rỡ!
+	var ult_row := HBoxContainer.new()
+	bars_col.add_child(ult_row)
+	var ult_sp := Control.new()
+	ult_sp.custom_minimum_size = Vector2(32, 1)
+	ult_row.add_child(ult_sp)
+
+	ultimate_bar = _create_classical_bar(Color(0.96, 0.68, 0.14), Color(0.12, 0.07, 0.03, 0.95), 17, true)
+	ultimate_bar.custom_minimum_size = Vector2(304, 17)
+	ultimate_bar.max_value = 100.0
+	ultimate_bar.value = 100.0
+	ult_row.add_child(ultimate_bar)
+	ultimate_label = _create_overlay_label(ultimate_bar, "★ CHIÊU CUỐI [U]: SẴN SÀNG! ★")
 
 	# Khung chân dung TRÒN viền vàng đồng chạm khắc đặt nổi chồng lên cạnh trái thanh máu (giống hệt ảnh!)
 	var portrait_circle := PanelContainer.new()
@@ -479,20 +514,20 @@ func _build_hud() -> void:
 
 	# Dòng gợi ý thao tác ngắn gọn, Vũ Khí đang cầm & Bùa Cổ Ngữ bên dưới bảng máu
 	var controls_hint := Label.new()
-	controls_hint.position = Vector2(22, 118)
-	controls_hint.text = "WASD: Di chuyển • [I] Rương Đồ 7x7 • [E] Tương tác • [J] Công • [K] Tuyệt kỹ • [L] Khinh Công • [Shift/Chuột phải] Đỡ"
+	controls_hint.position = Vector2(22, 134)
+	controls_hint.text = "WASD: Di chuyển • [I] Rương 7x7 • [E] Tương tác • [J] Công • [K] Tuyệt kỹ • [U/R] CHIÊU CUỐI • [L] Né • [Shift] Đỡ"
 	controls_hint.add_theme_font_size_override("font_size", 12)
-	controls_hint.modulate = Color(0.96, 0.90, 0.74, 0.90)
+	controls_hint.modulate = Color(0.96, 0.90, 0.74, 0.92)
 	hud_root.add_child(controls_hint)
 
 	_weapon_hud_label = Label.new()
-	_weapon_hud_label.position = Vector2(22, 137)
+	_weapon_hud_label.position = Vector2(22, 154)
 	_weapon_hud_label.add_theme_font_size_override("font_size", 13)
 	hud_root.add_child(_weapon_hud_label)
 	_refresh_hero_cosmetic_hud()
 
 	_relic_hud_label = Label.new()
-	_relic_hud_label.position = Vector2(22, 156)
+	_relic_hud_label.position = Vector2(22, 174)
 	_relic_hud_label.text = ""
 	_relic_hud_label.add_theme_font_size_override("font_size", 13)
 	_relic_hud_label.modulate = Color(0.55, 0.96, 1.0)
@@ -516,30 +551,35 @@ func _build_hud() -> void:
 	wave_label.text = "❖ Chiến Đợt: 1 / 3"
 	wave_label.add_theme_font_size_override("font_size", 14)
 	wave_label.modulate = Color(0.52, 0.12, 0.10)
+	WuxiaFontTheme.apply_parchment_ink_style(wave_label)
 	tr_vbox.add_child(wave_label)
 
 	gold_label = Label.new()
 	gold_label.text = "❖ Ngân Lượng: 0 Lượng"
 	gold_label.add_theme_font_size_override("font_size", 14)
 	gold_label.modulate = ink_brown
+	WuxiaFontTheme.apply_parchment_ink_style(gold_label)
 	tr_vbox.add_child(gold_label)
 
 	score_label = Label.new()
 	score_label.text = "❖ Chiến Công: 0"
 	score_label.add_theme_font_size_override("font_size", 14)
 	score_label.modulate = ink_brown
+	WuxiaFontTheme.apply_parchment_ink_style(score_label)
 	tr_vbox.add_child(score_label)
 
 	time_label = Label.new()
 	time_label.text = "❖ Thời Khắc: 00:00"
 	time_label.add_theme_font_size_override("font_size", 13)
 	time_label.modulate = ink_brown
+	WuxiaFontTheme.apply_parchment_ink_style(time_label)
 	tr_vbox.add_child(time_label)
 
 	weather_label = Label.new()
 	weather_label.text = "❖ Thiên Tượng: Màn Đêm Tĩnh Mịch"
 	weather_label.add_theme_font_size_override("font_size", 13)
 	weather_label.modulate = Color(0.38, 0.18, 0.08)
+	WuxiaFontTheme.apply_parchment_ink_style(weather_label)
 	tr_vbox.add_child(weather_label)
 
 	# =========================================================================
@@ -578,7 +618,7 @@ func _build_hud() -> void:
 
 	banner_title = Label.new()
 	banner_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	banner_title.add_theme_font_size_override("font_size", 21)
+	WuxiaFontTheme.apply_headline_style(banner_title, 22)
 	banner_title.modulate = Color(1.0, 0.88, 0.44)
 	b_vbox.add_child(banner_title)
 
@@ -608,7 +648,7 @@ func _build_hud() -> void:
 
 	boss_name_label = Label.new()
 	boss_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	boss_name_label.add_theme_font_size_override("font_size", 17)
+	WuxiaFontTheme.apply_headline_style(boss_name_label, 18)
 	boss_name_label.modulate = Color(1.0, 0.78, 0.38)
 	boss_name_label.text = "【 MA VƯƠNG HẮC ÁM MALAKOR • ĐỆ NHẤT CẢNH 】"
 	boss_vbox.add_child(boss_name_label)
@@ -646,6 +686,7 @@ func _build_cinematic_letterbox() -> void:
 	add_child(_letterbox_bottom)
 
 	var card := _create_classical_panel(Color(0.14, 0.04, 0.05, 0.94), Color(0.95, 0.74, 0.30, 1.0))
+	card.theme = WuxiaFontTheme.get_ui_theme()
 	card.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	card.position = Vector2(-320, -185)
 	card.custom_minimum_size = Vector2(640, 86)
@@ -661,7 +702,7 @@ func _build_cinematic_letterbox() -> void:
 
 	_boss_intro_name = Label.new()
 	_boss_intro_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_boss_intro_name.add_theme_font_size_override("font_size", 26)
+	WuxiaFontTheme.apply_headline_style(_boss_intro_name, 27)
 	_boss_intro_name.modulate = Color(1.0, 0.84, 0.36)
 	vb.add_child(_boss_intro_name)
 
@@ -719,8 +760,8 @@ func _build_main_menu() -> void:
 	var title := Label.new()
 	title.text = "PHONG HÀNH KÝ • WINDFERRY"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 28)
-	title.modulate = Color(1.0, 0.86, 0.40)
+	WuxiaFontTheme.apply_headline_style(title, 30)
+	title.modulate = Color(1.0, 0.88, 0.42)
 	vbox.add_child(title)
 
 	var sub := Label.new()
@@ -1363,12 +1404,13 @@ func _refresh_inventory_ui() -> void:
 		var w_key: String = str(wid)
 		if SaveManager.WEAPON_CATALOG.has(w_key):
 			var wd: Dictionary = SaveManager.WEAPON_CATALOG[w_key]
+			var uinfo: Dictionary = SaveManager.WEAPON_ULTIMATES.get(str(wd["type"]), SaveManager.WEAPON_ULTIMATES["sword"])
 			entries.append({
 				"kind": "weapon", "id": w_key, "name": str(wd["name"]),
 				"rarity": str(wd["rarity"]), "color": wd["color"],
 				"tex": PixelArtGenerator.get_weapon_icon_texture(w_key),
 				"badge": "★" if (SaveManager.equipped_weapon == w_key) else "",
-				"desc": "Loại: %s • +%d Công lực\n%s" % [str(wd["type"]).to_upper(), int(wd["dmg"]), str(wd["desc"])],
+				"desc": "Loại: %s • +%d Công lực\n%s\n\n★ CHIÊU CUỐI [U]: %s\n%s" % [str(wd["type"]).to_upper(), int(wd["dmg"]), str(wd["desc"]), str(uinfo["name"]), str(uinfo["desc"])],
 				"equipped": (SaveManager.equipped_weapon == w_key),
 			})
 	for iid in SaveManager.ITEM_CATALOG.keys():
@@ -1548,13 +1590,14 @@ func _refresh_shop_ui() -> void:
 		if int(wd["price"]) <= 0:
 			continue
 		var owned: bool = SaveManager.owned_weapons.has(w_key)
+		var uinfo: Dictionary = SaveManager.WEAPON_ULTIMATES.get(str(wd["type"]), SaveManager.WEAPON_ULTIMATES["sword"])
 		catalog_items.append({
 			"kind": "weapon", "id": w_key, "name": str(wd["name"]),
 			"rarity": str(wd["rarity"]), "color": wd["color"],
 			"price": int(wd["price"]), "owned": owned,
 			"tex": PixelArtGenerator.get_weapon_icon_texture(w_key),
 			"badge": "✓" if owned else ("%d" % int(wd["price"])),
-			"desc": "Loại: %s • +%d Công lực\nGiá: %d Lượng\n%s" % [str(wd["type"]).to_upper(), int(wd["dmg"]), int(wd["price"]), str(wd["desc"])],
+			"desc": "Loại: %s • +%d Công lực • Giá: %d Lượng\n%s\n\n★ CHIÊU CUỐI [U]: %s\n%s" % [str(wd["type"]).to_upper(), int(wd["dmg"]), int(wd["price"]), str(wd["desc"]), str(uinfo["name"]), str(uinfo["desc"])],
 		})
 	for iid in SaveManager.ITEM_CATALOG.keys():
 		var i_key: String = str(iid)
@@ -1940,6 +1983,28 @@ func _on_player_energy_changed(cur: float, mx: float) -> void:
 		energy_label.text = "CHÂN KHÍ (K): %d / %d" % [int(cur), int(mx)]
 
 
+func _on_player_ultimate_changed(cur: float, mx: float) -> void:
+	if ultimate_bar:
+		ultimate_bar.max_value = mx
+		ultimate_bar.value = cur
+	if ultimate_label:
+		var ult_info: Dictionary = SaveManager.get_equipped_weapon_ultimate()
+		var uname: String = str(ult_info.get("name", "CHIÊU CUỐI"))
+		if cur >= mx - 0.1:
+			ultimate_label.text = "★ [U] %s — SẴN SÀNG! ★" % uname
+			ultimate_label.modulate = Color(1.0, 0.98, 0.72)
+		else:
+			var pct: int = int(clampf(cur / maxf(1.0, mx) * 100.0, 0.0, 99.0))
+			ultimate_label.text = "NỘ KHÍ [U]: %d%% • %s" % [pct, uname]
+			ultimate_label.modulate = Color(0.96, 0.90, 0.78)
+
+
+func _on_player_ultimate_cast(ult_name: String, ult_subtitle: String, ult_color: Color) -> void:
+	show_wave_banner("✦ " + ult_name + " ✦", ult_subtitle)
+	if banner_title:
+		banner_title.modulate = ult_color.lightened(0.25)
+
+
 func _on_stats_updated(score: int, gold: int, wave_idx: int, total_waves: int) -> void:
 	if score_label:
 		score_label.text = "❖ Chiến Công: " + str(score)
@@ -2116,6 +2181,7 @@ func _create_classical_panel(bg_col: Color, border_col: Color) -> PanelContainer
 
 func _create_center_modal(w: int, h: int) -> Control:
 	var backdrop := ColorRect.new()
+	backdrop.theme = WuxiaFontTheme.get_ui_theme()
 	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
 	backdrop.color = Color(0.03, 0.02, 0.02, 0.68)
 	backdrop.visible = false

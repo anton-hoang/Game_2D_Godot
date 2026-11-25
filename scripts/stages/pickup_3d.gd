@@ -45,6 +45,7 @@ func _ready() -> void:
 
 	if pickup_type == "weapon" and SaveManager.WEAPON_CATALOG.has(item_id):
 		var lbl := Label3D.new()
+		WuxiaFontTheme.style_label_3d(lbl)
 		lbl.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 		lbl.pixel_size = 0.0085
 		lbl.font_size = 26

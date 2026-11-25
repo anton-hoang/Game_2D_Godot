@@ -57,6 +57,7 @@ func _ready() -> void:
 	add_child(_lid_mesh)
 
 	_prompt_label = Label3D.new()
+	WuxiaFontTheme.style_label_3d(_prompt_label)
 	_prompt_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	_prompt_label.pixel_size = 0.0085
 	_prompt_label.font_size = 28

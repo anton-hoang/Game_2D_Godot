@@ -6,11 +6,12 @@ static func spawn(parent: Node, world_pos: Vector3, amount: int, is_critical: bo
 	if parent == null or not is_instance_valid(parent):
 		return
 	var lbl := Label3D.new()
+	WuxiaFontTheme.style_label_3d(lbl)
 	lbl.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	lbl.no_depth_test = true
-	lbl.pixel_size = 0.011 if not is_critical else 0.015
-	lbl.font_size = 38 if not is_critical else 48
-	lbl.outline_size = 10
+	lbl.pixel_size = 0.011 if not is_critical else 0.0155
+	lbl.font_size = 40 if not is_critical else 52
+	lbl.outline_size = 11
 	lbl.text = custom_text if custom_text != "" else ( ("+" if is_heal else "") + str(amount) + ("!" if is_critical else "") )
 
 	if is_heal:

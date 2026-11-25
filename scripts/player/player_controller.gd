@@ -8,6 +8,8 @@ extends CharacterBody3D
 
 signal hp_changed(current_hp: float, max_hp: float)
 signal energy_changed(current_energy: float, max_energy: float)
+signal ultimate_changed(current_ult: float, max_ult: float)
+signal ultimate_cast(ult_name: String, ult_subtitle: String, ult_color: Color)
 signal dash_cooldown_changed(remaining: float, total: float)
 
 ## PLACEHOLDER ASSET: Khi có SpriteFrames thật (.tres), kéo thả vào thuộc tính custom_sprite_frames trong Inspector.
@@ -25,6 +27,8 @@ var max_hp: float = 120.0
 var current_hp: float = 120.0
 var max_energy: float = 100.0
 var current_energy: float = 100.0
+var max_ultimate: float = 100.0
+var current_ultimate: float = 100.0 # Bắt đầu đầy 100% Nộ Khí để tung Chiêu Cuối [U / R] ngay!
 var move_speed: float = 6.2
 var attack_damage: float = 22.0
 
@@ -75,6 +79,7 @@ func _ready() -> void:
 		SaveManager.cosmetic_changed.connect(refresh_cosmetic_appearance)
 	hp_changed.emit(current_hp, max_hp)
 	energy_changed.emit(current_energy, max_energy)
+	ultimate_changed.emit(current_ultimate, max_ultimate)
 
 
 ## Cập nhật màu khăn choàng, vũ khí & Trang Phục Gacha (tự bật/tắt Hiệu Ứng Hào Quang 3D cho Skin Hiếm trở lên!)
@@ -168,8 +173,9 @@ func activate_spirit_shield(duration_sec: float = 5.0) -> void:
 	AudioManager.play_sfx("gate", 1.25)
 
 
-## Kích hoạt hiệu ứng Hấp Tinh Đại Pháp khi tiêu diệt quái vật
+## Kích hoạt hiệu ứng Hấp Tinh Đại Pháp khi tiêu diệt quái vật + Tích Nộ Khí Chiêu Cuối
 func on_enemy_killed() -> void:
+	add_ultimate(15.0)
 	var lv: int = int(active_relics.get("siphon", 0))
 	if lv > 0:
 		heal(max_hp * 0.08 * float(lv))
@@ -368,10 +374,13 @@ func _physics_process(delta: float) -> void:
 			_rim_halo_sprite.texture = cur_tex
 		_rim_halo_sprite.flip_h = anim_sprite.flip_h
 
-	# Hồi năng lượng tự nhiên theo thời gian
+	# Hồi năng lượng tự nhiên + Tích Nộ Khí Chiêu Cuối theo thời gian
 	if current_energy < max_energy:
 		current_energy = minf(max_energy, current_energy + 4.5 * delta)
 		energy_changed.emit(current_energy, max_energy)
+	if current_ultimate < max_ultimate:
+		current_ultimate = minf(max_ultimate, current_ultimate + 4.2 * delta)
+		ultimate_changed.emit(current_ultimate, max_ultimate)
 
 	if _invuln_timer > 0.0:
 		_invuln_timer -= delta
@@ -420,9 +429,11 @@ func _physics_process(delta: float) -> void:
 	if Input.is_action_just_pressed("dash") and _dash_cd_timer <= 0.0 and _dash_timer <= 0.0:
 		_start_dash(move_dir if move_dir.length_squared() > 0.01 else facing_dir)
 
-	# Xử lý phím Tấn công combo 3 đòn (phím J) & Kỹ năng đặc biệt (phím K)
+	# Xử lý phím Tấn công combo 3 đòn (J), Tuyệt kỹ (K) và CHIÊU CUỐI VŨ KHÍ (U / R)!
 	if _dash_timer <= 0.0 and _attack_timer <= 0.0 and _parry_window_timer <= 0.0:
-		if Input.is_action_just_pressed("attack"):
+		if Input.is_action_just_pressed("ultimate") and current_ultimate >= max_ultimate:
+			_perform_ultimate_skill()
+		elif Input.is_action_just_pressed("attack"):
 			_perform_combo_attack()
 		elif Input.is_action_just_pressed("special") and current_energy >= special_energy_cost:
 			_perform_special_skill()
@@ -602,6 +613,30 @@ func _perform_special_skill() -> void:
 	CombatVFX3D.spawn_skin_skill_vfx(get_parent(), global_position, facing_dir, skill_style, skin_vcol)
 
 
+## CHIÊU CUỐI ĐẶC TRƯNG CỦA TỪNG LOẠI VŨ KHÍ (Phím U / R — khi đầy 100% Nộ Khí)!
+## - Kiếm: VẠN KIẾM QUY TÔNG  |  Đại Đao: BÁ VƯƠNG PHÁ THIÊN TRẢM
+## - Cung Tên: CỬU THIÊN HỎA VŨ TIỄN  |  Gậy Phép: THÁI CỰC THIÊN LÔI TRẬN
+func _perform_ultimate_skill() -> void:
+	current_ultimate = 0.0
+	ultimate_changed.emit(current_ultimate, max_ultimate)
+	_attack_timer = 0.45
+	_invuln_timer = 0.95
+	anim_sprite.play("special")
+	AudioManager.play_sfx("victory", 1.15)
+	GameManager.trigger_hit_stop(0.08, 0.12)
+
+	var w_data: Dictionary = SaveManager.get_equipped_weapon_data()
+	var w_type: String = str(w_data.get("type", "sword"))
+	var ult_info: Dictionary = SaveManager.get_equipped_weapon_ultimate()
+	var ult_name: String = str(ult_info.get("name", "VẠN KIẾM QUY TÔNG"))
+	var ult_sub: String = str(ult_info.get("subtitle", ""))
+	var ult_col: Color = ult_info.get("color", w_data.get("color", Color(1.0, 0.84, 0.28)))
+
+	ultimate_cast.emit(ult_name, ult_sub, ult_col)
+	DamageNumber3D.spawn(get_parent(), global_position + Vector3(0.0, 0.95, 0.0), 0, true, false, "✦ " + ult_name + " ✦")
+	WeaponUltimate3D.launch(get_parent(), self, w_type, facing_dir, attack_damage, ult_col)
+
+
 func _fire_player_projectile(kind: String, dir: Vector3, dmg: int, spd: float, col: Color, aoe: float, is_homing: bool, is_crit: bool) -> void:
 	if get_parent() == null:
 		return
@@ -662,8 +697,9 @@ func _deal_melee_damage(dmg: float, radius: float, dot_threshold: float, knockba
 				hit_any = true
 
 	if hit_any:
-		# Hồi nhẹ năng lượng mỗi khi đánh trúng quái
+		# Hồi nhẹ năng lượng & tích Nộ Khí Chiêu Cuối mỗi khi đánh trúng quái
 		add_energy(5.0)
+		add_ultimate(7.5 if not is_crit else 12.0)
 		GameManager.trigger_hit_stop(0.045 if not is_crit else 0.068, 0.08)
 		if camera_rig:
 			camera_rig.shake(0.14 if not is_crit else 0.22, 0.11)
@@ -784,6 +820,7 @@ func _execute_perfect_parry(attacker: Node) -> void:
 
 	AudioManager.play_sfx("victory", 1.45)
 	add_energy(28.0)
+	add_ultimate(35.0)
 	GameManager.add_score(120)
 	GameManager.trigger_hit_stop(0.11, 0.05)
 	if camera_rig:
@@ -818,3 +855,10 @@ func add_energy(amount: float) -> void:
 		return
 	current_energy = minf(max_energy, current_energy + amount)
 	energy_changed.emit(current_energy, max_energy)
+
+
+func add_ultimate(amount: float) -> void:
+	if _is_dead:
+		return
+	current_ultimate = minf(max_ultimate, current_ultimate + amount)
+	ultimate_changed.emit(current_ultimate, max_ultimate)

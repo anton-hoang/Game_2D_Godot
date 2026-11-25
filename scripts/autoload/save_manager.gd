@@ -56,6 +56,34 @@ const WEAPON_CATALOG: Dictionary = {
 	},
 }
 
+## CHIÊU CUỐI (ULTIMATE SKILL — PHÍM [U] / [R]) ĐẶC TRƯNG RIÊNG CHO TỪNG HỆ VŨ KHÍ!
+const WEAPON_ULTIMATES: Dictionary = {
+	"sword": {
+		"name": "VẠN KIẾM QUY TÔNG",
+		"subtitle": "Chiêu Cuối Kiếm — 16 Linh Kiếm Từ Trời Giáng Xuyên Giáp!",
+		"color": Color(0.38, 0.96, 0.88),
+		"desc": "Triệu hồi 16 thanh Linh Kiếm khổng lồ lơ lửng trên không rồi phóng cắm liên hoàn xuống đầu toàn bộ kẻ địch, gây sát thương chí mạng diện rộng & phá giáp!",
+	},
+	"saber": {
+		"name": "BÁ VƯƠNG PHÁ THIÊN TRẢM",
+		"subtitle": "Chiêu Cuối Đại Đao — 3 Đợt Đao Khí Hỏa Viêm Chẻ Đất!",
+		"color": Color(1.0, 0.44, 0.16),
+		"desc": "Vung đại đao chém ra 3 luồng Đao Khí Bán Nguyệt khổng lồ càn quét 13m phía trước kèm chuỗi nổ dung nham, hất văng quái & phá tan 3 tầng Khiên Giáp!",
+	},
+	"bow": {
+		"name": "CỬU THIÊN HỎA VŨ TIỄN",
+		"subtitle": "Chiêu Cuối Cung Tên — Mưa 24 Thần Tiễn Phượng Hoàng Rực Lửa!",
+		"color": Color(1.0, 0.72, 0.24),
+		"desc": "Bắn tiễn lên chín tầng mây gọi xuống cơn mưa 24 mũi Thần Tiễn rực lửa oanh tạc liên hoàn khắp chiến trường phía trước với sát thương chí mạng!",
+	},
+	"staff": {
+		"name": "THÁI CỰC THIÊN LÔI TRẬN",
+		"subtitle": "Chiêu Cuối Gậy Phép — Đại Pháp Trận Hút Quái & 9 Cột Thiên Lôi!",
+		"color": Color(0.76, 0.48, 1.0),
+		"desc": "Khắc Đại Pháp Trận Bát Quái 3D khổng lồ hút kẻ địch vào tâm, liên tiếp giáng 9 cột Thiên Lôi Tinh Quang rồi kích nổ Siêu Tân Tinh!",
+	},
+}
+
 ## Các vật phẩm tiêu hao cất trong Rương Đồ (có thể nhặt từ quái hoặc mua ở Thương Nhân)
 const ITEM_CATALOG: Dictionary = {
 	"hp_potion": {"name": "Hồi Xuân Đan", "price": 25, "desc": "Hồi ngay +75 Sinh Lực (HP)"},
@@ -500,6 +528,11 @@ func get_equipped_weapon_data() -> Dictionary:
 
 func get_equipped_weapon_type() -> String:
 	return str(get_equipped_weapon_data().get("type", "sword"))
+
+
+func get_equipped_weapon_ultimate() -> Dictionary:
+	var wtype: String = get_equipped_weapon_type()
+	return WEAPON_ULTIMATES.get(wtype, WEAPON_ULTIMATES["sword"])
 
 
 ## Thêm vũ khí vào Rương Đồ (khi nhặt từ quái hoặc mua từ Cửa hàng). Nếu đã có sẵn thì quy đổi thành Vàng!

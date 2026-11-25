@@ -47,6 +47,7 @@ func _ready() -> void:
 		_add_box(Vector3(0.14, 0.14, 0.06), Vector3(px, 1.70, 0.11), seal_mat)
 
 	var title_lbl := Label3D.new()
+	WuxiaFontTheme.style_label_3d(title_lbl)
 	title_lbl.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	title_lbl.pixel_size = 0.0085
 	title_lbl.font_size = 28
@@ -57,6 +58,7 @@ func _ready() -> void:
 	add_child(title_lbl)
 
 	_prompt_label = Label3D.new()
+	WuxiaFontTheme.style_label_3d(_prompt_label)
 	_prompt_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	_prompt_label.pixel_size = 0.009
 	_prompt_label.font_size = 30

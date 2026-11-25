@@ -43,6 +43,7 @@ func _ready() -> void:
 	add_child(pillar_light)
 
 	_label_3d = Label3D.new()
+	WuxiaFontTheme.style_label_3d(_label_3d)
 	_label_3d.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	_label_3d.position = Vector3(0.0, 2.35, 0.0)
 	_label_3d.pixel_size = 0.011

@@ -123,6 +123,7 @@ func _build_visuals() -> void:
 	# Biểu tượng Khiên Giáp trên đầu cho quái Tank (Boss hiển thị ngay trên thanh máu lớn HUD)
 	if max_shield > 0 and stats.archetype != "boss":
 		shield_label_3d = Label3D.new()
+		WuxiaFontTheme.style_label_3d(shield_label_3d)
 		shield_label_3d.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 		shield_label_3d.pixel_size = 0.0085
 		shield_label_3d.font_size = 28

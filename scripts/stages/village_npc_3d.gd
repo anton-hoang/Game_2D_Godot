@@ -39,6 +39,7 @@ func _ready() -> void:
 
 	# Nhãn tên NPC luôn hiện mờ phía trên
 	var name_lbl := Label3D.new()
+	WuxiaFontTheme.style_label_3d(name_lbl)
 	name_lbl.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	name_lbl.pixel_size = 0.0085
 	name_lbl.font_size = 28
@@ -50,6 +51,7 @@ func _ready() -> void:
 
 	# Biển báo tương tác chỉ hiện khi người chơi bước tới gần
 	_prompt_label = Label3D.new()
+	WuxiaFontTheme.style_label_3d(_prompt_label)
 	_prompt_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	_prompt_label.pixel_size = 0.009
 	_prompt_label.font_size = 30

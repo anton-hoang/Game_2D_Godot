@@ -99,6 +99,9 @@ func _on_body_entered(body: Node) -> void:
 		else:
 			CombatVFX3D.spawn_hit_sparks(get_parent(), body.global_position, direction, proj_color, 7)
 			body.take_damage(damage, direction * knockback_force, is_crit)
+		for pl in get_tree().get_nodes_in_group("player"):
+			if is_instance_valid(pl) and pl.has_method("add_ultimate"):
+				pl.add_ultimate(6.5)
 		queue_free()
 	elif body.is_in_group("breakables") and body.has_method("take_damage"):
 		body.take_damage(damage)
