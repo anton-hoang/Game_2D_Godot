@@ -38,6 +38,17 @@ var _invuln_timer: float = 0.0
 var _knockback_vel: Vector3 = Vector3.ZERO
 var _is_dead: bool = false
 
+## 3 Bùa Cổ Ngữ Roguelite thu thập trong màn chơi (có thể cộng dồn nhiều tầng!):
+## - "lightning": Lôi Công Kiếm Quyết (Đòn 3 giật tia sét lan sang 3 quái gần nhất)
+## - "fire_dash": Hỏa Viêm Khinh Công (Dash để lại vệt lửa đốt cháy quái)
+## - "siphon": Hấp Tinh Đại Pháp (Hạ gục quái hồi 8% HP & 15 Chân Khí)
+var active_relics: Dictionary = {
+	"lightning": 0,
+	"fire_dash": 0,
+	"siphon": 0,
+}
+var _fire_trail_spawn_cd: float = 0.0
+
 var anim_sprite: AnimatedSprite3D
 var slash_vfx: Sprite3D
 var player_light: OmniLight3D
@@ -50,8 +61,37 @@ func _ready() -> void:
 	add_to_group("player")
 	_apply_save_upgrades()
 	_build_visual_nodes()
+	if not SaveManager.cosmetic_changed.is_connected(refresh_cosmetic_appearance):
+		SaveManager.cosmetic_changed.connect(refresh_cosmetic_appearance)
 	hp_changed.emit(current_hp, max_hp)
 	energy_changed.emit(current_energy, max_energy)
+
+
+## Cập nhật màu khăn choàng ngay lập tức khi người chơi mở khóa hoặc thay đổi trang bị
+func refresh_cosmetic_appearance() -> void:
+	if anim_sprite and custom_sprite_frames == null:
+		var cur_anim := anim_sprite.animation
+		anim_sprite.sprite_frames = PixelArtGenerator.get_player_sprite_frames(SaveManager.equipped_scarf)
+		anim_sprite.play(cur_anim if anim_sprite.sprite_frames.has_animation(cur_anim) else "idle")
+
+
+## Xóa sạch các Bùa Cổ Ngữ khi bắt đầu màn mới
+func reset_stage_relics() -> void:
+	active_relics = {"lightning": 0, "fire_dash": 0, "siphon": 0}
+
+
+## Cộng thêm tầng Bùa Cổ Ngữ vừa chọn sau mỗi Wave
+func add_relic(relic_id: String) -> void:
+	active_relics[relic_id] = int(active_relics.get(relic_id, 0)) + 1
+	AudioManager.play_sfx("victory", 1.2)
+
+
+## Kích hoạt hiệu ứng Hấp Tinh Đại Pháp khi tiêu diệt quái vật
+func on_enemy_killed() -> void:
+	var lv: int = int(active_relics.get("siphon", 0))
+	if lv > 0:
+		heal(max_hp * 0.08 * float(lv))
+		add_energy(15.0 * float(lv))
 
 
 ## Áp dụng các nâng cấp đã mua bằng vàng từ SaveManager
@@ -90,7 +130,7 @@ func _build_visual_nodes() -> void:
 	anim_sprite.shaded = true
 	anim_sprite.alpha_cut = SpriteBase3D.ALPHA_CUT_DISCARD
 	anim_sprite.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_DOUBLE_SIDED
-	anim_sprite.sprite_frames = custom_sprite_frames if custom_sprite_frames else PixelArtGenerator.get_player_sprite_frames()
+	anim_sprite.sprite_frames = custom_sprite_frames if custom_sprite_frames else PixelArtGenerator.get_player_sprite_frames(SaveManager.equipped_scarf)
 	anim_sprite.play("idle")
 
 	# Tạo viền sáng Rim-Light an toàn 100% bằng Sprite3D hào quang nhẹ phía sau (tránh xung đột pipeline material_override trên D3D12)
@@ -197,6 +237,13 @@ func _physics_process(delta: float) -> void:
 		_dash_timer -= delta
 		velocity.x = facing_dir.x * dash_speed
 		velocity.z = facing_dir.z * dash_speed
+		# Bùa Cổ Ngữ Hỏa Viêm Khinh Công: Để lại vệt lửa đốt cháy quái đuổi theo
+		var fire_lv: int = int(active_relics.get("fire_dash", 0))
+		if fire_lv > 0:
+			_fire_trail_spawn_cd -= delta
+			if _fire_trail_spawn_cd <= 0.0:
+				_spawn_fire_trail(fire_lv)
+				_fire_trail_spawn_cd = 0.065
 	elif _attack_timer > 0.0:
 		velocity.x = facing_dir.x * 1.4 + _knockback_vel.x
 		velocity.z = facing_dir.z * 1.4 + _knockback_vel.z
@@ -254,7 +301,11 @@ func _perform_combo_attack() -> void:
 		Color(0.85, 0.95, 1.0) if combo_step < 3 else Color(1.0, 0.85, 0.35),
 		1.0 if combo_step < 3 else 1.35
 	)
-	_deal_melee_damage(attack_damage * dmg_mult, hit_range, 0.85, knockback, is_crit)
+	var hit_any := _deal_melee_damage(attack_damage * dmg_mult, hit_range, 0.85, knockback, is_crit)
+	# Bùa Cổ Ngữ Lôi Công Kiếm Quyết: Đòn thứ 3 giật tia sét lan sang 3 quái gần nhất!
+	var lightning_lv: int = int(active_relics.get("lightning", 0))
+	if combo_step == 3 and hit_any and lightning_lv > 0:
+		_trigger_chain_lightning(lightning_lv)
 
 
 ## Kỹ năng đặc biệt (Phím K): Kiếm Khí Xung Kích 360 độ tiêu hao năng lượng
@@ -286,7 +337,7 @@ func _show_slash_effect(col: Color, scale_mult: float) -> void:
 	tw.tween_callback(func() -> void: slash_vfx.visible = false)
 
 
-func _deal_melee_damage(dmg: float, radius: float, dot_threshold: float, knockback_force: float, is_crit: bool) -> void:
+func _deal_melee_damage(dmg: float, radius: float, dot_threshold: float, knockback_force: float, is_crit: bool) -> bool:
 	var hit_any := false
 	for node in get_tree().get_nodes_in_group("enemies"):
 		if not is_instance_valid(node) or not node.has_method("take_damage"):
@@ -319,6 +370,71 @@ func _deal_melee_damage(dmg: float, radius: float, dot_threshold: float, knockba
 		GameManager.trigger_hit_stop(0.045 if not is_crit else 0.068, 0.08)
 		if camera_rig:
 			camera_rig.shake(0.14 if not is_crit else 0.22, 0.11)
+	return hit_any
+
+
+## Lôi Công Kiếm Quyết: Giật tia sét màu lam vàng lan sang tối đa 3 quái vật gần nhất
+func _trigger_chain_lightning(level: int) -> void:
+	var candidates: Array = []
+	for node in get_tree().get_nodes_in_group("enemies"):
+		if is_instance_valid(node) and node.has_method("take_damage"):
+			var d := global_position.distance_to(node.global_position)
+			if d <= 9.5:
+				candidates.append({"node": node, "dist": d})
+	candidates.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a["dist"]) < float(b["dist"]))
+
+	var max_targets := mini(3, candidates.size())
+	var prev_pos := global_position + Vector3(0.0, 1.0, 0.0)
+	var bolt_dmg := int(round(attack_damage * (0.75 + 0.35 * float(level - 1))))
+
+	if max_targets > 0:
+		AudioManager.play_sfx("special", 1.35)
+	for i in range(max_targets):
+		var target_node: Node3D = candidates[i]["node"]
+		if not is_instance_valid(target_node):
+			continue
+		var target_pos := target_node.global_position + Vector3(0.0, 1.0, 0.0)
+		_spawn_lightning_beam(prev_pos, target_pos)
+		target_node.take_damage(bolt_dmg, Vector3.ZERO, true)
+		DamageNumber3D.spawn(get_parent(), target_pos, bolt_dmg, true, false, "LÔI SÉT -" + str(bolt_dmg))
+		prev_pos = target_pos
+
+
+func _spawn_lightning_beam(from_pos: Vector3, to_pos: Vector3) -> void:
+	if get_parent() == null:
+		return
+	var diff := to_pos - from_pos
+	var dist := diff.length()
+	if dist < 0.05:
+		return
+	var beam := MeshInstance3D.new()
+	var bm := BoxMesh.new()
+	bm.size = Vector3(0.14, 0.14, dist)
+	beam.mesh = bm
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.albedo_color = Color(0.55, 0.92, 1.0)
+	mat.emission_enabled = true
+	mat.emission = Color(0.42, 0.88, 1.0)
+	mat.emission_energy_multiplier = 4.5
+	beam.material_override = mat
+	get_parent().add_child(beam)
+	beam.global_position = (from_pos + to_pos) * 0.5
+	beam.look_at(to_pos, Vector3.UP)
+
+	var tw := beam.create_tween()
+	tw.tween_property(beam, "scale", Vector3(0.05, 0.05, 1.0), 0.22)
+	tw.tween_callback(beam.queue_free)
+
+
+func _spawn_fire_trail(level: int) -> void:
+	if get_parent() == null:
+		return
+	var fz := FireTrailZone3D.new()
+	fz.burn_damage = 10 + level * 6
+	fz.duration = 2.8 + float(level - 1) * 0.6
+	get_parent().add_child(fz)
+	fz.global_position = global_position + Vector3(0.0, 0.05, 0.0)
 
 
 ## Nhận sát thương từ quái hoặc đạn
@@ -327,6 +443,7 @@ func take_damage(amount: float, knockback: Vector3 = Vector3.ZERO) -> void:
 		return
 	current_hp = maxf(0.0, current_hp - amount)
 	GameManager.damage_taken_in_stage += amount
+	SaveManager.reset_no_damage_goblin_streak()
 	_invuln_timer = 0.55
 	_knockback_vel = Vector3(knockback.x, 0.0, knockback.z)
 	anim_sprite.play("hurt")

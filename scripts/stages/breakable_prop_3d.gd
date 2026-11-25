@@ -93,6 +93,7 @@ func take_damage(dmg: int) -> void:
 func _break_and_drop() -> void:
 	_broken = true
 	AudioManager.play_sfx("hurt", 1.35)
+	SaveManager.advance_quest("crate_breaker", 1)
 
 	# Rơi ngẫu nhiên Vàng, Bình máu hoặc Năng lượng
 	var drop := Pickup3D.new()

@@ -10,6 +10,7 @@ signal start_stage_requested(stage_id: int)
 signal enter_town_hub_requested
 signal toggle_dof_requested
 signal npc_service_requested(role: String)
+signal relic_chosen(relic_id: String)
 
 var hud_root: Control
 var hp_bar: ProgressBar
@@ -44,6 +45,14 @@ var pause_panel: Control
 var result_panel: Control
 var gameover_panel: Control
 var dialogue_panel: Control
+var relic_panel: Control
+var quest_board_panel: Control
+
+var _hero_portrait_rect: TextureRect
+var _hero_title_label: Label
+var _relic_hud_label: Label
+var _quest_list_box: VBoxContainer
+var _scarf_buttons_box: HBoxContainer
 
 var _stage_buttons_box: VBoxContainer
 var _upgrade_info_label: Label
@@ -70,12 +79,18 @@ func _ready() -> void:
 	_build_result_menu()
 	_build_gameover_menu()
 	_build_dialogue_panel()
+	_build_relic_selection_panel()
+	_build_quest_board_panel()
 
 	GameManager.stats_updated.connect(_on_stats_updated)
 	GameManager.stage_cleared.connect(_on_stage_cleared)
 	GameManager.player_died.connect(_on_player_died)
 	GameManager.boss_spawned.connect(_on_boss_spawned)
 	SaveManager.data_changed.connect(_refresh_all_menus)
+	SaveManager.cosmetic_changed.connect(_refresh_hero_cosmetic_hud)
+	SaveManager.quest_completed_notify.connect(func(qtitle: String, qsub: String) -> void:
+		show_wave_banner("HOÀN THÀNH NHIỆM VỤ: " + qtitle, qsub)
+	)
 
 	show_main_menu()
 
@@ -108,6 +123,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		if dialogue_panel and dialogue_panel.visible:
 			_hide_all_panels()
 			get_tree().paused = false
+		elif quest_board_panel and quest_board_panel.visible:
+			_hide_all_panels()
+			get_tree().paused = false
+		elif relic_panel and relic_panel.visible:
+			return # Bắt buộc chọn 1 Bùa Cổ Ngữ trước khi tiếp tục
 		elif GameManager.is_stage_active:
 			_toggle_pause()
 		elif not main_menu_panel.visible and not stage_select_panel.visible and not upgrade_panel.visible:
@@ -169,9 +189,46 @@ func show_main_menu() -> void:
 
 
 func _hide_all_panels() -> void:
-	for p in [main_menu_panel, stage_select_panel, upgrade_panel, pause_panel, result_panel, gameover_panel, dialogue_panel]:
+	for p in [main_menu_panel, stage_select_panel, upgrade_panel, pause_panel, result_panel, gameover_panel, dialogue_panel, relic_panel, quest_board_panel]:
 		if p:
 			p.visible = false
+
+
+## Hiện bảng chọn 1 trong 3 Bùa Cổ Ngữ Roguelite sau mỗi đợt quái
+func show_relic_selection() -> void:
+	get_tree().paused = true
+	_hide_all_panels()
+	if relic_panel:
+		relic_panel.visible = true
+
+
+## Hiện Bảng Truy Nã Nhiệm Vụ Dân Làng & Tủ Đổi Danh Hiệu / Màu Khăn Choàng
+func show_quest_board() -> void:
+	get_tree().paused = true
+	_hide_all_panels()
+	_refresh_quest_board()
+	if quest_board_panel:
+		quest_board_panel.visible = true
+
+
+func update_relics_hud(relics: Dictionary) -> void:
+	if _relic_hud_label == null:
+		return
+	var parts: Array[String] = []
+	if int(relics.get("lightning", 0)) > 0:
+		parts.append("⚡Lôi Công Lv.%d" % int(relics["lightning"]))
+	if int(relics.get("fire_dash", 0)) > 0:
+		parts.append("🔥Hỏa Viêm Lv.%d" % int(relics["fire_dash"]))
+	if int(relics.get("siphon", 0)) > 0:
+		parts.append("✦Hấp Tinh Lv.%d" % int(relics["siphon"]))
+	_relic_hud_label.text = ("Bùa Cổ Ngữ: " + "  |  ".join(parts)) if parts.size() > 0 else ""
+
+
+func _refresh_hero_cosmetic_hud() -> void:
+	if _hero_portrait_rect:
+		_hero_portrait_rect.texture = PixelArtGenerator.get_hero_portrait_texture(SaveManager.equipped_scarf)
+	if _hero_title_label:
+		_hero_title_label.text = "  " + SaveManager.equipped_title.to_upper()
 
 
 func show_npc_dialogue(npc_data: Dictionary) -> void:
@@ -235,11 +292,12 @@ func _build_hud() -> void:
 	hbox.add_child(portrait_frame)
 
 	var hero_tex := TextureRect.new()
-	hero_tex.texture = PixelArtGenerator.get_hero_portrait_texture()
+	hero_tex.texture = PixelArtGenerator.get_hero_portrait_texture(SaveManager.equipped_scarf)
 	hero_tex.custom_minimum_size = Vector2(64, 64)
 	hero_tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	hero_tex.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	portrait_frame.add_child(hero_tex)
+	_hero_portrait_rect = hero_tex
 
 	var bars_col := VBoxContainer.new()
 	bars_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -254,10 +312,11 @@ func _build_hud() -> void:
 	name_row.add_child(seal)
 
 	var hero_title := Label.new()
-	hero_title.text = "  LỮ KHÁCH WINDFERRY"
+	hero_title.text = "  " + SaveManager.equipped_title.to_upper()
 	hero_title.add_theme_font_size_override("font_size", 14)
 	hero_title.modulate = Color(0.98, 0.86, 0.50)
 	name_row.add_child(hero_title)
+	_hero_title_label = hero_title
 
 	# Thanh Sinh Lực (HP) 2 lớp: vệt vàng trễ phía sau + thanh son đỏ phía trước
 	var hp_holder := Control.new()
@@ -279,13 +338,20 @@ func _build_hud() -> void:
 	bars_col.add_child(energy_bar)
 	energy_label = _create_overlay_label(energy_bar, "CHÂN KHÍ (K): 100 / 100")
 
-	# Dòng gợi ý thao tác ngắn gọn bên dưới bảng máu
+	# Dòng gợi ý thao tác ngắn gọn & danh sách Bùa Cổ Ngữ đang kích hoạt bên dưới bảng máu
 	var controls_hint := Label.new()
 	controls_hint.position = Vector2(22, 126)
-	controls_hint.text = "WASD: Hành tẩu  •  [E] Giao tiếp/Mở rương  •  [J] Tam Liên Trảm  •  [K] Kiếm Khí  •  [L] Thân Pháp  •  [ESC] Tạm nghỉ"
+	controls_hint.text = "WASD: Hành tẩu  •  [E] Giao tiếp/Rương/Bảng Truy Nã  •  [J] Tam Liên Trảm  •  [K] Kiếm Khí  •  [L] Thân Pháp  •  [ESC] Tạm nghỉ"
 	controls_hint.add_theme_font_size_override("font_size", 12)
 	controls_hint.modulate = Color(0.92, 0.86, 0.72, 0.88)
 	hud_root.add_child(controls_hint)
+
+	_relic_hud_label = Label.new()
+	_relic_hud_label.position = Vector2(22, 146)
+	_relic_hud_label.text = ""
+	_relic_hud_label.add_theme_font_size_override("font_size", 13)
+	_relic_hud_label.modulate = Color(0.55, 0.96, 1.0)
+	hud_root.add_child(_relic_hud_label)
 
 	# =========================================================================
 	# GÓC TRÊN PHẢI: THẺ NGỌC CHIẾN TÍCH & THIÊN TƯỢNG (Cổ trang)
@@ -544,6 +610,10 @@ func _build_main_menu() -> void:
 		upgrade_panel.visible = true
 	))
 
+	vbox.add_child(_create_button("❖ BẢNG TRUY NÃ & TỦ KHĂN CHOÀNG (NHIỆM VỤ)", func() -> void:
+		show_quest_board()
+	))
+
 	vbox.add_child(_create_button("❖ TẨY TỦY CHƠI LẠI TỪ ĐẦU", func() -> void:
 		SaveManager.reset_save()
 		_refresh_all_menus()
@@ -784,6 +854,218 @@ func _build_dialogue_panel() -> void:
 	)
 	close_btn.custom_minimum_size = Vector2(140, 38)
 	btn_row.add_child(close_btn)
+
+
+## ============================================================================
+## BẢNG CHỌN 1 TRONG 3 THẺ BÙA CỔ NGỮ ROGUELITE SAU MỖI ĐỢT QUÁI (WAVE)
+## ============================================================================
+func _build_relic_selection_panel() -> void:
+	var backdrop := ColorRect.new()
+	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	backdrop.color = Color(0.02, 0.01, 0.03, 0.72)
+	backdrop.visible = false
+	add_child(backdrop)
+	relic_panel = backdrop
+
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	backdrop.add_child(center)
+
+	var main_box := _create_classical_panel(Color(0.11, 0.07, 0.06, 0.96), Color(0.92, 0.72, 0.30, 1.0))
+	main_box.custom_minimum_size = Vector2(860, 410)
+	center.add_child(main_box)
+
+	var vbox := VBoxContainer.new()
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_theme_constant_override("separation", 16)
+	main_box.add_child(vbox)
+
+	var hdr := Label.new()
+	hdr.text = "【 CHỌN 1 BÙA CỔ NGỮ — BÍ TỊCH TĂNG CƯỜNG 】"
+	hdr.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hdr.add_theme_font_size_override("font_size", 23)
+	hdr.modulate = Color(1.0, 0.86, 0.38)
+	vbox.add_child(hdr)
+
+	var sub := Label.new()
+	sub.text = "Lĩnh hội 1 trong 3 bí kíp cổ trang dưới đây (có thể cộng dồn nhiều tầng trong trận đánh này!)"
+	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	sub.add_theme_font_size_override("font_size", 14)
+	sub.modulate = Color(0.94, 0.88, 0.74)
+	vbox.add_child(sub)
+
+	var cards_row := HBoxContainer.new()
+	cards_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	cards_row.add_theme_constant_override("separation", 18)
+	vbox.add_child(cards_row)
+
+	var relic_cards := [
+		{
+			"id": "lightning",
+			"seal": "LÔI",
+			"title": "Lôi Công Kiếm Quyết",
+			"accent": Color(0.45, 0.88, 1.0),
+			"desc": "Đòn thứ 3 trong chuỗi Tam Liên Trảm giật tia sét lan sang tối đa 3 quái vật gần nhất, gây sát thương chí mạng!",
+		},
+		{
+			"id": "fire_dash",
+			"seal": "HỎA",
+			"title": "Hỏa Viêm Khinh Công",
+			"accent": Color(1.0, 0.56, 0.22),
+			"desc": "Mỗi lần thi triển Thân Pháp (Dash - phím L) để lại vệt lửa cháy rực trên mặt đất thiêu đốt toàn bộ kẻ địch đuổi theo!",
+		},
+		{
+			"id": "siphon",
+			"seal": "TINH",
+			"title": "Hấp Tinh Đại Pháp",
+			"accent": Color(0.46, 0.96, 0.62),
+			"desc": "Mỗi khi hạ gục một kẻ địch, hấp thụ linh khí hồi ngay 8% Sinh Lực tối đa và +15 Chân Khí (cộng dồn theo tầng)!",
+		},
+	]
+
+	for rc in relic_cards:
+		var card := _create_classical_panel(Color(0.16, 0.10, 0.08, 0.98), rc["accent"])
+		card.custom_minimum_size = Vector2(252, 265)
+		cards_row.add_child(card)
+
+		var cv := VBoxContainer.new()
+		cv.alignment = BoxContainer.ALIGNMENT_CENTER
+		cv.add_theme_constant_override("separation", 10)
+		card.add_child(cv)
+
+		var seal_center := CenterContainer.new()
+		cv.add_child(seal_center)
+		seal_center.add_child(_create_red_seal(str(rc["seal"])))
+
+		var ctitle := Label.new()
+		ctitle.text = str(rc["title"])
+		ctitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		ctitle.add_theme_font_size_override("font_size", 18)
+		ctitle.modulate = rc["accent"]
+		cv.add_child(ctitle)
+
+		var cdesc := Label.new()
+		cdesc.text = str(rc["desc"])
+		cdesc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		cdesc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		cdesc.add_theme_font_size_override("font_size", 13)
+		cdesc.modulate = Color(0.95, 0.90, 0.80)
+		cdesc.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		cv.add_child(cdesc)
+
+		var rid := str(rc["id"])
+		var pick_btn := _create_button("LĨNH HỘI BÍ TỊCH NÀY", func() -> void:
+			_hide_all_panels()
+			get_tree().paused = false
+			relic_chosen.emit(rid)
+		)
+		cv.add_child(pick_btn)
+
+
+## ============================================================================
+## BẢNG TRUY NÃ NHIỆM VỤ DÂN LÀNG & TỦ ĐỔI DANH HIỆU / MÀU KHĂN CHOÀNG
+## ============================================================================
+func _build_quest_board_panel() -> void:
+	quest_board_panel = _create_center_modal(760, 540)
+	var vbox := _get_modal_vbox(quest_board_panel)
+
+	var title := Label.new()
+	title.text = "【 BẢNG TRUY NÃ LÀNG CỔ & TỦ KHĂN CHOÀNG 】"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 22)
+	title.modulate = Color(1.0, 0.86, 0.38)
+	vbox.add_child(title)
+
+	_quest_list_box = VBoxContainer.new()
+	_quest_list_box.add_theme_constant_override("separation", 8)
+	vbox.add_child(_quest_list_box)
+
+	var scarf_hdr := Label.new()
+	scarf_hdr.text = "─── MÀU KHĂN CHOÀNG ĐÃ MỞ KHÓA (Đổi trực tiếp trên Nhân Vật) ───"
+	scarf_hdr.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	scarf_hdr.add_theme_font_size_override("font_size", 13)
+	scarf_hdr.modulate = Color(0.95, 0.84, 0.50)
+	vbox.add_child(scarf_hdr)
+
+	_scarf_buttons_box = HBoxContainer.new()
+	_scarf_buttons_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	_scarf_buttons_box.add_theme_constant_override("separation", 8)
+	vbox.add_child(_scarf_buttons_box)
+
+	vbox.add_child(_create_button("ĐÓNG BẢNG TRUY NÃ", func() -> void:
+		if not GameManager.is_stage_active and not main_menu_panel.visible:
+			_hide_all_panels()
+			get_tree().paused = false
+		else:
+			show_main_menu()
+	))
+
+
+func _refresh_quest_board() -> void:
+	if _quest_list_box == null or _scarf_buttons_box == null:
+		return
+	for c in _quest_list_box.get_children():
+		c.queue_free()
+
+	for qid in SaveManager.QUEST_DEFINITIONS.keys():
+		var qd: Dictionary = SaveManager.QUEST_DEFINITIONS[qid]
+		var cur: int = int(SaveManager.quest_progress.get(qid, 0))
+		var tgt: int = int(qd["target"])
+		var claimed := bool(SaveManager.quest_claimed.get(qid, false))
+		var done := cur >= tgt
+
+		var row_panel := _create_classical_panel(Color(0.15, 0.10, 0.08, 0.92), Color(0.76, 0.58, 0.26, 0.85))
+		_quest_list_box.add_child(row_panel)
+
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 12)
+		row_panel.add_child(row)
+
+		var info_col := VBoxContainer.new()
+		info_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(info_col)
+
+		var q_lbl := Label.new()
+		q_lbl.text = "❖ %s  [%d / %d]" % [str(qd["title"]), cur, tgt]
+		q_lbl.add_theme_font_size_override("font_size", 15)
+		q_lbl.modulate = Color(0.45, 0.96, 0.55) if done else Color(1.0, 0.86, 0.42)
+		info_col.add_child(q_lbl)
+
+		var desc_lbl := Label.new()
+		desc_lbl.text = "%s\nThưởng: +%d Lượng • Danh hiệu「%s」• %s" % [str(qd["desc"]), int(qd["gold"]), str(qd["unlock_title"]), str(qd["scarf_label"])]
+		desc_lbl.add_theme_font_size_override("font_size", 12)
+		desc_lbl.modulate = Color(0.92, 0.87, 0.76)
+		info_col.add_child(desc_lbl)
+
+		var q_key := str(qid)
+		var btn_txt := "ĐÃ LĨNH THƯỞNG" if claimed else ("LĨNH THƯỞNG!" if done else "ĐANG LÀM...")
+		var claim_btn := _create_button(btn_txt, func() -> void:
+			if SaveManager.claim_quest_reward(q_key):
+				AudioManager.play_sfx("victory", 1.2)
+				_refresh_quest_board()
+				show_wave_banner("ĐÃ LĨNH THƯỞNG NHIỆM VỤ!", "Mở khóa Danh hiệu & Màu Khăn Choàng mới!")
+		)
+		claim_btn.custom_minimum_size = Vector2(150, 42)
+		claim_btn.disabled = claimed or not done
+		row.add_child(claim_btn)
+
+	# Hàng nút chọn Màu Khăn Choàng đã mở khóa
+	for sc in _scarf_buttons_box.get_children():
+		sc.queue_free()
+	for scarf_id in SaveManager.SCARF_PALETTES.keys():
+		var sp: Dictionary = SaveManager.SCARF_PALETTES[scarf_id]
+		var unlocked := SaveManager.unlocked_scarves.has(scarf_id)
+		var equipped := SaveManager.equipped_scarf == scarf_id
+		var s_key := str(scarf_id)
+		var label_txt := ("★ " if equipped else "") + str(sp["name"]) if unlocked else "🔒 " + str(sp["name"])
+		var sbtn := _create_button(label_txt, func() -> void:
+			if unlocked:
+				SaveManager.equip_scarf(s_key)
+				AudioManager.play_sfx("pickup", 1.1)
+				_refresh_quest_board()
+		)
+		sbtn.disabled = not unlocked
+		_scarf_buttons_box.add_child(sbtn)
 
 
 func _start_stage(stage_id: int) -> void:

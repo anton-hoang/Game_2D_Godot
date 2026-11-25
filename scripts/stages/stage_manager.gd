@@ -9,6 +9,8 @@ extends Node3D
 signal wave_banner_requested(title_text: String, subtitle_text: String)
 signal boss_appeared(boss_node: EnemyBase)
 signal npc_interacted(npc_data: Dictionary)
+signal bounty_board_opened
+signal relic_selection_requested
 signal hub_portal_entered
 
 var environment_builder: HD2DEnvironmentBuilder
@@ -124,6 +126,13 @@ func _build_town_npcs() -> void:
 		npc.interacted.connect(func(d: Dictionary) -> void: npc_interacted.emit(d))
 		town_npcs_root.add_child(npc)
 
+	# Bảng Truy Nã (Bounty Board) đặt ngay quảng trường giữa Làng Windferry
+	var board := BountyBoard3D.new()
+	board.name = "VillageBountyBoard"
+	board.position = Vector3(2.8, 0.0, -5.2)
+	board.board_interacted.connect(func() -> void: bounty_board_opened.emit())
+	town_npcs_root.add_child(board)
+
 
 ## Vào chế độ Làng Trung Tâm yên bình (Town Hub):
 ## Người chơi tự do đi dạo, nói chuyện 3 NPC, leo bậc thang vào 3 ngôi nhà mở rương báu, chém thùng gỗ,
@@ -167,9 +176,10 @@ func load_and_start_stage(stage_id: int) -> void:
 	current_wave_index = 0
 	alive_enemies_count = 0
 
-	# Đặt lại vị trí và nâng cấp của Player
+	# Đặt lại vị trí, nâng cấp và xóa Bùa Cổ Ngữ của trận trước
 	player._is_dead = false
 	player._apply_save_upgrades()
+	player.reset_stage_relics()
 	player.global_position = Vector3(1.5, 0.2, 2.2)
 	player.hp_changed.emit(player.current_hp, player.max_hp)
 	player.energy_changed.emit(player.current_energy, player.max_energy)
@@ -243,6 +253,12 @@ func _on_enemy_died(enemy: EnemyBase) -> void:
 	alive_enemies_count = maxi(0, alive_enemies_count - 1)
 	_spawn_loot_drops(enemy.global_position, enemy.stats)
 
+	# Kích hoạt Hấp Tinh Đại Pháp (nếu đã chọn) & tính tiến độ nhiệm vụ Diệt Goblin vô thương
+	if player and is_instance_valid(player):
+		player.on_enemy_killed()
+	if enemy.stats and enemy.stats.archetype == "melee":
+		SaveManager.advance_quest("goblin_slayer", 1)
+
 	if alive_enemies_count == 0 and GameManager.is_stage_active:
 		_on_wave_cleared()
 
@@ -291,7 +307,15 @@ func _on_portal_entered() -> void:
 	if is_in_town_hub:
 		hub_portal_entered.emit()
 	else:
-		_spawn_current_wave()
+		# Sau mỗi Wave bước qua Cổng Ánh Sáng -> Hiện 3 Thẻ Bùa Cổ Ngữ Roguelite để người chơi chọn!
+		relic_selection_requested.emit()
+
+
+## Tiếp tục sinh đợt quái kế tiếp ngay sau khi người chơi chọn xong 1 trong 3 Bùa Cổ Ngữ
+func apply_relic_and_continue_wave(relic_id: String) -> void:
+	if player and is_instance_valid(player):
+		player.add_relic(relic_id)
+	_spawn_current_wave()
 
 
 func _clear_entities() -> void:

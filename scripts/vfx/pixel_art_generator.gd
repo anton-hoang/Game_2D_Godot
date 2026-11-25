@@ -7,47 +7,48 @@ extends RefCounted
 static var _cache: Dictionary = {}
 
 
-static func get_player_sprite_frames() -> SpriteFrames:
-	if _cache.has("player_frames_hd"):
-		return _cache["player_frames_hd"]
+static func get_player_sprite_frames(scarf_id: String = "blue") -> SpriteFrames:
+	var key := "player_frames_hd_" + scarf_id
+	if _cache.has(key):
+		return _cache[key]
 	var frames := SpriteFrames.new()
 	if frames.has_animation("default"):
 		frames.remove_animation("default")
 
 	_add_anim(frames, "idle", 4.5, true, [
-		_make_hero_frame(0, false, false),
-		_make_hero_frame(1, false, false),
-		_make_hero_frame(2, false, false),
-		_make_hero_frame(1, false, false),
+		_make_hero_frame(0, false, false, Color.WHITE, 0, scarf_id),
+		_make_hero_frame(1, false, false, Color.WHITE, 0, scarf_id),
+		_make_hero_frame(2, false, false, Color.WHITE, 0, scarf_id),
+		_make_hero_frame(1, false, false, Color.WHITE, 0, scarf_id),
 	])
 	_add_anim(frames, "run", 11.0, true, [
-		_make_hero_frame(0, true, false),
-		_make_hero_frame(1, true, false),
-		_make_hero_frame(2, true, false),
-		_make_hero_frame(3, true, false),
+		_make_hero_frame(0, true, false, Color.WHITE, 0, scarf_id),
+		_make_hero_frame(1, true, false, Color.WHITE, 0, scarf_id),
+		_make_hero_frame(2, true, false, Color.WHITE, 0, scarf_id),
+		_make_hero_frame(3, true, false, Color.WHITE, 0, scarf_id),
 	])
 	_add_anim(frames, "dash", 14.0, false, [
-		_make_hero_frame(2, true, false, Color(0.68, 0.96, 1.0)),
+		_make_hero_frame(2, true, false, Color(0.68, 0.96, 1.0), 0, scarf_id),
 	])
 	_add_anim(frames, "attack_1", 15.0, false, [
-		_make_hero_frame(0, false, true, Color.WHITE, 1),
-		_make_hero_frame(1, false, true, Color.WHITE, 2),
+		_make_hero_frame(0, false, true, Color.WHITE, 1, scarf_id),
+		_make_hero_frame(1, false, true, Color.WHITE, 2, scarf_id),
 	])
 	_add_anim(frames, "attack_2", 15.0, false, [
-		_make_hero_frame(1, false, true, Color.WHITE, 2),
-		_make_hero_frame(2, false, true, Color.WHITE, 3),
+		_make_hero_frame(1, false, true, Color.WHITE, 2, scarf_id),
+		_make_hero_frame(2, false, true, Color.WHITE, 3, scarf_id),
 	])
 	_add_anim(frames, "attack_3", 15.0, false, [
-		_make_hero_frame(2, false, true, Color(1.0, 0.94, 0.72), 4),
+		_make_hero_frame(2, false, true, Color(1.0, 0.94, 0.72), 4, scarf_id),
 	])
 	_add_anim(frames, "special", 13.0, false, [
-		_make_hero_frame(2, false, true, Color(0.55, 0.92, 1.0), 4),
+		_make_hero_frame(2, false, true, Color(0.55, 0.92, 1.0), 4, scarf_id),
 	])
 	_add_anim(frames, "hurt", 8.0, false, [
-		_make_hero_frame(1, false, false, Color(1.0, 0.42, 0.42)),
+		_make_hero_frame(1, false, false, Color(1.0, 0.42, 0.42), 0, scarf_id),
 	])
 
-	_cache["player_frames_hd"] = frames
+	_cache[key] = frames
 	return frames
 
 
@@ -84,11 +85,12 @@ static func get_enemy_sprite_frames(archetype: String, tint: Color = Color.WHITE
 	return frames
 
 
-static func get_hero_portrait_texture() -> ImageTexture:
-	if _cache.has("hero_portrait"):
-		return _cache["hero_portrait"]
-	var tex := ImageTexture.create_from_image(_make_hero_portrait_image())
-	_cache["hero_portrait"] = tex
+static func get_hero_portrait_texture(scarf_id: String = "blue") -> ImageTexture:
+	var key := "hero_portrait_" + scarf_id
+	if _cache.has(key):
+		return _cache[key]
+	var tex := ImageTexture.create_from_image(_make_hero_portrait_image(scarf_id))
+	_cache[key] = tex
 	return tex
 
 
@@ -157,7 +159,7 @@ static func _add_anim(frames: SpriteFrames, anim_name: String, fps: float, loop:
 ## - Tỉ lệ chibi đầu tròn lớn đáng yêu, mái tóc nâu đỏ bồng bềnh nhiều lọn sáng tối.
 ## - Kẹp hoa/lá xanh vàng gắn bên tóc trái, đôi mắt đen tròn lớn, má hồng.
 ## - Khăn quàng cổ xanh lam, ba lô/túi hành lý màu vàng đất đeo sau lưng, áo choàng nâu đỏ & giày ủng nâu.
-static func _make_hero_frame(step: int, running: bool, attacking: bool, modulate_col: Color = Color.WHITE, sword_pose: int = 0) -> ImageTexture:
+static func _make_hero_frame(step: int, running: bool, attacking: bool, modulate_col: Color = Color.WHITE, sword_pose: int = 0, scarf_id: String = "blue") -> ImageTexture:
 	var w := 40
 	var h := 44
 	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
@@ -174,9 +176,10 @@ static func _make_hero_frame(step: int, running: bool, attacking: bool, modulate
 	var skin := Color(0.98, 0.85, 0.74)
 	var skin_shade := Color(0.86, 0.67, 0.56)
 	var blush := Color(0.95, 0.58, 0.54)
-	var scarf_d := Color(0.10, 0.34, 0.48)
-	var scarf_m := Color(0.18, 0.52, 0.68)
-	var scarf_h := Color(0.38, 0.74, 0.86)
+	var sp: Dictionary = SaveManager.SCARF_PALETTES.get(scarf_id, SaveManager.SCARF_PALETTES["blue"])
+	var scarf_d: Color = sp["dark"]
+	var scarf_m: Color = sp["mid"]
+	var scarf_h: Color = sp["hi"]
 	var pack_d := Color(0.56, 0.36, 0.12)
 	var pack_m := Color(0.82, 0.58, 0.20)
 	var pack_h := Color(0.96, 0.78, 0.34)
@@ -607,8 +610,8 @@ static func _make_butterfly_image() -> Image:
 	return img
 
 
-## Chân dung Lữ Khách 48x48 gắn trên khung Thanh Máu Cổ Trang
-static func _make_hero_portrait_image() -> Image:
+## Chân dung Lữ Khách 48x48 gắn trên khung Thanh Máu Cổ Trang (đổi màu khăn theo trang bị mở khóa)
+static func _make_hero_portrait_image(scarf_id: String = "blue") -> Image:
 	var w := 48
 	var h := 48
 	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
@@ -621,10 +624,11 @@ static func _make_hero_portrait_image() -> Image:
 	_fill_rect(img, 3, 3, w - 6, 1, Color(0.55, 0.16, 0.16))
 	_fill_rect(img, 3, h - 4, w - 6, 1, Color(0.55, 0.16, 0.16))
 
-	# Vai áo lữ khách & khăn choàng lam
-	_fill_rect(img, 8, 34, 32, 12, Color(0.76, 0.48, 0.16))
-	_fill_rect(img, 10, 29, 28, 7, Color(0.18, 0.56, 0.78))
-	_fill_rect(img, 14, 29, 16, 2, Color(0.45, 0.80, 0.96))
+	var sp: Dictionary = SaveManager.SCARF_PALETTES.get(scarf_id, SaveManager.SCARF_PALETTES["blue"])
+	# Vai áo lữ khách & khăn choàng theo màu đã chọn
+	_fill_rect(img, 8, 34, 32, 12, Color(0.54, 0.22, 0.16))
+	_fill_rect(img, 10, 29, 28, 7, sp["mid"])
+	_fill_rect(img, 14, 29, 16, 2, sp["hi"])
 	# Khuôn mặt Chibi hướng 3/4 + kẹp hoa lá xanh vàng giống nhân vật ảnh mẫu
 	_fill_circle(img, 24, 20, 14, Color(0.28, 0.08, 0.08))
 	_fill_circle(img, 23, 19, 12, Color(0.48, 0.14, 0.11))

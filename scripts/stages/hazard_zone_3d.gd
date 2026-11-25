@@ -82,8 +82,11 @@ func _physics_process(delta: float) -> void:
 
 		if body.is_in_group("enemies") and body.has_method("take_damage"):
 			if hazard_type == "water_hazard":
-				# Quái rơi xuống suối nước chịu sát thương đuối nước mạnh
+				# Quái rơi xuống suối nước chịu sát thương đuối nước mạnh & tính tiến độ nhiệm vụ Thủy Chiến!
 				body.take_damage(damage_per_tick, Vector3(0.0, 0.0, 0.0), true)
+				if not body.has_meta("counted_water_quest"):
+					body.set_meta("counted_water_quest", true)
+					SaveManager.advance_quest("river_tactician", 1)
 				DamageNumber3D.spawn(get_parent(), body.global_position + Vector3(0, 0.7, 0), damage_per_tick, false, false, "RƠI SUỐI! -" + str(damage_per_tick))
 				_cooldowns[uid] = 0.85
 			else:

@@ -89,6 +89,7 @@ func _open_chest() -> void:
 	_prompt_label.visible = false
 	AudioManager.play_sfx("victory", 1.15)
 	SaveManager.add_gold(gold_reward)
+	SaveManager.advance_quest("treasure_hunter", 1)
 	GameManager.add_score(gold_reward * 4)
 
 	var player := get_tree().get_first_node_in_group("player")

@@ -24,9 +24,12 @@ func _ready() -> void:
 	ui_controller.enter_town_hub_requested.connect(_on_enter_town_hub_requested)
 	ui_controller.npc_service_requested.connect(_on_npc_service_requested)
 	ui_controller.toggle_dof_requested.connect(_on_toggle_dof_requested)
+	ui_controller.relic_chosen.connect(_on_relic_chosen)
 
 	stage_manager.wave_banner_requested.connect(ui_controller.show_wave_banner)
 	stage_manager.npc_interacted.connect(ui_controller.show_npc_dialogue)
+	stage_manager.bounty_board_opened.connect(ui_controller.show_quest_board)
+	stage_manager.relic_selection_requested.connect(ui_controller.show_relic_selection)
 	stage_manager.hub_portal_entered.connect(ui_controller.open_stage_select_from_hub)
 	stage_manager.boss_appeared.connect(_on_boss_appeared_cinematic)
 
@@ -86,9 +89,16 @@ func _on_boss_appeared_cinematic(boss_node: EnemyBase) -> void:
 	Engine.time_scale = 1.0
 
 
+func _on_relic_chosen(relic_id: String) -> void:
+	stage_manager.apply_relic_and_continue_wave(relic_id)
+	if stage_manager.player:
+		ui_controller.update_relics_hud(stage_manager.player.active_relics)
+
+
 func _on_start_stage_requested(stage_id: int) -> void:
 	stage_manager.load_and_start_stage(stage_id)
 	ui_controller.bind_player(stage_manager.player)
+	ui_controller.update_relics_hud({})
 
 
 func _on_toggle_dof_requested() -> void:
