@@ -11,6 +11,7 @@ signal enter_town_hub_requested
 signal toggle_dof_requested
 signal npc_service_requested(role: String)
 signal relic_chosen(relic_id: String)
+signal use_bag_item_requested(item_id: String)
 
 var hud_root: Control
 var hp_bar: ProgressBar
@@ -47,13 +48,21 @@ var gameover_panel: Control
 var dialogue_panel: Control
 var relic_panel: Control
 var quest_board_panel: Control
+var inventory_panel: Control
+var shop_panel: Control
 
 var _hero_portrait_rect: TextureRect
 var _hero_title_label: Label
+var _weapon_hud_label: Label
 var _relic_hud_label: Label
 var _quest_list_box: VBoxContainer
 var _scarf_buttons_box: HBoxContainer
 var _pet_buttons_box: HBoxContainer
+var _inv_weapons_box: VBoxContainer
+var _inv_items_box: VBoxContainer
+var _shop_gold_lbl: Label
+var _shop_weapons_box: VBoxContainer
+var _shop_items_box: VBoxContainer
 
 var _stage_buttons_box: VBoxContainer
 var _upgrade_info_label: Label
@@ -82,6 +91,8 @@ func _ready() -> void:
 	_build_dialogue_panel()
 	_build_relic_selection_panel()
 	_build_quest_board_panel()
+	_build_inventory_panel()
+	_build_shop_panel()
 
 	GameManager.stats_updated.connect(_on_stats_updated)
 	GameManager.stage_cleared.connect(_on_stage_cleared)
@@ -89,6 +100,7 @@ func _ready() -> void:
 	GameManager.boss_spawned.connect(_on_boss_spawned)
 	SaveManager.data_changed.connect(_refresh_all_menus)
 	SaveManager.cosmetic_changed.connect(_refresh_hero_cosmetic_hud)
+	SaveManager.inventory_changed.connect(_refresh_hero_cosmetic_hud)
 	SaveManager.quest_completed_notify.connect(func(qtitle: String, qsub: String) -> void:
 		show_wave_banner("HOÀN THÀNH NHIỆM VỤ: " + qtitle, qsub)
 	)
@@ -127,6 +139,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif quest_board_panel and quest_board_panel.visible:
 			_hide_all_panels()
 			get_tree().paused = false
+		elif inventory_panel and inventory_panel.visible:
+			_hide_all_panels()
+			get_tree().paused = false
+		elif shop_panel and shop_panel.visible:
+			_hide_all_panels()
+			get_tree().paused = false
 		elif relic_panel and relic_panel.visible:
 			return # Bắt buộc chọn 1 Bùa Cổ Ngữ trước khi tiếp tục
 		elif GameManager.is_stage_active:
@@ -135,7 +153,13 @@ func _unhandled_input(event: InputEvent) -> void:
 			_toggle_pause()
 	elif event is InputEventKey and event.pressed and not event.echo:
 		var kev := event as InputEventKey
-		if kev.keycode == KEY_G:
+		if kev.keycode == KEY_I or kev.keycode == KEY_B:
+			if inventory_panel and inventory_panel.visible:
+				_hide_all_panels()
+				get_tree().paused = false
+			elif not main_menu_panel.visible and not relic_panel.visible:
+				show_inventory()
+		elif kev.keycode == KEY_G:
 			toggle_dof_requested.emit()
 		elif kev.keycode == KEY_H and hud_root:
 			hud_root.visible = not hud_root.visible
@@ -190,9 +214,27 @@ func show_main_menu() -> void:
 
 
 func _hide_all_panels() -> void:
-	for p in [main_menu_panel, stage_select_panel, upgrade_panel, pause_panel, result_panel, gameover_panel, dialogue_panel, relic_panel, quest_board_panel]:
+	for p in [main_menu_panel, stage_select_panel, upgrade_panel, pause_panel, result_panel, gameover_panel, dialogue_panel, relic_panel, quest_board_panel, inventory_panel, shop_panel]:
 		if p:
 			p.visible = false
+
+
+## Mở Rương Đồ / Túi Đồ Cổ Trang (Phím I / B hoặc từ Menu)
+func show_inventory() -> void:
+	get_tree().paused = true
+	_hide_all_panels()
+	_refresh_inventory_ui()
+	if inventory_panel:
+		inventory_panel.visible = true
+
+
+## Mở Cửa Hàng Vũ Khí & Đan Dược (từ Thương Nhân Aurelius hoặc Menu)
+func show_weapon_shop() -> void:
+	get_tree().paused = true
+	_hide_all_panels()
+	_refresh_shop_ui()
+	if shop_panel:
+		shop_panel.visible = true
 
 
 ## Hiện bảng chọn 1 trong 3 Bùa Cổ Ngữ Roguelite sau mỗi đợt quái
@@ -230,6 +272,11 @@ func _refresh_hero_cosmetic_hud() -> void:
 		_hero_portrait_rect.texture = PixelArtGenerator.get_hero_portrait_texture(SaveManager.equipped_scarf)
 	if _hero_title_label:
 		_hero_title_label.text = "  " + SaveManager.equipped_title.to_upper()
+	if _weapon_hud_label:
+		var wd: Dictionary = SaveManager.get_equipped_weapon_data()
+		var type_vn: String = {"sword": "KIẾM", "saber": "ĐAO", "bow": "CUNG", "staff": "GẬY PHÉP"}.get(str(wd.get("type", "sword")), "KIẾM")
+		_weapon_hud_label.text = "❖ Binh Khí [%s]: %s (+%.0f Công)  •  Nhấn [I] Mở Rương Đồ" % [type_vn, str(wd.get("name", "")), float(wd.get("dmg", 0.0))]
+		_weapon_hud_label.modulate = wd.get("color", Color(1.0, 0.88, 0.50))
 
 
 func show_npc_dialogue(npc_data: Dictionary) -> void:
@@ -339,16 +386,22 @@ func _build_hud() -> void:
 	bars_col.add_child(energy_bar)
 	energy_label = _create_overlay_label(energy_bar, "CHÂN KHÍ (K): 100 / 100")
 
-	# Dòng gợi ý thao tác ngắn gọn & danh sách Bùa Cổ Ngữ đang kích hoạt bên dưới bảng máu
+	# Dòng gợi ý thao tác ngắn gọn, Vũ Khí đang cầm & Bùa Cổ Ngữ bên dưới bảng máu
 	var controls_hint := Label.new()
-	controls_hint.position = Vector2(22, 126)
-	controls_hint.text = "WASD: Hành tẩu  •  [E] Giao tiếp/Rương/Bảng Truy Nã  •  [J] Tam Liên Trảm  •  [K] Kiếm Khí  •  [L] Thân Pháp  •  [ESC] Tạm nghỉ"
+	controls_hint.position = Vector2(22, 124)
+	controls_hint.text = "WASD: Hành tẩu  •  [I] Rương Đồ  •  [E] Giao tiếp/Rương  •  [J] Công  •  [K] Tuyệt kỹ  •  [L] Thân Pháp"
 	controls_hint.add_theme_font_size_override("font_size", 12)
 	controls_hint.modulate = Color(0.92, 0.86, 0.72, 0.88)
 	hud_root.add_child(controls_hint)
 
+	_weapon_hud_label = Label.new()
+	_weapon_hud_label.position = Vector2(22, 143)
+	_weapon_hud_label.add_theme_font_size_override("font_size", 13)
+	hud_root.add_child(_weapon_hud_label)
+	_refresh_hero_cosmetic_hud()
+
 	_relic_hud_label = Label.new()
-	_relic_hud_label.position = Vector2(22, 146)
+	_relic_hud_label.position = Vector2(22, 163)
 	_relic_hud_label.text = ""
 	_relic_hud_label.add_theme_font_size_override("font_size", 13)
 	_relic_hud_label.modulate = Color(0.55, 0.96, 1.0)
@@ -611,6 +664,14 @@ func _build_main_menu() -> void:
 		upgrade_panel.visible = true
 	))
 
+	vbox.add_child(_create_button("❖ RƯƠNG ĐỒ & VŨ KHÍ (PHÍM I)", func() -> void:
+		show_inventory()
+	))
+
+	vbox.add_child(_create_button("❖ CỬA HÀNG THƯƠNG NHÂN (MUA VŨ KHÍ & ĐAN DƯỢC)", func() -> void:
+		show_weapon_shop()
+	))
+
 	vbox.add_child(_create_button("❖ BẢNG TRUY NÃ & TỦ KHĂN CHOÀNG (NHIỆM VỤ)", func() -> void:
 		show_quest_board()
 	))
@@ -841,6 +902,8 @@ func _build_dialogue_panel() -> void:
 			_hide_all_panels()
 			_refresh_all_menus()
 			upgrade_panel.visible = true
+		elif _current_npc_role == "merchant":
+			show_weapon_shop()
 		else:
 			_hide_all_panels()
 			get_tree().paused = false
@@ -1098,6 +1161,292 @@ func _refresh_quest_board() -> void:
 		)
 		sbtn.disabled = not unlocked
 		_scarf_buttons_box.add_child(sbtn)
+
+
+## ============================================================================
+## RƯƠNG ĐỒ / TÚI ĐỒ CỔ TRANG (PHÍM I / B): ĐỔI 4 LOẠI VŨ KHÍ & DÙNG ĐAN DƯỢC
+## ============================================================================
+func _build_inventory_panel() -> void:
+	inventory_panel = _create_center_modal(840, 560)
+	var vbox := _get_modal_vbox(inventory_panel)
+
+	var title := Label.new()
+	title.text = "【 RƯƠNG ĐỒ CỔ TRANG — KHO BINH KHÍ & TÚI ĐAN DƯỢC 】"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 21)
+	title.modulate = Color(1.0, 0.86, 0.38)
+	vbox.add_child(title)
+
+	var split := HBoxContainer.new()
+	split.add_theme_constant_override("separation", 16)
+	split.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	vbox.add_child(split)
+
+	# Cột trái: Kho Vũ Khí sở hữu (Kiếm, Đao, Cung Tên, Gậy Phép)
+	var left_scroll := ScrollContainer.new()
+	left_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	left_scroll.custom_minimum_size = Vector2(460, 410)
+	split.add_child(left_scroll)
+
+	_inv_weapons_box = VBoxContainer.new()
+	_inv_weapons_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_inv_weapons_box.add_theme_constant_override("separation", 8)
+	left_scroll.add_child(_inv_weapons_box)
+
+	# Cột phải: Vật phẩm tiêu hao (Đan Dược)
+	var right_scroll := ScrollContainer.new()
+	right_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	right_scroll.custom_minimum_size = Vector2(310, 410)
+	split.add_child(right_scroll)
+
+	_inv_items_box = VBoxContainer.new()
+	_inv_items_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_inv_items_box.add_theme_constant_override("separation", 8)
+	right_scroll.add_child(_inv_items_box)
+
+	vbox.add_child(_create_button("ĐÓNG RƯƠNG ĐỒ (PHÍM I / ESC)", func() -> void:
+		if not main_menu_panel.visible:
+			_hide_all_panels()
+			get_tree().paused = false
+		else:
+			show_main_menu()
+	))
+
+
+func _refresh_inventory_ui() -> void:
+	if _inv_weapons_box == null or _inv_items_box == null:
+		return
+	for c in _inv_weapons_box.get_children():
+		c.queue_free()
+	for c in _inv_items_box.get_children():
+		c.queue_free()
+
+	var whdr := Label.new()
+	whdr.text = "❖ BINH KHÍ TRONG RƯƠNG (%d / %d)" % [SaveManager.owned_weapons.size(), SaveManager.WEAPON_CATALOG.size()]
+	whdr.add_theme_font_size_override("font_size", 15)
+	whdr.modulate = Color(1.0, 0.86, 0.42)
+	_inv_weapons_box.add_child(whdr)
+
+	var type_map := {"sword": "KIẾM", "saber": "ĐẠI ĐAO", "bow": "CUNG TÊN", "staff": "GẬY PHÉP"}
+	for wid in SaveManager.owned_weapons:
+		var w_key: String = str(wid)
+		if not SaveManager.WEAPON_CATALOG.has(w_key):
+			continue
+		var wd: Dictionary = SaveManager.WEAPON_CATALOG[w_key]
+		var is_eq: bool = (SaveManager.equipped_weapon == w_key)
+		var card := _create_classical_panel(Color(0.16, 0.10, 0.08, 0.94), wd["color"] if is_eq else Color(0.72, 0.56, 0.28, 0.75))
+		_inv_weapons_box.add_child(card)
+
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 10)
+		card.add_child(row)
+
+		var info := VBoxContainer.new()
+		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(info)
+
+		var nlbl := Label.new()
+		nlbl.text = "[%s • %s] %s (+%.0f Công)" % [str(type_map.get(str(wd["type"]), "KIẾM")), str(wd["rarity"]), str(wd["name"]), float(wd["dmg"])]
+		nlbl.add_theme_font_size_override("font_size", 14)
+		nlbl.modulate = wd["color"]
+		info.add_child(nlbl)
+
+		var dlbl := Label.new()
+		dlbl.text = str(wd["desc"])
+		dlbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		dlbl.add_theme_font_size_override("font_size", 11)
+		dlbl.modulate = Color(0.92, 0.88, 0.78)
+		info.add_child(dlbl)
+
+		var eq_btn := _create_button("ĐANG CẦM" if is_eq else "TRANG BỊ", func() -> void:
+			SaveManager.equip_weapon(w_key)
+			AudioManager.play_sfx("slash", 1.1)
+			_refresh_inventory_ui()
+		)
+		eq_btn.custom_minimum_size = Vector2(105, 38)
+		eq_btn.disabled = is_eq
+		row.add_child(eq_btn)
+
+	var ihdr := Label.new()
+	ihdr.text = "❖ TÚI ĐAN DƯỢC & VẬT PHẨM"
+	ihdr.add_theme_font_size_override("font_size", 15)
+	ihdr.modulate = Color(0.55, 0.96, 0.72)
+	_inv_items_box.add_child(ihdr)
+
+	for iid in SaveManager.ITEM_CATALOG.keys():
+		var i_key: String = str(iid)
+		var idata: Dictionary = SaveManager.ITEM_CATALOG[i_key]
+		var qty: int = int(SaveManager.bag_items.get(i_key, 0))
+		var icard := _create_classical_panel(Color(0.14, 0.10, 0.09, 0.92), Color(0.68, 0.56, 0.30, 0.8))
+		_inv_items_box.add_child(icard)
+
+		var iv := VBoxContainer.new()
+		iv.add_theme_constant_override("separation", 4)
+		icard.add_child(iv)
+
+		var iname := Label.new()
+		iname.text = "%s  (x%d)" % [str(idata["name"]), qty]
+		iname.add_theme_font_size_override("font_size", 14)
+		iname.modulate = Color(1.0, 0.90, 0.52)
+		iv.add_child(iname)
+
+		var idesc := Label.new()
+		idesc.text = str(idata["desc"])
+		idesc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		idesc.add_theme_font_size_override("font_size", 12)
+		idesc.modulate = Color(0.90, 0.86, 0.76)
+		iv.add_child(idesc)
+
+		var use_btn := _create_button("SỬ DỤNG NGAY", func() -> void:
+			use_bag_item_requested.emit(i_key)
+			_refresh_inventory_ui()
+		)
+		use_btn.disabled = qty <= 0
+		iv.add_child(use_btn)
+
+
+## ============================================================================
+## CỬA HÀNG THƯƠNG NHÂN AURELIUS: MUA VŨ KHÍ (ĐAO, KIẾM, CUNG, GẬY) & ĐAN DƯỢC
+## ============================================================================
+func _build_shop_panel() -> void:
+	shop_panel = _create_center_modal(860, 580)
+	var vbox := _get_modal_vbox(shop_panel)
+
+	var title := Label.new()
+	title.text = "【 CỬA HÀNG BINH KHÍ PHỔ & DƯỢC ĐIẾM AURELIUS 】"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 21)
+	title.modulate = Color(1.0, 0.86, 0.38)
+	vbox.add_child(title)
+
+	_shop_gold_lbl = Label.new()
+	_shop_gold_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_shop_gold_lbl.add_theme_font_size_override("font_size", 15)
+	_shop_gold_lbl.modulate = Color(1.0, 0.92, 0.45)
+	vbox.add_child(_shop_gold_lbl)
+
+	var split := HBoxContainer.new()
+	split.add_theme_constant_override("separation", 16)
+	split.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	vbox.add_child(split)
+
+	var w_scroll := ScrollContainer.new()
+	w_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	w_scroll.custom_minimum_size = Vector2(490, 400)
+	split.add_child(w_scroll)
+
+	_shop_weapons_box = VBoxContainer.new()
+	_shop_weapons_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_shop_weapons_box.add_theme_constant_override("separation", 8)
+	w_scroll.add_child(_shop_weapons_box)
+
+	var i_scroll := ScrollContainer.new()
+	i_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	i_scroll.custom_minimum_size = Vector2(300, 400)
+	split.add_child(i_scroll)
+
+	_shop_items_box = VBoxContainer.new()
+	_shop_items_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_shop_items_box.add_theme_constant_override("separation", 8)
+	i_scroll.add_child(_shop_items_box)
+
+	vbox.add_child(_create_button("RỜI CỬA HÀNG", func() -> void:
+		if not main_menu_panel.visible:
+			_hide_all_panels()
+			get_tree().paused = false
+		else:
+			show_main_menu()
+	))
+
+
+func _refresh_shop_ui() -> void:
+	if _shop_weapons_box == null or _shop_items_box == null:
+		return
+	if _shop_gold_lbl:
+		_shop_gold_lbl.text = "❖ NGÂN LƯỢNG HIỆN CÓ: %d LƯỢNG" % SaveManager.gold
+
+	for c in _shop_weapons_box.get_children():
+		c.queue_free()
+	for c in _shop_items_box.get_children():
+		c.queue_free()
+
+	var type_map := {"sword": "KIẾM", "saber": "ĐẠI ĐAO", "bow": "CUNG TÊN", "staff": "GẬY PHÉP"}
+	for wid in SaveManager.WEAPON_CATALOG.keys():
+		var w_key: String = str(wid)
+		var wd: Dictionary = SaveManager.WEAPON_CATALOG[w_key]
+		if int(wd["price"]) <= 0:
+			continue
+		var owned: bool = SaveManager.owned_weapons.has(w_key)
+		var price: int = int(wd["price"])
+
+		var card := _create_classical_panel(Color(0.15, 0.10, 0.08, 0.94), wd["color"])
+		_shop_weapons_box.add_child(card)
+
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 10)
+		card.add_child(row)
+
+		var info := VBoxContainer.new()
+		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(info)
+
+		var nlbl := Label.new()
+		nlbl.text = "[%s • %s] %s (+%.0f Công)" % [str(type_map.get(str(wd["type"]), "KIẾM")), str(wd["rarity"]), str(wd["name"]), float(wd["dmg"])]
+		nlbl.add_theme_font_size_override("font_size", 14)
+		nlbl.modulate = wd["color"]
+		info.add_child(nlbl)
+
+		var dlbl := Label.new()
+		dlbl.text = str(wd["desc"])
+		dlbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		dlbl.add_theme_font_size_override("font_size", 11)
+		dlbl.modulate = Color(0.92, 0.88, 0.78)
+		info.add_child(dlbl)
+
+		var b_txt := "ĐÃ SỞ HỮU" if owned else ("MUA (%d Lượng)" % price)
+		var buy_btn := _create_button(b_txt, func() -> void:
+			if SaveManager.buy_weapon(w_key):
+				AudioManager.play_sfx("victory", 1.15)
+				_refresh_shop_ui()
+				show_wave_banner("ĐÃ SỞ HỮU BINH KHÍ MỚI!", "Đã trang bị ngay: " + str(wd["name"]))
+		)
+		buy_btn.custom_minimum_size = Vector2(132, 40)
+		buy_btn.disabled = owned or SaveManager.gold < price
+		row.add_child(buy_btn)
+
+	for iid in SaveManager.ITEM_CATALOG.keys():
+		var i_key: String = str(iid)
+		var idata: Dictionary = SaveManager.ITEM_CATALOG[i_key]
+		var price: int = int(idata["price"])
+		var qty: int = int(SaveManager.bag_items.get(i_key, 0))
+
+		var icard := _create_classical_panel(Color(0.14, 0.10, 0.09, 0.94), Color(0.75, 0.60, 0.30))
+		_shop_items_box.add_child(icard)
+
+		var iv := VBoxContainer.new()
+		iv.add_theme_constant_override("separation", 4)
+		icard.add_child(iv)
+
+		var iname := Label.new()
+		iname.text = "%s (Trong rương: x%d)" % [str(idata["name"]), qty]
+		iname.add_theme_font_size_override("font_size", 14)
+		iname.modulate = Color(1.0, 0.90, 0.50)
+		iv.add_child(iname)
+
+		var idesc := Label.new()
+		idesc.text = str(idata["desc"])
+		idesc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		idesc.add_theme_font_size_override("font_size", 12)
+		idesc.modulate = Color(0.90, 0.86, 0.76)
+		iv.add_child(idesc)
+
+		var ibtn := _create_button("MUA (%d Lượng)" % price, func() -> void:
+			if SaveManager.buy_bag_item(i_key):
+				AudioManager.play_sfx("pickup", 1.15)
+				_refresh_shop_ui()
+		)
+		ibtn.disabled = SaveManager.gold < price
+		iv.add_child(ibtn)
 
 
 func _start_stage(stage_id: int) -> void:

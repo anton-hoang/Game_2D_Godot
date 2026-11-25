@@ -7,8 +7,8 @@ extends RefCounted
 static var _cache: Dictionary = {}
 
 
-static func get_player_sprite_frames(scarf_id: String = "blue") -> SpriteFrames:
-	var key := "player_frames_hd_" + scarf_id
+static func get_player_sprite_frames(scarf_id: String = "blue", weapon_type: String = "sword") -> SpriteFrames:
+	var key := "player_frames_hd_" + scarf_id + "_" + weapon_type
 	if _cache.has(key):
 		return _cache[key]
 	var frames := SpriteFrames.new()
@@ -16,36 +16,36 @@ static func get_player_sprite_frames(scarf_id: String = "blue") -> SpriteFrames:
 		frames.remove_animation("default")
 
 	_add_anim(frames, "idle", 4.5, true, [
-		_make_hero_frame(0, false, false, Color.WHITE, 0, scarf_id),
-		_make_hero_frame(1, false, false, Color.WHITE, 0, scarf_id),
-		_make_hero_frame(2, false, false, Color.WHITE, 0, scarf_id),
-		_make_hero_frame(1, false, false, Color.WHITE, 0, scarf_id),
+		_make_hero_frame(0, false, false, Color.WHITE, 0, scarf_id, weapon_type),
+		_make_hero_frame(1, false, false, Color.WHITE, 0, scarf_id, weapon_type),
+		_make_hero_frame(2, false, false, Color.WHITE, 0, scarf_id, weapon_type),
+		_make_hero_frame(1, false, false, Color.WHITE, 0, scarf_id, weapon_type),
 	])
 	_add_anim(frames, "run", 11.0, true, [
-		_make_hero_frame(0, true, false, Color.WHITE, 0, scarf_id),
-		_make_hero_frame(1, true, false, Color.WHITE, 0, scarf_id),
-		_make_hero_frame(2, true, false, Color.WHITE, 0, scarf_id),
-		_make_hero_frame(3, true, false, Color.WHITE, 0, scarf_id),
+		_make_hero_frame(0, true, false, Color.WHITE, 0, scarf_id, weapon_type),
+		_make_hero_frame(1, true, false, Color.WHITE, 0, scarf_id, weapon_type),
+		_make_hero_frame(2, true, false, Color.WHITE, 0, scarf_id, weapon_type),
+		_make_hero_frame(3, true, false, Color.WHITE, 0, scarf_id, weapon_type),
 	])
 	_add_anim(frames, "dash", 14.0, false, [
-		_make_hero_frame(2, true, false, Color(0.68, 0.96, 1.0), 0, scarf_id),
+		_make_hero_frame(2, true, false, Color(0.68, 0.96, 1.0), 0, scarf_id, weapon_type),
 	])
 	_add_anim(frames, "attack_1", 15.0, false, [
-		_make_hero_frame(0, false, true, Color.WHITE, 1, scarf_id),
-		_make_hero_frame(1, false, true, Color.WHITE, 2, scarf_id),
+		_make_hero_frame(0, false, true, Color.WHITE, 1, scarf_id, weapon_type),
+		_make_hero_frame(1, false, true, Color.WHITE, 2, scarf_id, weapon_type),
 	])
 	_add_anim(frames, "attack_2", 15.0, false, [
-		_make_hero_frame(1, false, true, Color.WHITE, 2, scarf_id),
-		_make_hero_frame(2, false, true, Color.WHITE, 3, scarf_id),
+		_make_hero_frame(1, false, true, Color.WHITE, 2, scarf_id, weapon_type),
+		_make_hero_frame(2, false, true, Color.WHITE, 3, scarf_id, weapon_type),
 	])
 	_add_anim(frames, "attack_3", 15.0, false, [
-		_make_hero_frame(2, false, true, Color(1.0, 0.94, 0.72), 4, scarf_id),
+		_make_hero_frame(2, false, true, Color(1.0, 0.94, 0.72), 4, scarf_id, weapon_type),
 	])
 	_add_anim(frames, "special", 13.0, false, [
-		_make_hero_frame(2, false, true, Color(0.55, 0.92, 1.0), 4, scarf_id),
+		_make_hero_frame(2, false, true, Color(0.55, 0.92, 1.0), 4, scarf_id, weapon_type),
 	])
 	_add_anim(frames, "hurt", 8.0, false, [
-		_make_hero_frame(1, false, false, Color(1.0, 0.42, 0.42), 0, scarf_id),
+		_make_hero_frame(1, false, false, Color(1.0, 0.42, 0.42), 0, scarf_id, weapon_type),
 	])
 
 	_cache[key] = frames
@@ -155,6 +155,10 @@ static func get_prop_texture(prop_type: String) -> ImageTexture:
 			img = _make_icon_image(Color(0.18, 0.68, 1.0), Color(0.78, 0.96, 1.0), "crystal")
 		"pickup_gold":
 			img = _make_icon_image(Color(1.0, 0.82, 0.16), Color(1.0, 0.98, 0.70), "coin")
+		"pickup_weapon":
+			img = _make_icon_image(Color(0.88, 0.48, 1.0), Color(1.0, 0.94, 0.65), "weapon")
+		"pickup_potion":
+			img = _make_icon_image(Color(0.24, 0.86, 0.56), Color(0.85, 1.0, 0.92), "heart")
 		"slash_arc":
 			img = _make_slash_image()
 		_:
@@ -177,7 +181,7 @@ static func _add_anim(frames: SpriteFrames, anim_name: String, fps: float, loop:
 ## - Mắt anime to tròn long lanh ánh ngọc bích, má hồng nhẹ.
 ## - Hán phục cổ trang cổ giao lĩnh trắng ngà phối áo khoác lụa đỏ son viền vàng kim, dải lụa/khăn choàng đổi màu theo trang bị mở khóa.
 ## - Tay áo rộng (quảng tụ) thướt tha, thắt lưng ngọc bội và thanh Cổ Kiếm ánh ngọc đeo hông / vung kiếm khí thủy mặc!
-static func _make_hero_frame(step: int, running: bool, attacking: bool, modulate_col: Color = Color.WHITE, sword_pose: int = 0, scarf_id: String = "blue") -> ImageTexture:
+static func _make_hero_frame(step: int, running: bool, attacking: bool, modulate_col: Color = Color.WHITE, sword_pose: int = 0, scarf_id: String = "blue", weapon_type: String = "sword") -> ImageTexture:
 	var w := 44
 	var h := 48
 	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
@@ -298,41 +302,119 @@ static func _make_hero_frame(step: int, running: bool, attacking: bool, modulate
 	_fill_rect(img, 23 + lean + right_dx, 40 + right_dy, 4, 5, boot_d)
 	_fill_rect(img, 24 + lean + right_dx, 43 + right_dy, 3, 2, crimson_m)
 
-	# 8. Thanh Cổ Kiếm Thanh Phong (đeo hông tinh tế khi đi dạo, phát sáng kiếm khí ngọc bích khi xuất chiêu!)
-	var blade_d := Color(0.46, 0.72, 0.84)
-	var blade_m := Color(0.84, 0.96, 1.0)
-	var blade_hi := Color(1.0, 1.0, 1.0)
-	if attacking:
-		if sword_pose == 1:
-			_fill_rect(img, 28, 10 + bob, 3, 17, blade_d)
-			_fill_rect(img, 29, 10 + bob, 2, 16, blade_m)
-			_fill_rect(img, 30, 11 + bob, 1, 12, blade_hi)
-			_fill_rect(img, 26, 26 + bob, 7, 2, gold)
-		elif sword_pose == 2:
-			_fill_rect(img, 27, 24 + bob, 15, 4, blade_d)
-			_fill_rect(img, 28, 24 + bob, 14, 2, blade_m)
-			_fill_rect(img, 29, 24 + bob, 12, 1, blade_hi)
-			_fill_rect(img, 25, 23 + bob, 2, 6, gold)
-		elif sword_pose == 3:
-			_fill_rect(img, 26, 18 + bob, 16, 6, blade_m)
-			_fill_rect(img, 28, 19 + bob, 14, 3, blade_hi)
-			_fill_rect(img, 24, 20 + bob, 2, 5, gold)
-		else: # Kiếm khí cổ trang rực sáng ngọc bích - vàng kim
-			_fill_rect(img, 24, 12 + bob, 18, 15, Color(0.42, 0.95, 0.88, 0.75))
-			_fill_rect(img, 26, 16 + bob, 16, 6, blade_hi)
-			_fill_rect(img, 24, 18 + bob, 3, 6, gold)
-	else:
-		# Bao kiếm cổ trang sơn đen khảm vàng đeo chéo sau eo kèm tua rua đỏ
-		_fill_rect(img, 10 + lean, 31 + bob, 5, 3, Color(0.14, 0.12, 0.18))
-		_fill_rect(img, 7 + lean, 33 + bob, 5, 2, Color(0.14, 0.12, 0.18))
-		_fill_rect(img, 13 + lean, 29 + bob, 3, 3, gold)
-		_fill_rect(img, 11 + lean, 34 + bob, 2, 4, crimson_m) # Tua rua chuôi kiếm
+	# 8. Vẽ Vũ Khí & Animation tấn công riêng biệt cho 4 hệ: KIẾM / ĐAO / CUNG TÊN / GẬY PHÉP!
+	_draw_hero_weapon_pose(img, weapon_type, attacking, sword_pose, bob, lean, gold, crimson_m)
 
 	_apply_clean_outline(img, outline)
 	if modulate_col != Color.WHITE:
 		_tint_image(img, modulate_col)
 
 	return ImageTexture.create_from_image(img)
+
+
+## Vẽ tạo hình và các khung hình tấn công riêng cho 4 loại vũ khí cổ trang:
+## - "sword" (Kiếm): Đâm lên -> Chém ngang -> Kiếm khí ngọc bích.
+## - "saber" (Đại Đao): Giơ đại đao bản rộng cong -> Bổ chẻ rực lửa -> Quét bán nguyệt đỏ vàng.
+## - "bow" (Cung Tên): Giương cánh cung cong -> Kéo dây tên sáng -> Bắn luồng tiễn rực sáng.
+## - "staff" (Gậy Phép): Gậy ngọc có vòng tròn thái cực/hạt châu phát sáng, giơ cao tụ pháp lực & phóng cầu phép!
+static func _draw_hero_weapon_pose(img: Image, weapon_type: String, attacking: bool, pose: int, bob: int, lean: int, gold: Color, crimson: Color) -> void:
+	var steel_d := Color(0.46, 0.66, 0.80)
+	var steel_m := Color(0.84, 0.95, 1.0)
+	var steel_hi := Color(1.0, 1.0, 1.0)
+	var wood_c := Color(0.48, 0.28, 0.14)
+
+	match weapon_type:
+		"saber":
+			# ĐẠI ĐAO BẢN RỘNG CONG UY LỰC (Ánh đỏ lửa - vàng kim)
+			var saber_glow := Color(1.0, 0.44, 0.22)
+			if attacking:
+				if pose == 1: # Giơ cao đại đao chém bổ xuống
+					_fill_rect(img, 24, 6 + bob, 6, 18, saber_glow)
+					_fill_rect(img, 26, 7 + bob, 3, 16, steel_hi)
+					_fill_rect(img, 23, 24 + bob, 8, 3, gold)
+				elif pose == 2: # Quét ngang đại đao bản rộng
+					_fill_rect(img, 25, 22 + bob, 17, 6, saber_glow)
+					_fill_rect(img, 26, 23 + bob, 15, 3, steel_hi)
+					_fill_rect(img, 23, 22 + bob, 3, 7, gold)
+				else: # Bổ chẻ Bá Vương Trảm rực cam vàng
+					_fill_rect(img, 22, 11 + bob, 20, 18, Color(1.0, 0.52, 0.18, 0.78))
+					_fill_rect(img, 25, 16 + bob, 17, 8, Color(1.0, 0.94, 0.72))
+					_fill_rect(img, 22, 18 + bob, 4, 7, gold)
+			else:
+				# Đại đao vác sau lưng với chuôi vàng & tua rua đỏ
+				_fill_rect(img, 8 + lean, 18 + bob, 4, 14, steel_d)
+				_fill_rect(img, 9 + lean, 19 + bob, 2, 12, steel_m)
+				_fill_rect(img, 7 + lean, 31 + bob, 6, 2, gold)
+				_fill_rect(img, 9 + lean, 33 + bob, 2, 4, crimson)
+
+		"bow":
+			# TRƯỜNG CUNG CỔ TRANG (Giương cung kéo dây bắn tên sáng)
+			var bow_col := Color(0.68, 0.44, 0.18)
+			var arrow_glow := Color(0.65, 1.0, 0.48) if pose < 4 else Color(1.0, 0.65, 0.22)
+			if attacking:
+				# Thân cung cong đặt phía trước tay phải
+				_fill_rect(img, 30, 14 + bob, 3, 5, bow_col)
+				_fill_rect(img, 32, 19 + bob, 3, 11, bow_col)
+				_fill_rect(img, 30, 30 + bob, 3, 5, bow_col)
+				# Dây cung căng & Mũi tên phát sáng chuẩn bị/đang phóng
+				_fill_rect(img, 27, 16 + bob, 1, 17, Color(0.95, 0.92, 0.85))
+				var arrow_x: int = 25 if pose == 1 else (28 if pose == 2 else 30)
+				_fill_rect(img, arrow_x, 23 + bob, 13, 3, arrow_glow)
+				_fill_rect(img, arrow_x + 2, 24 + bob, 11, 1, Color.WHITE)
+				if pose >= 3:
+					_fill_circle(img, 36, 24 + bob, 4, Color(1.0, 0.88, 0.35, 0.8))
+			else:
+				# Cung đeo chéo sau lưng
+				_fill_rect(img, 9 + lean, 16 + bob, 2, 16, bow_col)
+				_fill_rect(img, 11 + lean, 14 + bob, 3, 3, gold)
+				_fill_rect(img, 11 + lean, 31 + bob, 3, 3, gold)
+
+		"staff":
+			# GẬY PHÉP / TIÊN TRƯỢNG CỔ TRANG (Đỉnh gắn vòng Thái Cực & Linh Châu phát sáng)
+			var orb_col := Color(0.45, 0.82, 1.0) if pose < 4 else Color(0.88, 0.46, 1.0)
+			if attacking:
+				# Giơ cao gậy phép về phía trước tụ linh khí
+				var tilt_x: int = 30 if pose == 1 else 32
+				_fill_rect(img, tilt_x, 12 + bob, 3, 26, wood_c)
+				_fill_rect(img, tilt_x - 2, 9 + bob, 7, 3, gold)
+				_fill_circle(img, tilt_x + 1, 8 + bob, 5 if pose >= 3 else 4, orb_col)
+				_fill_circle(img, tilt_x + 1, 8 + bob, 2, Color.WHITE)
+				if pose >= 2:
+					# Vòng pháp trận sáng lóe trước đầu trượng
+					_fill_circle(img, 38, 16 + bob, 4, orb_col)
+					_fill_circle(img, 38, 16 + bob, 2, Color.WHITE)
+			else:
+				# Cầm gậy phép dựng đứng bên cạnh với linh châu sáng dịu
+				_fill_rect(img, 10 + lean, 14 + bob, 3, 25, wood_c)
+				_fill_rect(img, 9 + lean, 12 + bob, 5, 2, gold)
+				_fill_circle(img, 11 + lean, 10 + bob, 3, orb_col)
+				img.set_pixel(11 + lean, 9 + bob, Color.WHITE)
+
+		_: # "sword" (Thanh Phong Cổ Kiếm mặc định)
+			if attacking:
+				if pose == 1:
+					_fill_rect(img, 28, 10 + bob, 3, 17, steel_d)
+					_fill_rect(img, 29, 10 + bob, 2, 16, steel_m)
+					_fill_rect(img, 30, 11 + bob, 1, 12, steel_hi)
+					_fill_rect(img, 26, 26 + bob, 7, 2, gold)
+				elif pose == 2:
+					_fill_rect(img, 27, 24 + bob, 15, 4, steel_d)
+					_fill_rect(img, 28, 24 + bob, 14, 2, steel_m)
+					_fill_rect(img, 29, 24 + bob, 12, 1, steel_hi)
+					_fill_rect(img, 25, 23 + bob, 2, 6, gold)
+				elif pose == 3:
+					_fill_rect(img, 26, 18 + bob, 16, 6, steel_m)
+					_fill_rect(img, 28, 19 + bob, 14, 3, steel_hi)
+					_fill_rect(img, 24, 20 + bob, 2, 5, gold)
+				else:
+					_fill_rect(img, 24, 12 + bob, 18, 15, Color(0.42, 0.95, 0.88, 0.75))
+					_fill_rect(img, 26, 16 + bob, 16, 6, steel_hi)
+					_fill_rect(img, 24, 18 + bob, 3, 6, gold)
+			else:
+				_fill_rect(img, 10 + lean, 31 + bob, 5, 3, Color(0.14, 0.12, 0.18))
+				_fill_rect(img, 7 + lean, 33 + bob, 5, 2, Color(0.14, 0.12, 0.18))
+				_fill_rect(img, 13 + lean, 29 + bob, 3, 3, gold)
+				_fill_rect(img, 11 + lean, 34 + bob, 2, 4, crimson)
 
 
 ## Quái vật & Boss HD-2D độ phân giải cao có đổ bóng nhiều sắc độ và viền sắc nét

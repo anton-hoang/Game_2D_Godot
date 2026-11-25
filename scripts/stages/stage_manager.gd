@@ -119,9 +119,9 @@ func _build_town_npcs() -> void:
 		{
 			"role": "merchant",
 			"name": "Thương Nhân Aurelius",
-			"title": "Hội Thương Buôn Lữ Hành",
-			"text": "Ta vừa mang về rất nhiều dược phẩm quý! Chỉ với 20 Vàng, ta sẽ tặng ngươi Bình Thuốc Hồi Phục & Tặng thêm điểm Năng lượng chiến đấu.",
-			"action_label": "Mua Thuốc Tăng Lực (20 Vàng)",
+			"title": "Binh Khí Phổ & Dược Điếm",
+			"text": "Ta mang về đủ loại Thần Binh Cổ Trang (Kiếm, Đại Đao, Cung Tên, Gậy Phép) cùng Đan Dược thượng hạng! Mời lữ khách ghé xem hàng.",
+			"action_label": "Mở Cửa Hàng Vũ Khí & Đan Dược",
 			"pos": Vector3(-11.5, 0.1, -0.5),
 		},
 	]
@@ -285,20 +285,37 @@ func _spawn_loot_drops(pos: Vector3, enemy_stats: EnemyStats) -> void:
 	entities_root.add_child(gold_pickup)
 	gold_pickup.global_position = pos + Vector3(randf_range(-0.4, 0.4), 0.2, randf_range(-0.4, 0.4))
 
-	# Tỉ lệ rơi bình máu (35%) hoặc tinh thể năng lượng (40%)
+	# Tỉ lệ rơi bình máu (30%), năng lượng (30%), Đan Dược bỏ vào Rương Đồ (20%) & RƠI VŨ KHÍ NGẪU NHIÊN (22% quái thường, 100% Boss!)
 	var roll := randf()
-	if roll < 0.35:
+	if roll < 0.30:
 		var hp_p := Pickup3D.new()
 		hp_p.pickup_type = "hp"
 		hp_p.amount = 28
 		entities_root.add_child(hp_p)
 		hp_p.global_position = pos + Vector3(randf_range(-0.6, 0.6), 0.2, randf_range(-0.6, 0.6))
-	elif roll < 0.75:
+	elif roll < 0.60:
 		var mp_p := Pickup3D.new()
 		mp_p.pickup_type = "energy"
 		mp_p.amount = 35
 		entities_root.add_child(mp_p)
 		mp_p.global_position = pos + Vector3(randf_range(-0.6, 0.6), 0.2, randf_range(-0.6, 0.6))
+	elif roll < 0.82:
+		var bag_p := Pickup3D.new()
+		bag_p.pickup_type = "bag_item"
+		var pot_pool: Array[String] = ["hp_potion", "mp_potion", "elixir_power"]
+		bag_p.item_id = pot_pool[randi() % 2] if randf() < 0.82 else pot_pool[2]
+		entities_root.add_child(bag_p)
+		bag_p.global_position = pos + Vector3(randf_range(-0.6, 0.6), 0.2, randf_range(-0.6, 0.6))
+
+	var is_boss_enemy: bool = (enemy_stats.archetype == "boss")
+	var weapon_drop_chance: float = 1.0 if is_boss_enemy else (0.35 if enemy_stats.archetype == "tank" else 0.22)
+	if randf() < weapon_drop_chance:
+		var wp := Pickup3D.new()
+		wp.pickup_type = "weapon"
+		var stage_lv: int = current_stage_data.stage_id if current_stage_data else 1
+		wp.item_id = SaveManager.pick_random_weapon_drop(stage_lv, is_boss_enemy)
+		entities_root.add_child(wp)
+		wp.global_position = pos + Vector3(randf_range(-0.7, 0.7), 0.35, randf_range(-0.7, 0.7))
 
 
 func _on_wave_cleared() -> void:

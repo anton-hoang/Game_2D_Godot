@@ -69,12 +69,32 @@ func _ready() -> void:
 	energy_changed.emit(current_energy, max_energy)
 
 
-## Cập nhật màu khăn choàng ngay lập tức khi người chơi mở khóa hoặc thay đổi trang bị
+## Cập nhật màu khăn choàng & hệ vũ khí ngay lập tức khi người chơi đổi trang bị trong Rương Đồ
 func refresh_cosmetic_appearance() -> void:
+	attack_damage = base_attack_damage + SaveManager.get_bonus_attack()
 	if anim_sprite and custom_sprite_frames == null:
 		var cur_anim := anim_sprite.animation
-		anim_sprite.sprite_frames = PixelArtGenerator.get_player_sprite_frames(SaveManager.equipped_scarf)
+		anim_sprite.sprite_frames = PixelArtGenerator.get_player_sprite_frames(SaveManager.equipped_scarf, SaveManager.get_equipped_weapon_type())
 		anim_sprite.play(cur_anim if anim_sprite.sprite_frames.has_animation(cur_anim) else "idle")
+
+
+## Dùng đan dược từ Rương Đồ (Hồi Xuân Đan / Tụ Khí Tán / Long Hổ Thần Đan)
+func use_bag_item(item_id: String) -> bool:
+	if _is_dead or not SaveManager.consume_bag_item(item_id):
+		return false
+	AudioManager.play_sfx("victory", 1.2)
+	match item_id:
+		"hp_potion":
+			heal(75.0)
+		"mp_potion":
+			add_energy(65.0)
+			DamageNumber3D.spawn(get_parent(), global_position + Vector3(0, 0.5, 0), 65, false, false, "+65 CHÂN KHÍ!")
+		"elixir_power":
+			heal(max_hp)
+			add_energy(max_energy)
+			activate_spirit_shield(4.0)
+			DamageNumber3D.spawn(get_parent(), global_position + Vector3(0, 0.6, 0), 0, true, false, "LONG HỔ THẦN ĐAN!")
+	return true
 
 
 ## Xóa sạch các Bùa Cổ Ngữ khi bắt đầu màn mới
@@ -140,7 +160,7 @@ func _build_visual_nodes() -> void:
 	anim_sprite.shaded = true
 	anim_sprite.alpha_cut = SpriteBase3D.ALPHA_CUT_DISCARD
 	anim_sprite.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_DOUBLE_SIDED
-	anim_sprite.sprite_frames = custom_sprite_frames if custom_sprite_frames else PixelArtGenerator.get_player_sprite_frames(SaveManager.equipped_scarf)
+	anim_sprite.sprite_frames = custom_sprite_frames if custom_sprite_frames else PixelArtGenerator.get_player_sprite_frames(SaveManager.equipped_scarf, SaveManager.get_equipped_weapon_type())
 	anim_sprite.play("idle")
 
 	# Tạo viền sáng Rim-Light an toàn 100% bằng Sprite3D hào quang nhẹ phía sau (tránh xung đột pipeline material_override trên D3D12)
@@ -316,46 +336,112 @@ func _start_dash(dir: Vector3) -> void:
 	dash_cooldown_changed.emit(_dash_cd_timer, dash_cooldown)
 
 
-## Tấn công thường theo combo 3 đòn: Đòn 1 chém nhanh -> Đòn 2 quét ngang -> Đòn 3 kết liễu mạnh
+## Tấn công thường theo combo 3 đòn — MỖI VŨ KHÍ (Kiếm, Đao, Cung Tên, Gậy Phép) có nhịp đánh, tầm và chiêu thức riêng!
 func _perform_combo_attack() -> void:
 	combo_step = (combo_step % 3) + 1
-	_combo_reset_timer = 0.95
-	_attack_timer = 0.20 if combo_step < 3 else 0.28
+	var w_data: Dictionary = SaveManager.get_equipped_weapon_data()
+	var w_type: String = str(w_data.get("type", "sword"))
+	var w_speed: float = float(w_data.get("speed", 1.0))
+	var w_col: Color = w_data.get("color", Color(0.85, 0.95, 1.0))
+
+	_combo_reset_timer = 1.05
+	var base_cd := (0.20 if combo_step < 3 else 0.28) / maxf(0.65, w_speed)
+	_attack_timer = base_cd
 
 	var anim_name := "attack_" + str(combo_step)
 	anim_sprite.play(anim_name)
-	AudioManager.play_sfx("slash", 0.95 + combo_step * 0.08)
 
 	var dmg_mult := 1.0 if combo_step == 1 else (1.22 if combo_step == 2 else 1.65)
-	var hit_range := 2.25 if combo_step < 3 else 2.75
-	var knockback := 6.5 if combo_step < 3 else 11.5
 	var is_crit := combo_step == 3
+	var hit_any := false
 
-	_show_slash_effect(
-		Color(0.85, 0.95, 1.0) if combo_step < 3 else Color(1.0, 0.85, 0.35),
-		1.0 if combo_step < 3 else 1.35
-	)
-	var hit_any := _deal_melee_damage(attack_damage * dmg_mult, hit_range, 0.85, knockback, is_crit)
+	match w_type:
+		"saber":
+			# ĐẠI ĐAO: Chém quét rộng, uy lực cực cao & đẩy lùi mạnh (hợp đánh bay quái xuống suối/hố gai!)
+			AudioManager.play_sfx("slash", 0.78 + combo_step * 0.06)
+			_show_slash_effect(w_col if combo_step < 3 else Color(1.0, 0.56, 0.22), 1.45 if combo_step < 3 else 1.95)
+			hit_any = _deal_melee_damage(attack_damage * dmg_mult * 1.18, 3.1 if combo_step < 3 else 3.7, 0.2, 11.5 if combo_step < 3 else 16.5, is_crit)
+		"bow":
+			# CUNG TÊN: Bắn mũi tên bay xuyên gió (Đòn 3 bắn 3 mũi tên hình quạt!)
+			AudioManager.play_sfx("dash", 1.35 + combo_step * 0.08)
+			var arrow_count := 1 if combo_step < 3 else 3
+			var spread := 14.0
+			for i in range(arrow_count):
+				var deg := -spread * float(arrow_count - 1) * 0.5 + float(i) * spread
+				var dir := facing_dir.rotated(Vector3.UP, deg_to_rad(deg)).normalized()
+				_fire_player_projectile("arrow", dir, int(round(attack_damage * dmg_mult * 0.92)), 21.0, w_col, 0.0, false, is_crit)
+			hit_any = true
+		"staff":
+			# GẬY PHÉP: Phóng cầu linh lực truy đuổi mục tiêu (Đòn 3 cầu phép nổ lan AOE!)
+			AudioManager.play_sfx("pickup", 0.95 + combo_step * 0.12)
+			var orb_aoe := 0.0 if combo_step < 3 else 3.0
+			_fire_player_projectile("magic_orb", facing_dir, int(round(attack_damage * dmg_mult * 1.05)), 14.5, w_col, orb_aoe, true, is_crit)
+			hit_any = true
+		_:
+			# CỔ KIẾM: Cân bằng linh hoạt, đòn 3 chí mạng sắc bén
+			AudioManager.play_sfx("slash", 0.95 + combo_step * 0.08)
+			_show_slash_effect(w_col if combo_step < 3 else Color(1.0, 0.85, 0.35), 1.05 if combo_step < 3 else 1.42)
+			hit_any = _deal_melee_damage(attack_damage * dmg_mult, 2.35 if combo_step < 3 else 2.85, 0.85, 6.8 if combo_step < 3 else 11.8, is_crit)
+
 	# Bùa Cổ Ngữ Lôi Công Kiếm Quyết: Đòn thứ 3 giật tia sét lan sang 3 quái gần nhất!
 	var lightning_lv: int = int(active_relics.get("lightning", 0))
 	if combo_step == 3 and hit_any and lightning_lv > 0:
 		_trigger_chain_lightning(lightning_lv)
 
 
-## Kỹ năng đặc biệt (Phím K): Kiếm Khí Xung Kích 360 độ tiêu hao năng lượng
+## Kỹ năng đặc biệt (Phím K) — MỖI VŨ KHÍ CÓ 1 TUYỆT KỸ RIÊNG BIỆT!
 func _perform_special_skill() -> void:
 	current_energy = maxf(0.0, current_energy - special_energy_cost)
 	energy_changed.emit(current_energy, max_energy)
 	_attack_timer = 0.34
-	_invuln_timer = 0.25
+	_invuln_timer = 0.28
 	anim_sprite.play("special")
 	AudioManager.play_sfx("special")
 
-	_show_slash_effect(Color(0.35, 0.92, 1.0), 1.9)
-	# Gây sát thương diện rộng toàn bộ quái xung quanh
-	_deal_melee_damage(attack_damage * 2.25, 3.8, -1.0, 13.5, true)
+	var w_data: Dictionary = SaveManager.get_equipped_weapon_data()
+	var w_type: String = str(w_data.get("type", "sword"))
+	var w_col: Color = w_data.get("color", Color(0.35, 0.92, 1.0))
+
+	match w_type:
+		"saber":
+			# Bá Vương Trảm Phá: Chém vòng đại đao cực rộng + đẩy văng cực mạnh
+			_show_slash_effect(Color(1.0, 0.45, 0.18), 2.45)
+			_deal_melee_damage(attack_damage * 2.65, 4.6, -1.0, 18.0, true)
+		"bow":
+			# Loạn Tiễn Hình Quạt: Phóng đồng loạt 7 mũi tên năng lượng về phía trước!
+			for i in range(7):
+				var deg := -36.0 + float(i) * 12.0
+				var dir := facing_dir.rotated(Vector3.UP, deg_to_rad(deg)).normalized()
+				_fire_player_projectile("arrow", dir, int(round(attack_damage * 1.45)), 22.0, w_col, 1.6, false, true)
+		"staff":
+			# Bát Quái Linh Châu: Triệu hồi 8 cầu pháp thuật nổ lan tỏa tròn 360° truy đuổi toàn bản đồ!
+			for i in range(8):
+				var angle := (TAU / 8.0) * float(i)
+				var dir := Vector3(cos(angle), 0.0, sin(angle))
+				_fire_player_projectile("magic_orb", dir, int(round(attack_damage * 1.55)), 13.5, w_col, 2.8, true, true)
+		_:
+			# Kiếm Khí Xung Kích 360°
+			_show_slash_effect(w_col, 1.95)
+			_deal_melee_damage(attack_damage * 2.25, 3.9, -1.0, 13.5, true)
+
 	if camera_rig:
 		camera_rig.shake(0.24, 0.18)
+
+
+func _fire_player_projectile(kind: String, dir: Vector3, dmg: int, spd: float, col: Color, aoe: float, is_homing: bool, is_crit: bool) -> void:
+	if get_parent() == null:
+		return
+	var p := PlayerProjectile3D.new()
+	p.proj_kind = kind
+	p.direction = dir
+	p.damage = dmg
+	p.speed = spd
+	p.proj_color = col
+	p.aoe_radius = aoe
+	p.homing = is_homing
+	p.is_crit = is_crit
+	get_parent().add_child(p)
+	p.global_position = global_position + Vector3(dir.x * 0.7, 0.95, dir.z * 0.7)
 
 
 func _show_slash_effect(col: Color, scale_mult: float) -> void:

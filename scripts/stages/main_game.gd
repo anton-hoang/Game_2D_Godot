@@ -25,6 +25,7 @@ func _ready() -> void:
 	ui_controller.npc_service_requested.connect(_on_npc_service_requested)
 	ui_controller.toggle_dof_requested.connect(_on_toggle_dof_requested)
 	ui_controller.relic_chosen.connect(_on_relic_chosen)
+	ui_controller.use_bag_item_requested.connect(_on_use_bag_item_requested)
 
 	stage_manager.wave_banner_requested.connect(ui_controller.show_wave_banner)
 	stage_manager.npc_interacted.connect(ui_controller.show_npc_dialogue)
@@ -87,6 +88,11 @@ func _on_boss_appeared_cinematic(boss_node: EnemyBase) -> void:
 	if stage_manager.camera_rig:
 		await stage_manager.camera_rig.play_boss_intro(boss_node, 2.2)
 	Engine.time_scale = 1.0
+
+
+func _on_use_bag_item_requested(item_id: String) -> void:
+	if stage_manager and stage_manager.player:
+		stage_manager.player.use_bag_item(item_id)
 
 
 func _on_relic_chosen(relic_id: String) -> void:

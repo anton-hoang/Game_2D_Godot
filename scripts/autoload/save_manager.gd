@@ -7,8 +7,61 @@ extends Node
 signal data_changed
 signal quest_completed_notify(quest_title: String, reward_summary: String)
 signal cosmetic_changed
+signal inventory_changed
 
 const SAVE_PATH := "user://save_data.cfg"
+
+## Kho Dữ Liệu 8 Món Binh Khí thuộc 4 Hệ Vũ Khí (Kiếm, Đao, Cung Tên, Gậy Phép)
+## Mỗi hệ có animation tấn công riêng + chỉ số + phẩm chất (Thường / Hiếm / Sử Thi / Huyền Thoại)
+const WEAPON_CATALOG: Dictionary = {
+	"sword_basic": {
+		"name": "Thanh Phong Cổ Kiếm", "type": "sword", "rarity": "Thường",
+		"color": Color(0.75, 0.92, 1.0), "dmg": 0.0, "speed": 1.0, "price": 0,
+		"desc": "Kiếm cổ cân bằng, Tam Liên Trảm linh hoạt. Tuyệt kỹ: Kiếm Khí Xung Kích 360°.",
+	},
+	"sword_jade": {
+		"name": "Bích Ngọc Long Kiếm", "type": "sword", "rarity": "Sử Thi",
+		"color": Color(0.32, 0.96, 0.72), "dmg": 14.0, "speed": 1.12, "price": 135,
+		"desc": "Thần kiếm ngọc bích sắc bén (+14 Công lực, ra đòn nhanh). Tuyệt kỹ: Kiếm Khí Xung Kích.",
+	},
+	"saber_iron": {
+		"name": "Huyết Nguyệt Đại Đao", "type": "saber", "rarity": "Hiếm",
+		"color": Color(1.0, 0.42, 0.28), "dmg": 9.0, "speed": 0.88, "price": 85,
+		"desc": "Đại đao uy lực chém quét tầm rộng & đẩy lùi cực mạnh. Tuyệt kỹ: Bá Vương Trảm Phá.",
+	},
+	"saber_dragon": {
+		"name": "Thanh Long Yển Nguyệt Đao", "type": "saber", "rarity": "Huyền Thoại",
+		"color": Color(1.0, 0.80, 0.22), "dmg": 20.0, "speed": 0.94, "price": 210,
+		"desc": "Thần đao trấn quốc (+20 Công lực, quét càn quái diện rộng). Tuyệt kỹ: Long Quyển Trảm.",
+	},
+	"bow_bamboo": {
+		"name": "Trúc Lâm Trường Cung", "type": "bow", "rarity": "Hiếm",
+		"color": Color(0.62, 0.95, 0.42), "dmg": 6.0, "speed": 1.18, "price": 90,
+		"desc": "Cung tên tầm xa bắn liên hoàn 3 mũi tên xuyên gió. Tuyệt kỹ: Loạn Tiễn Hình Quạt (7 tên).",
+	},
+	"bow_phoenix": {
+		"name": "Phượng Hoàng Hỏa Cung", "type": "bow", "rarity": "Huyền Thoại",
+		"color": Color(1.0, 0.54, 0.20), "dmg": 16.0, "speed": 1.25, "price": 195,
+		"desc": "Thần cung bắn tiễn rực lửa (+16 Công lực). Tuyệt kỹ: Phượng Vũ Cửu Tiễn (7 tên nổ).",
+	},
+	"staff_jade": {
+		"name": "Linh Hạc Pháp Trượng", "type": "staff", "rarity": "Hiếm",
+		"color": Color(0.55, 0.72, 1.0), "dmg": 8.0, "speed": 1.02, "price": 105,
+		"desc": "Gậy phép phóng cầu linh lực truy đuổi mục tiêu. Tuyệt kỹ: Bát Quái Linh Châu 8 hướng.",
+	},
+	"staff_celestial": {
+		"name": "Thái Cực Tiên Trượng", "type": "staff", "rarity": "Huyền Thoại",
+		"color": Color(0.86, 0.56, 1.0), "dmg": 18.0, "speed": 1.08, "price": 220,
+		"desc": "Tiên trượng tối thượng (+18 Công lực, cầu phép nổ lan). Tuyệt kỹ: Cửu Thiên Pháp Hoàn.",
+	},
+}
+
+## Các vật phẩm tiêu hao cất trong Rương Đồ (có thể nhặt từ quái hoặc mua ở Thương Nhân)
+const ITEM_CATALOG: Dictionary = {
+	"hp_potion": {"name": "Hồi Xuân Đan", "price": 25, "desc": "Hồi ngay +75 Sinh Lực (HP)"},
+	"mp_potion": {"name": "Tụ Khí Tán", "price": 25, "desc": "Hồi ngay +65 Chân Khí (MP)"},
+	"elixir_power": {"name": "Long Hổ Thần Đan", "price": 55, "desc": "Hồi đầy 100% Sinh Lực & Chân Khí + Tạo Khiên 4s"},
+}
 
 ## 4 nhiệm vụ phụ dân làng trên Bảng Truy Nã (Bounty Board)
 const QUEST_DEFINITIONS: Dictionary = {
@@ -82,6 +135,15 @@ var unlocked_scarves: Array = ["blue"]
 var equipped_scarf: String = "blue"
 var equipped_pet: String = "fox" # "fox" (Tiểu Hồ Ly) | "crane" (Tiên Hạc)
 
+# Rương đồ (Inventory): Danh sách vũ khí sở hữu + vũ khí đang trang bị + vật phẩm tiêu hao
+var owned_weapons: Array = ["sword_basic"]
+var equipped_weapon: String = "sword_basic"
+var bag_items: Dictionary = {
+	"hp_potion": 2,
+	"mp_potion": 1,
+	"elixir_power": 0,
+}
+
 
 func _ready() -> void:
 	load_game()
@@ -102,6 +164,9 @@ func save_game() -> void:
 	cfg.set_value("cosmetics", "unlocked_scarves", unlocked_scarves)
 	cfg.set_value("cosmetics", "equipped_scarf", equipped_scarf)
 	cfg.set_value("cosmetics", "equipped_pet", equipped_pet)
+	cfg.set_value("inventory", "owned_weapons", owned_weapons)
+	cfg.set_value("inventory", "equipped_weapon", equipped_weapon)
+	cfg.set_value("inventory", "bag_items", bag_items)
 	cfg.save(SAVE_PATH)
 	data_changed.emit()
 
@@ -127,6 +192,14 @@ func load_game() -> void:
 	unlocked_scarves = cfg.get_value("cosmetics", "unlocked_scarves", ["blue"])
 	equipped_scarf = str(cfg.get_value("cosmetics", "equipped_scarf", "blue"))
 	equipped_pet = str(cfg.get_value("cosmetics", "equipped_pet", "fox"))
+	owned_weapons = cfg.get_value("inventory", "owned_weapons", ["sword_basic"])
+	equipped_weapon = str(cfg.get_value("inventory", "equipped_weapon", "sword_basic"))
+	if not WEAPON_CATALOG.has(equipped_weapon):
+		equipped_weapon = "sword_basic"
+	var saved_bag: Dictionary = cfg.get_value("inventory", "bag_items", {})
+	for ik in bag_items.keys():
+		if saved_bag.has(ik):
+			bag_items[ik] = int(saved_bag[ik])
 	data_changed.emit()
 
 
@@ -239,8 +312,101 @@ func buy_upgrade(stat_key: String) -> bool:
 	return true
 
 
+func get_equipped_weapon_data() -> Dictionary:
+	return WEAPON_CATALOG.get(equipped_weapon, WEAPON_CATALOG["sword_basic"])
+
+
+func get_equipped_weapon_type() -> String:
+	return str(get_equipped_weapon_data().get("type", "sword"))
+
+
+## Thêm vũ khí vào Rương Đồ (khi nhặt từ quái hoặc mua từ Cửa hàng). Nếu đã có sẵn thì quy đổi thành Vàng!
+func add_weapon_to_inventory(weapon_id: String) -> bool:
+	if not WEAPON_CATALOG.has(weapon_id):
+		return false
+	if owned_weapons.has(weapon_id):
+		return false
+	owned_weapons.append(weapon_id)
+	save_game()
+	inventory_changed.emit()
+	return true
+
+
+func equip_weapon(weapon_id: String) -> void:
+	if owned_weapons.has(weapon_id) and WEAPON_CATALOG.has(weapon_id):
+		equipped_weapon = weapon_id
+		save_game()
+		inventory_changed.emit()
+		cosmetic_changed.emit()
+
+
+func buy_weapon(weapon_id: String) -> bool:
+	if not WEAPON_CATALOG.has(weapon_id) or owned_weapons.has(weapon_id):
+		return false
+	var price: int = int(WEAPON_CATALOG[weapon_id]["price"])
+	if gold < price:
+		return false
+	gold -= price
+	owned_weapons.append(weapon_id)
+	equipped_weapon = weapon_id
+	save_game()
+	inventory_changed.emit()
+	cosmetic_changed.emit()
+	return true
+
+
+func add_bag_item(item_id: String, count: int = 1) -> void:
+	if not ITEM_CATALOG.has(item_id):
+		return
+	bag_items[item_id] = int(bag_items.get(item_id, 0)) + count
+	save_game()
+	inventory_changed.emit()
+
+
+func buy_bag_item(item_id: String) -> bool:
+	if not ITEM_CATALOG.has(item_id):
+		return false
+	var price: int = int(ITEM_CATALOG[item_id]["price"])
+	if gold < price:
+		return false
+	gold -= price
+	bag_items[item_id] = int(bag_items.get(item_id, 0)) + 1
+	save_game()
+	inventory_changed.emit()
+	return true
+
+
+func consume_bag_item(item_id: String) -> bool:
+	var cur: int = int(bag_items.get(item_id, 0))
+	if cur <= 0:
+		return false
+	bag_items[item_id] = cur - 1
+	save_game()
+	inventory_changed.emit()
+	return true
+
+
+## Chọn ngẫu nhiên 1 vũ khí để rơi ra khi tiêu diệt quái / Boss
+func pick_random_weapon_drop(stage_id: int, is_boss: bool = false) -> String:
+	var pool: Array[String] = ["saber_iron", "bow_bamboo", "staff_jade"]
+	if stage_id >= 3 or is_boss:
+		pool.append("sword_jade")
+	if stage_id >= 4 or is_boss:
+		pool.append("saber_dragon")
+		pool.append("bow_phoenix")
+		pool.append("staff_celestial")
+	# Ưu tiên rơi vũ khí người chơi chưa sở hữu
+	var unowned: Array[String] = []
+	for wid in pool:
+		if not owned_weapons.has(wid):
+			unowned.append(wid)
+	if unowned.size() > 0:
+		return unowned[randi() % unowned.size()]
+	return pool[randi() % pool.size()]
+
+
 func get_bonus_attack() -> float:
-	return float(upgrades.get("attack", 0)) * 4.0
+	return float(upgrades.get("attack", 0)) * 4.0 + float(get_equipped_weapon_data().get("dmg", 0.0))
 
 
 func get_bonus_max_hp() -> float:
@@ -262,5 +428,10 @@ func reset_save() -> void:
 	equipped_title = "Lữ Khách Windferry"
 	unlocked_scarves = ["blue"]
 	equipped_scarf = "blue"
+	equipped_pet = "fox"
+	owned_weapons = ["sword_basic"]
+	equipped_weapon = "sword_basic"
+	bag_items = {"hp_potion": 2, "mp_potion": 1, "elixir_power": 0}
 	save_game()
 	cosmetic_changed.emit()
+	inventory_changed.emit()
