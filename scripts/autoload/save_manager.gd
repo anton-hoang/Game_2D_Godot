@@ -64,83 +64,84 @@ const ITEM_CATALOG: Dictionary = {
 }
 
 ## ============================================================================
-## KHO 10 TRANG PHỤC (SKIN) GACHA CỔ TRANG CHO NHÂN VẬT CHÍNH:
-## - 5 Skin Thường (tier="common", has_vfx=false): Mặc vào thay đổi hoàn toàn bảng màu y phục & tóc như bình thường.
-## - 5 Skin Hiếm / Sử Thi / Huyền Thoại (has_vfx=true): Có hiệu ứng hào quang, vòng ánh sáng & hạt bay quanh thân 3D!
+## KHO 10 SKIN ANIME CHIBI ĐẶC SẮC CHUẨN ẢNH MẪU:
+## 5 Skin Thường (mặc bình thường + dáng tóc/phụ kiện & nhịp animation riêng):
+##   1. Kiếm Khách (mặc định — Chiến Giáp Huyền Bí)   2. Tiên Nhân   3. Ninja   4. Miko   5. Vocaloid
+## 5 Skin Hiếm / Sử Thi / Huyền Thoại (có Hiệu Ứng Hào Quang 3D + Kỹ năng đặc trưng riêng!):
+##   6. Hồ Ly (Hiếm ★)   7. Ma Nữ (Hiếm ★)   8. Ác Ma (Sử Thi ★★)   9. Thiên Sứ (Sử Thi ★★)   10. Hoàng Đế (Huyền Thoại ★★★)
 ## ============================================================================
 const SKIN_CATALOG: Dictionary = {
-	# --- 5 SKIN THƯỜNG (Mặc bình thường, không có hiệu ứng hạt) ---
 	"skin_default": {
-		"name": "Hồng Y Kiếm Khách", "rarity": "Thường", "tier": "common", "has_vfx": false,
-		"tag_color": Color(0.84, 0.86, 0.90), "vfx_color": Color(0, 0, 0, 0),
-		"hair_d": Color(0.10, 0.10, 0.16), "hair_m": Color(0.18, 0.19, 0.28), "hair_h": Color(0.36, 0.40, 0.56),
-		"robe": Color(0.96, 0.94, 0.90), "coat_d": Color(0.50, 0.10, 0.14), "coat_m": Color(0.78, 0.16, 0.20),
-		"eye": Color(0.20, 0.68, 0.72), "desc": "Hán phục đỏ son - trắng ngà cổ điển của Nữ Kiếm Khách.",
+		"name": "Kiếm Khách", "rarity": "Thường", "tier": "common", "has_vfx": false,
+		"tag_color": Color(0.95, 0.36, 0.30), "vfx_color": Color(1.0, 0.28, 0.18), "skill_vfx": "crimson_arc",
+		"hair_d": Color(0.08, 0.07, 0.11), "hair_m": Color(0.15, 0.13, 0.20), "hair_h": Color(0.32, 0.28, 0.40),
+		"robe": Color(0.96, 0.94, 0.92), "coat_d": Color(0.14, 0.11, 0.16), "coat_m": Color(0.84, 0.16, 0.18),
+		"eye": Color(0.95, 0.18, 0.20), "desc": "Chiến Giáp Huyền Bí — Tóc đen xoăn, mắt đỏ, dải lụa đỏ & kiếm lửa rực cháy.",
 	},
-	"skin_bamboo": {
-		"name": "Thanh Trúc Du Hiệp", "rarity": "Thường", "tier": "common", "has_vfx": false,
-		"tag_color": Color(0.62, 0.88, 0.68), "vfx_color": Color(0, 0, 0, 0),
-		"hair_d": Color(0.12, 0.14, 0.12), "hair_m": Color(0.22, 0.26, 0.22), "hair_h": Color(0.42, 0.50, 0.40),
-		"robe": Color(0.92, 0.95, 0.86), "coat_d": Color(0.12, 0.34, 0.20), "coat_m": Color(0.22, 0.56, 0.32),
-		"eye": Color(0.28, 0.74, 0.40), "desc": "Y phục xanh trúc thanh nhã, nhẹ nhàng hòa mình vào rừng núi.",
+	"skin_immortal": {
+		"name": "Tiên Nhân", "rarity": "Thường", "tier": "common", "has_vfx": false,
+		"tag_color": Color(0.45, 0.78, 1.0), "vfx_color": Color(0.28, 0.68, 1.0), "skill_vfx": "azure_dragon",
+		"hair_d": Color(0.08, 0.10, 0.18), "hair_m": Color(0.16, 0.20, 0.32), "hair_h": Color(0.36, 0.45, 0.66),
+		"robe": Color(0.94, 0.97, 1.0), "coat_d": Color(0.12, 0.28, 0.56), "coat_m": Color(0.24, 0.54, 0.90),
+		"eye": Color(0.30, 0.76, 1.0), "desc": "Tiên Nhân đạo bào trắng lam thanh thoát, tóc buộc cao bay nhẹ trong gió.",
 	},
-	"skin_ink": {
-		"name": "Mặc Ảnh Dạ Hành", "rarity": "Thường", "tier": "common", "has_vfx": false,
-		"tag_color": Color(0.68, 0.72, 0.80), "vfx_color": Color(0, 0, 0, 0),
-		"hair_d": Color(0.08, 0.08, 0.12), "hair_m": Color(0.16, 0.17, 0.24), "hair_h": Color(0.34, 0.36, 0.48),
-		"robe": Color(0.28, 0.30, 0.36), "coat_d": Color(0.10, 0.11, 0.16), "coat_m": Color(0.18, 0.20, 0.28),
-		"eye": Color(0.75, 0.82, 0.95), "desc": "Dạ hành y đen mực huyền bí của thích khách giang hồ.",
+	"skin_ninja": {
+		"name": "Ninja", "rarity": "Thường", "tier": "common", "has_vfx": false,
+		"tag_color": Color(1.0, 0.62, 0.18), "vfx_color": Color(1.0, 0.52, 0.12), "skill_vfx": "crimson_arc",
+		"hair_d": Color(0.76, 0.52, 0.10), "hair_m": Color(0.98, 0.80, 0.22), "hair_h": Color(1.0, 0.94, 0.52),
+		"robe": Color(0.16, 0.16, 0.22), "coat_d": Color(0.78, 0.34, 0.08), "coat_m": Color(0.98, 0.52, 0.14),
+		"eye": Color(0.22, 0.72, 1.0), "desc": "Nhẫn Giả tóc vàng dựng, băng trán thép, áo khoác cam đen tốc độ siêu nhanh.",
 	},
-	"skin_azure": {
-		"name": "Bích Hải Thư Sinh", "rarity": "Thường", "tier": "common", "has_vfx": false,
-		"tag_color": Color(0.56, 0.82, 0.96), "vfx_color": Color(0, 0, 0, 0),
-		"hair_d": Color(0.12, 0.15, 0.24), "hair_m": Color(0.22, 0.28, 0.42), "hair_h": Color(0.44, 0.54, 0.74),
-		"robe": Color(0.90, 0.96, 1.0), "coat_d": Color(0.12, 0.28, 0.52), "coat_m": Color(0.22, 0.48, 0.80),
-		"eye": Color(0.26, 0.62, 0.96), "desc": "Áo dài xanh biển nho nhã của kiếm khách vùng sông nước.",
+	"skin_miko": {
+		"name": "Miko", "rarity": "Thường", "tier": "common", "has_vfx": false,
+		"tag_color": Color(1.0, 0.44, 0.48), "vfx_color": Color(1.0, 0.36, 0.42), "skill_vfx": "crimson_arc",
+		"hair_d": Color(0.14, 0.08, 0.10), "hair_m": Color(0.24, 0.14, 0.16), "hair_h": Color(0.46, 0.28, 0.32),
+		"robe": Color(0.98, 0.96, 0.95), "coat_d": Color(0.68, 0.10, 0.16), "coat_m": Color(0.92, 0.20, 0.26),
+		"eye": Color(0.92, 0.24, 0.30), "desc": "Vu Nữ Thần Xã áo trắng hakama đỏ, đeo mặt nạ cáo Kitsune bên mái tóc.",
 	},
-	"skin_autumn": {
-		"name": "Thu Phong Cẩm Y", "rarity": "Thường", "tier": "common", "has_vfx": false,
-		"tag_color": Color(0.92, 0.72, 0.46), "vfx_color": Color(0, 0, 0, 0),
-		"hair_d": Color(0.28, 0.14, 0.10), "hair_m": Color(0.48, 0.24, 0.14), "hair_h": Color(0.74, 0.42, 0.24),
-		"robe": Color(0.98, 0.92, 0.80), "coat_d": Color(0.52, 0.26, 0.10), "coat_m": Color(0.84, 0.46, 0.18),
-		"eye": Color(0.90, 0.56, 0.22), "desc": "Gấm thu màu lá phong ấm áp như nắng chiều ngoại ô Windferry.",
+	"skin_vocaloid": {
+		"name": "Vocaloid", "rarity": "Thường", "tier": "common", "has_vfx": false,
+		"tag_color": Color(0.32, 0.94, 0.96), "vfx_color": Color(0.28, 0.92, 1.0), "skill_vfx": "azure_dragon",
+		"hair_d": Color(0.10, 0.56, 0.64), "hair_m": Color(0.24, 0.86, 0.90), "hair_h": Color(0.66, 0.98, 1.0),
+		"robe": Color(0.92, 0.97, 1.0), "coat_d": Color(0.16, 0.20, 0.28), "coat_m": Color(0.22, 0.76, 0.86),
+		"eye": Color(0.22, 0.90, 0.95), "desc": "Ca Sĩ Ảo tóc 2 bím dài xanh ngọc bồng bềnh nhún nhảy theo nhịp chạy.",
 	},
 
-	# --- 5 SKIN HIẾM / SỬ THI / HUYỀN THOẠI (CÓ HIỆU ỨNG HÀO QUANG & HẠT 3D RIÊNG!) ---
-	"skin_sakura": {
-		"name": "Anh Đào Tiên Tử", "rarity": "Hiếm ★", "tier": "rare", "has_vfx": true,
-		"tag_color": Color(1.0, 0.64, 0.82), "vfx_color": Color(1.0, 0.68, 0.86), "vfx_style": "petals",
-		"hair_d": Color(0.56, 0.24, 0.36), "hair_m": Color(0.86, 0.48, 0.64), "hair_h": Color(1.0, 0.76, 0.86),
-		"robe": Color(1.0, 0.93, 0.96), "coat_d": Color(0.74, 0.28, 0.46), "coat_m": Color(0.96, 0.52, 0.70),
-		"eye": Color(1.0, 0.44, 0.68), "desc": "[HIỆU ỨNG] Cánh hoa anh đào hồng tỏa sáng bay lượn quanh thân!",
+	# --- 5 SKIN HIẾM / SỬ THI / HUYỀN THOẠI (CÓ HIỆU ỨNG HÀO QUANG 3D + KỸ NĂNG ĐẶC BIỆT!) ---
+	"skin_fox": {
+		"name": "Hồ Ly", "rarity": "Hiếm ★", "tier": "rare", "has_vfx": true,
+		"tag_color": Color(0.48, 0.88, 1.0), "vfx_color": Color(0.35, 0.82, 1.0), "skill_vfx": "azure_dragon",
+		"hair_d": Color(0.62, 0.68, 0.82), "hair_m": Color(0.92, 0.95, 1.0), "hair_h": Color(1.0, 1.0, 1.0),
+		"robe": Color(0.96, 0.98, 1.0), "coat_d": Color(0.18, 0.38, 0.72), "coat_m": Color(0.36, 0.66, 0.96),
+		"eye": Color(0.32, 0.78, 1.0), "desc": "[HIỆU ỨNG] Cửu Vĩ Bạch Hồ có tai cáo & đuôi bông vẫy thật + Hào quang lam tuyết!",
 	},
-	"skin_frost": {
-		"name": "Băng Tuyết Ngọc Nữ", "rarity": "Hiếm ★", "tier": "rare", "has_vfx": true,
-		"tag_color": Color(0.48, 0.92, 1.0), "vfx_color": Color(0.46, 0.92, 1.0), "vfx_style": "frost",
-		"hair_d": Color(0.48, 0.66, 0.84), "hair_m": Color(0.76, 0.90, 1.0), "hair_h": Color(0.96, 0.99, 1.0),
-		"robe": Color(0.92, 0.98, 1.0), "coat_d": Color(0.16, 0.48, 0.74), "coat_m": Color(0.32, 0.76, 0.96),
-		"eye": Color(0.32, 0.94, 1.0), "desc": "[HIỆU ỨNG] Bông tuyết băng tinh & sương lạnh phát sáng xoay quanh thân!",
+	"skin_witch": {
+		"name": "Ma Nữ", "rarity": "Hiếm ★", "tier": "rare", "has_vfx": true,
+		"tag_color": Color(0.78, 0.44, 1.0), "vfx_color": Color(0.76, 0.34, 1.0), "skill_vfx": "purple_butterflies",
+		"hair_d": Color(0.16, 0.08, 0.28), "hair_m": Color(0.34, 0.18, 0.58), "hair_h": Color(0.64, 0.42, 0.90),
+		"robe": Color(0.24, 0.12, 0.38), "coat_d": Color(0.38, 0.14, 0.64), "coat_m": Color(0.66, 0.30, 0.96),
+		"eye": Color(0.86, 0.42, 1.0), "desc": "[HIỆU ỨNG] Ma Nữ Bướm Tím tỏa đàn bướm huyền ảo & kỹ năng Vòng Bướm Tím!",
 	},
-	"skin_phoenix": {
-		"name": "Chu Tước Viêm Hoàng", "rarity": "Sử Thi ★★", "tier": "epic", "has_vfx": true,
-		"tag_color": Color(1.0, 0.48, 0.20), "vfx_color": Color(1.0, 0.44, 0.14), "vfx_style": "flame",
-		"hair_d": Color(0.42, 0.08, 0.08), "hair_m": Color(0.78, 0.18, 0.12), "hair_h": Color(1.0, 0.54, 0.20),
-		"robe": Color(1.0, 0.90, 0.74), "coat_d": Color(0.68, 0.12, 0.08), "coat_m": Color(0.98, 0.34, 0.14),
-		"eye": Color(1.0, 0.78, 0.22), "desc": "[HIỆU ỨNG] Tàn lửa Phượng Hoàng bốc cháy & vòng hào quang rực lửa!",
+	"skin_demon": {
+		"name": "Ác Ma", "rarity": "Sử Thi ★★", "tier": "epic", "has_vfx": true,
+		"tag_color": Color(0.98, 0.24, 0.36), "vfx_color": Color(0.98, 0.18, 0.32), "skill_vfx": "crimson_arc",
+		"hair_d": Color(0.56, 0.56, 0.64), "hair_m": Color(0.86, 0.88, 0.94), "hair_h": Color(1.0, 1.0, 1.0),
+		"robe": Color(0.14, 0.09, 0.15), "coat_d": Color(0.34, 0.06, 0.12), "coat_m": Color(0.84, 0.12, 0.24),
+		"eye": Color(1.0, 0.20, 0.28), "desc": "[HIỆU ỨNG] Chúa Tể Ác Ma tóc bạc, đôi cánh dơi vỗ nhịp & sóng hắc viêm đỏ rực!",
 	},
-	"skin_thunder": {
-		"name": "Lôi Đình Kiếm Tôn", "rarity": "Sử Thi ★★", "tier": "epic", "has_vfx": true,
-		"tag_color": Color(0.76, 0.52, 1.0), "vfx_color": Color(0.72, 0.46, 1.0), "vfx_style": "lightning",
-		"hair_d": Color(0.18, 0.10, 0.34), "hair_m": Color(0.38, 0.22, 0.68), "hair_h": Color(0.72, 0.56, 1.0),
-		"robe": Color(0.92, 0.90, 1.0), "coat_d": Color(0.28, 0.12, 0.54), "coat_m": Color(0.56, 0.28, 0.92),
-		"eye": Color(0.84, 0.62, 1.0), "desc": "[HIỆU ỨNG] Tia lôi điện tím vàng nhấp nháy & luồng điện xoay quanh chân!",
+	"skin_angel": {
+		"name": "Thiên Sứ", "rarity": "Sử Thi ★★", "tier": "epic", "has_vfx": true,
+		"tag_color": Color(1.0, 0.92, 0.62), "vfx_color": Color(1.0, 0.92, 0.56), "skill_vfx": "golden_pillars",
+		"hair_d": Color(0.68, 0.72, 0.84), "hair_m": Color(0.94, 0.96, 1.0), "hair_h": Color(1.0, 1.0, 1.0),
+		"robe": Color(1.0, 0.99, 0.95), "coat_d": Color(0.82, 0.66, 0.26), "coat_m": Color(1.0, 0.88, 0.44),
+		"eye": Color(0.46, 0.84, 1.0), "desc": "[HIỆU ỨNG] Thiên Sứ có Vòng Hào Quang trên đầu, đôi cánh trắng vỗ bay & Cột Sáng Thánh!",
 	},
-	"skin_celestial": {
-		"name": "Cửu Thiên Kim Long", "rarity": "Huyền Thoại ★★★", "tier": "legendary", "has_vfx": true,
-		"tag_color": Color(1.0, 0.86, 0.26), "vfx_color": Color(1.0, 0.84, 0.28), "vfx_style": "celestial",
-		"hair_d": Color(0.62, 0.48, 0.18), "hair_m": Color(0.94, 0.82, 0.42), "hair_h": Color(1.0, 0.98, 0.82),
-		"robe": Color(1.0, 0.97, 0.88), "coat_d": Color(0.68, 0.48, 0.08), "coat_m": Color(0.98, 0.78, 0.20),
-		"eye": Color(1.0, 0.88, 0.26), "desc": "[HIỆU ỨNG TỐI THƯỢNG] Vòng Pháp Trận Hoàng Kim dưới chân + Sao vàng thăng thiên rực rỡ!",
+	"skin_emperor": {
+		"name": "Hoàng Đế", "rarity": "Huyền Thoại ★★★", "tier": "legendary", "has_vfx": true,
+		"tag_color": Color(1.0, 0.82, 0.22), "vfx_color": Color(1.0, 0.82, 0.22), "skill_vfx": "golden_pillars",
+		"hair_d": Color(0.08, 0.07, 0.10), "hair_m": Color(0.16, 0.14, 0.20), "hair_h": Color(0.36, 0.30, 0.24),
+		"robe": Color(0.12, 0.10, 0.14), "coat_d": Color(0.68, 0.46, 0.08), "coat_m": Color(1.0, 0.80, 0.20),
+		"eye": Color(1.0, 0.84, 0.22), "desc": "[HIỆU ỨNG TỐI THƯỢNG] Hoàng Đế Long Bào đen vàng, vương miện & Kim Long uốn lượn + Thiên Trụ Hoàng Kim!",
 	},
 }
 
@@ -282,7 +283,14 @@ func load_game() -> void:
 	unlocked_scarves = cfg.get_value("cosmetics", "unlocked_scarves", ["blue"])
 	equipped_scarf = str(cfg.get_value("cosmetics", "equipped_scarf", "blue"))
 	equipped_pet = str(cfg.get_value("cosmetics", "equipped_pet", "fox"))
-	owned_skins = cfg.get_value("cosmetics", "owned_skins", ["skin_default"])
+	var raw_skins: Array = cfg.get_value("cosmetics", "owned_skins", ["skin_default"])
+	owned_skins = []
+	for sid_v in raw_skins:
+		var sid: String = str(sid_v)
+		if SKIN_CATALOG.has(sid) and not owned_skins.has(sid):
+			owned_skins.append(sid)
+	if not owned_skins.has("skin_default"):
+		owned_skins.insert(0, "skin_default")
 	equipped_skin = str(cfg.get_value("cosmetics", "equipped_skin", "skin_default"))
 	if not SKIN_CATALOG.has(equipped_skin):
 		equipped_skin = "skin_default"
@@ -396,17 +404,17 @@ func roll_skin_gacha(count: int = 1) -> Array[Dictionary]:
 		return []
 	gold -= cost
 
-	var common_pool: Array[String] = ["skin_default", "skin_bamboo", "skin_ink", "skin_azure", "skin_autumn"]
-	var rare_pool: Array[String] = ["skin_sakura", "skin_frost"]
-	var epic_pool: Array[String] = ["skin_phoenix", "skin_thunder"]
-	var legend_pool: Array[String] = ["skin_celestial"]
+	var common_pool: Array[String] = ["skin_default", "skin_immortal", "skin_ninja", "skin_miko", "skin_vocaloid"]
+	var rare_pool: Array[String] = ["skin_fox", "skin_witch"]
+	var epic_pool: Array[String] = ["skin_demon", "skin_angel"]
+	var legend_pool: Array[String] = ["skin_emperor"]
 
 	var results: Array[Dictionary] = []
 	var guaranteed_vfx_given := false
 
 	for i in range(count):
 		gacha_pity += 1
-		var chosen_id: String = "skin_bamboo"
+		var chosen_id: String = "skin_immortal"
 		var force_high: bool = (gacha_pity >= 5) or (count >= 5 and i == count - 1 and not guaranteed_vfx_given)
 
 		var r := randf()

@@ -205,8 +205,8 @@ func _build_visual_nodes() -> void:
 		anim_sprite.name = "AnimatedSprite3D"
 		add_child(anim_sprite)
 
-	anim_sprite.position = Vector3(0.0, 1.02, 0.0)
-	anim_sprite.pixel_size = 0.043
+	anim_sprite.position = Vector3(0.0, 1.06, 0.0)
+	anim_sprite.pixel_size = 0.041
 	anim_sprite.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
 	anim_sprite.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 	anim_sprite.shaded = true
@@ -218,8 +218,8 @@ func _build_visual_nodes() -> void:
 	# Tạo viền sáng Rim-Light an toàn 100% bằng Sprite3D hào quang nhẹ phía sau (tránh xung đột pipeline material_override trên D3D12)
 	var rim_halo := Sprite3D.new()
 	rim_halo.name = "RimLightHalo"
-	rim_halo.position = Vector3(0.0, 1.02, -0.02)
-	rim_halo.pixel_size = 0.0465
+	rim_halo.position = Vector3(0.0, 1.06, -0.02)
+	rim_halo.pixel_size = 0.0445
 	rim_halo.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
 	rim_halo.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 	rim_halo.shaded = false
@@ -432,11 +432,13 @@ func _physics_process(delta: float) -> void:
 		_dash_timer -= delta
 		velocity.x = facing_dir.x * dash_speed
 		velocity.z = facing_dir.z * dash_speed
-		# TÀN ẢNH KHINH CÔNG: Để lại chuỗi 4 tàn ảnh ngọc bích mờ dần sau lưng Nữ Kiếm Khách!
+		# TÀN ẢNH KHINH CÔNG: Để lại chuỗi 4 tàn ảnh mờ ảo nhuộm sắc hào quang riêng theo từng Skin!
 		_afterimage_cd -= delta
 		if _afterimage_cd <= 0.0 and anim_sprite and anim_sprite.sprite_frames:
 			var gtex := anim_sprite.sprite_frames.get_frame_texture(anim_sprite.animation, anim_sprite.frame)
-			CombatVFX3D.spawn_afterimage(get_parent(), global_position + anim_sprite.position, gtex, anim_sprite.flip_h, anim_sprite.pixel_size)
+			var sk_d: Dictionary = SaveManager.get_equipped_skin_data()
+			var sv_col: Color = sk_d.get("vfx_color", Color(0.38, 0.94, 0.92))
+			CombatVFX3D.spawn_afterimage(get_parent(), global_position + anim_sprite.position, gtex, anim_sprite.flip_h, anim_sprite.pixel_size, Color(sv_col.r, sv_col.g, sv_col.b, 0.65))
 			_afterimage_cd = 0.036
 		# Bùa Cổ Ngữ Hỏa Viêm Khinh Công: Để lại vệt lửa đốt cháy quái đuổi theo
 		var fire_lv: int = int(active_relics.get("fire_dash", 0))
@@ -519,12 +521,14 @@ func _perform_combo_attack() -> void:
 	var dmg_mult := 1.0 if combo_step == 1 else (1.22 if combo_step == 2 else 1.65)
 	var is_crit := combo_step == 3
 	var hit_any := false
+	var sk_atk: Dictionary = SaveManager.get_equipped_skin_data()
+	var sk_col: Color = sk_atk.get("vfx_color", w_col)
 
 	match w_type:
 		"saber":
 			# ĐẠI ĐAO: Chém quét rộng, uy lực cực cao & đẩy lùi mạnh (hợp đánh bay quái xuống suối/hố gai!)
 			AudioManager.play_sfx("slash", 0.78 + combo_step * 0.06)
-			_show_slash_effect(w_col if combo_step < 3 else Color(1.0, 0.56, 0.22), 1.45 if combo_step < 3 else 1.95)
+			_show_slash_effect(w_col if combo_step < 3 else sk_col, 1.45 if combo_step < 3 else 1.95)
 			hit_any = _deal_melee_damage(attack_damage * dmg_mult * 1.18, 3.1 if combo_step < 3 else 3.7, 0.2, 11.5 if combo_step < 3 else 16.5, is_crit)
 		"bow":
 			# CUNG TÊN: Bắn mũi tên bay xuyên gió (Đòn 3 bắn 3 mũi tên hình quạt!)
@@ -534,18 +538,18 @@ func _perform_combo_attack() -> void:
 			for i in range(arrow_count):
 				var deg := -spread * float(arrow_count - 1) * 0.5 + float(i) * spread
 				var dir := facing_dir.rotated(Vector3.UP, deg_to_rad(deg)).normalized()
-				_fire_player_projectile("arrow", dir, int(round(attack_damage * dmg_mult * 0.92)), 21.0, w_col, 0.0, false, is_crit)
+				_fire_player_projectile("arrow", dir, int(round(attack_damage * dmg_mult * 0.92)), 21.0, w_col if combo_step < 3 else sk_col, 0.0, false, is_crit)
 			hit_any = true
 		"staff":
 			# GẬY PHÉP: Phóng cầu linh lực truy đuổi mục tiêu (Đòn 3 cầu phép nổ lan AOE!)
 			AudioManager.play_sfx("pickup", 0.95 + combo_step * 0.12)
 			var orb_aoe := 0.0 if combo_step < 3 else 3.0
-			_fire_player_projectile("magic_orb", facing_dir, int(round(attack_damage * dmg_mult * 1.05)), 14.5, w_col, orb_aoe, true, is_crit)
+			_fire_player_projectile("magic_orb", facing_dir, int(round(attack_damage * dmg_mult * 1.05)), 14.5, w_col if combo_step < 3 else sk_col, orb_aoe, true, is_crit)
 			hit_any = true
 		_:
-			# CỔ KIẾM: Cân bằng linh hoạt, đòn 3 chí mạng sắc bén
+			# CỔ KIẾM: Cân bằng linh hoạt, đòn 3 chí mạng nhuộm kiếm khí theo Skin đang mặc!
 			AudioManager.play_sfx("slash", 0.95 + combo_step * 0.08)
-			_show_slash_effect(w_col if combo_step < 3 else Color(1.0, 0.85, 0.35), 1.05 if combo_step < 3 else 1.42)
+			_show_slash_effect(w_col if combo_step < 3 else sk_col, 1.05 if combo_step < 3 else 1.48)
 			hit_any = _deal_melee_damage(attack_damage * dmg_mult, 2.35 if combo_step < 3 else 2.85, 0.85, 6.8 if combo_step < 3 else 11.8, is_crit)
 
 	# Bùa Cổ Ngữ Lôi Công Kiếm Quyết: Đòn thứ 3 giật tia sét lan sang 3 quái gần nhất!
@@ -591,7 +595,11 @@ func _perform_special_skill() -> void:
 
 	if camera_rig:
 		camera_rig.shake(0.24, 0.18)
-	CombatVFX3D.spawn_shockwave_ring(get_parent(), global_position, w_col, 0.6, 4.2, 0.35)
+	# Kích hoạt 1 trong 4 HIỆU ỨNG KỸ NĂNG ĐẶC TRƯNG THEO SKIN (Trảm Nguyệt Đỏ / Thanh Long Lam / Vòng Bướm Tím / Cột Sáng Hoàng Kim)!
+	var sk_data: Dictionary = SaveManager.get_equipped_skin_data()
+	var skill_style: String = str(sk_data.get("skill_vfx", "crimson_arc"))
+	var skin_vcol: Color = sk_data.get("vfx_color", w_col)
+	CombatVFX3D.spawn_skin_skill_vfx(get_parent(), global_position, facing_dir, skill_style, skin_vcol)
 
 
 func _fire_player_projectile(kind: String, dir: Vector3, dmg: int, spd: float, col: Color, aoe: float, is_homing: bool, is_crit: bool) -> void:

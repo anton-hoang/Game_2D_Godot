@@ -8,41 +8,75 @@ static var _cache: Dictionary = {}
 
 
 static func get_player_sprite_frames(scarf_id: String = "blue", weapon_type: String = "sword", skin_id: String = "skin_default") -> SpriteFrames:
-	var key := "player_frames_hd_" + scarf_id + "_" + weapon_type + "_" + skin_id
+	var key := "player_frames_anime_v2_" + scarf_id + "_" + weapon_type + "_" + skin_id
 	if _cache.has(key):
 		return _cache[key]
 	var frames := SpriteFrames.new()
 	if frames.has_animation("default"):
 		frames.remove_animation("default")
 
-	_add_anim(frames, "idle", 4.5, true, [
+	# Nhịp animation riêng cho từng skin (Ninja chạy cực nhanh, Thiên Sứ/Tiên Nhân bay lượn nhẹ nhàng, Kiếm Khách/Ác Ma chém dứt khoát)
+	var idle_fps: float = 5.5
+	var run_fps: float = 11.5
+	var atk_fps: float = 15.5
+	match skin_id:
+		"skin_ninja":
+			idle_fps = 6.5
+			run_fps = 14.5
+			atk_fps = 17.0
+		"skin_vocaloid":
+			idle_fps = 6.5
+			run_fps = 12.8
+			atk_fps = 16.0
+		"skin_angel", "skin_immortal", "skin_witch":
+			idle_fps = 5.5
+			run_fps = 10.5
+			atk_fps = 15.0
+		"skin_demon", "skin_default":
+			idle_fps = 6.0
+			run_fps = 12.2
+			atk_fps = 16.5
+		"skin_emperor":
+			idle_fps = 6.0
+			run_fps = 11.2
+			atk_fps = 16.0
+
+	var sk: Dictionary = SaveManager.SKIN_CATALOG.get(skin_id, SaveManager.SKIN_CATALOG["skin_default"])
+	var vcol: Color = sk.get("vfx_color", Color(0.68, 0.96, 1.0))
+	var dash_tint: Color = Color.WHITE.lerp(vcol, 0.38)
+	var fin_tint: Color = Color.WHITE.lerp(vcol, 0.22)
+
+	_add_anim(frames, "idle", idle_fps, true, [
 		_make_hero_frame(0, false, false, Color.WHITE, 0, scarf_id, weapon_type, skin_id),
 		_make_hero_frame(1, false, false, Color.WHITE, 0, scarf_id, weapon_type, skin_id),
 		_make_hero_frame(2, false, false, Color.WHITE, 0, scarf_id, weapon_type, skin_id),
-		_make_hero_frame(1, false, false, Color.WHITE, 0, scarf_id, weapon_type, skin_id),
+		_make_hero_frame(3, false, false, Color.WHITE, 0, scarf_id, weapon_type, skin_id),
 	])
-	_add_anim(frames, "run", 11.0, true, [
+	_add_anim(frames, "run", run_fps, true, [
 		_make_hero_frame(0, true, false, Color.WHITE, 0, scarf_id, weapon_type, skin_id),
 		_make_hero_frame(1, true, false, Color.WHITE, 0, scarf_id, weapon_type, skin_id),
 		_make_hero_frame(2, true, false, Color.WHITE, 0, scarf_id, weapon_type, skin_id),
 		_make_hero_frame(3, true, false, Color.WHITE, 0, scarf_id, weapon_type, skin_id),
 	])
-	_add_anim(frames, "dash", 14.0, false, [
-		_make_hero_frame(2, true, false, Color(0.68, 0.96, 1.0), 0, scarf_id, weapon_type, skin_id),
+	_add_anim(frames, "dash", 15.0, false, [
+		_make_hero_frame(1, true, false, dash_tint, 0, scarf_id, weapon_type, skin_id),
+		_make_hero_frame(2, true, false, dash_tint, 0, scarf_id, weapon_type, skin_id),
 	])
-	_add_anim(frames, "attack_1", 15.0, false, [
+	_add_anim(frames, "attack_1", atk_fps, false, [
 		_make_hero_frame(0, false, true, Color.WHITE, 1, scarf_id, weapon_type, skin_id),
 		_make_hero_frame(1, false, true, Color.WHITE, 2, scarf_id, weapon_type, skin_id),
 	])
-	_add_anim(frames, "attack_2", 15.0, false, [
+	_add_anim(frames, "attack_2", atk_fps, false, [
 		_make_hero_frame(1, false, true, Color.WHITE, 2, scarf_id, weapon_type, skin_id),
 		_make_hero_frame(2, false, true, Color.WHITE, 3, scarf_id, weapon_type, skin_id),
 	])
-	_add_anim(frames, "attack_3", 15.0, false, [
-		_make_hero_frame(2, false, true, Color(1.0, 0.94, 0.72), 4, scarf_id, weapon_type, skin_id),
+	_add_anim(frames, "attack_3", atk_fps, false, [
+		_make_hero_frame(2, false, true, fin_tint, 3, scarf_id, weapon_type, skin_id),
+		_make_hero_frame(3, false, true, fin_tint, 4, scarf_id, weapon_type, skin_id),
 	])
-	_add_anim(frames, "special", 13.0, false, [
-		_make_hero_frame(2, false, true, Color(0.55, 0.92, 1.0), 4, scarf_id, weapon_type, skin_id),
+	_add_anim(frames, "special", 13.5, false, [
+		_make_hero_frame(1, false, true, dash_tint, 3, scarf_id, weapon_type, skin_id),
+		_make_hero_frame(3, false, true, dash_tint, 4, scarf_id, weapon_type, skin_id),
 	])
 	_add_anim(frames, "hurt", 8.0, false, [
 		_make_hero_frame(1, false, false, Color(1.0, 0.42, 0.42), 0, scarf_id, weapon_type, skin_id),
@@ -194,135 +228,411 @@ static func _add_anim(frames: SpriteFrames, anim_name: String, fps: float, loop:
 		frames.add_frame(anim_name, tex)
 
 
-## Nhân vật chính phong cách ANIME CỔ TRANG / KIẾM HIỆP (44x48 pixel — Nữ Kiếm Khách Hán Phục):
-## - Tóc đen huyền dài buộc đuôi ngựa cao bồng bềnh, trâm ngọc vàng + dải lụa bay phấp phới theo bước chạy.
-## - Mắt anime to tròn long lanh ánh ngọc bích, má hồng nhẹ.
-## - Hán phục cổ trang cổ giao lĩnh trắng ngà phối áo khoác lụa đỏ son viền vàng kim, dải lụa/khăn choàng đổi màu theo trang bị mở khóa.
-## - Tay áo rộng (quảng tụ) thướt tha, thắt lưng ngọc bội và thanh Cổ Kiếm ánh ngọc đeo hông / vung kiếm khí thủy mặc!
+## Nhân vật chính phong cách ANIME CHIBI ĐẶC SẮC (48x52 pixel) — 10 SKIN CHUẨN ẢNH MẪU, MỖI SKIN CÓ ANIMATION RIÊNG!
+## 1. Kiếm Khách (skin_default): Tóc đen xoăn dựng, mắt đỏ sắc, giáp đen-đỏ viền vàng, khăn lụa đỏ bay phấp phới & kiếm lửa đỏ rực.
+## 2. Tiên Nhân (skin_immortal): Tóc đen dài búi cao, đạo bào trắng lam, chuyển động lơ lửng thanh thoát.
+## 3. Ninja (skin_ninja): Tóc vàng dựng, băng trán thép, áo khoác cam-đen, dáng chạy chúi người cực nhanh.
+## 4. Miko (skin_miko): Tóc đen dài, mặt nạ cáo Kitsune đeo nghiêng bên đầu, áo trắng hakama đỏ.
+## 5. Vocaloid (skin_vocaloid): Tóc 2 bím siêu dài xanh ngọc nhún nhảy lệch pha theo từng bước, trang phục idol hiện đại.
+## 6. Hồ Ly (skin_fox): Tóc trắng, đôi tai cáo bông lớn, 3 chiếc đuôi bạch hồ vẫy mượt mà phía sau, kimono trắng-lam.
+## 7. Ma Nữ (skin_witch): Tóc tím đậm dài, váy ma nữ tím vàng & đàn bướm tím phát sáng bay lượn quanh người theo từng frame.
+## 8. Ác Ma (skin_demon): Tóc bạc dựng, mắt đỏ rực, đôi cánh dơi hắc ám vỗ lên xuống theo từng bước.
+## 9. Thiên Sứ (skin_angel): Tóc trắng, vòng hào quang vàng lơ lửng trên đầu, đôi cánh lông vũ trắng vỗ bay nhẹ nhàng.
+## 10. Hoàng Đế (skin_emperor): Tóc đen đội vương miện hoàng kim, long bào đen vàng & Kim Long uốn lượn phía sau lưng theo từng frame!
 static func _make_hero_frame(step: int, running: bool, attacking: bool, modulate_col: Color = Color.WHITE, sword_pose: int = 0, scarf_id: String = "blue", weapon_type: String = "sword", skin_id: String = "skin_default") -> ImageTexture:
-	var w := 44
-	var h := 48
+	var w: int = 48
+	var h: int = 52
 	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
 	img.fill(Color(0, 0, 0, 0))
 
-	var bob: int = 1 if (step % 2 == 1) else 0
-	var lean: int = 1 if running else 0
-	var flow: int = (step % 2) * 2 - 1 # Nhịp bay lụa & tóc (-1 / +1)
-	var outline := Color(0.11, 0.08, 0.14)
+	# Nhịp chuyển động cơ thể riêng theo từng Skin!
+	var is_floating: bool = (skin_id == "skin_angel" or skin_id == "skin_immortal" or skin_id == "skin_witch")
+	var bob: int = 0
+	if is_floating:
+		# Bay lơ lửng nhịp nhàng (0 -> -1 -> -2 -> -1)
+		bob = -1 if (step == 1 or step == 3) else (-2 if step == 2 else 0)
+	elif skin_id == "skin_vocaloid" or skin_id == "skin_fox":
+		# Nhún nhảy sinh động
+		bob = -1 if (step == 1 or step == 3) else 0
+	else:
+		bob = 1 if (step % 2 == 1) else 0
 
-	# Lấy bảng màu theo 1 trong 10 bộ Trang Phục Gacha (Thường / Hiếm / Sử Thi / Huyền Thoại)
+	var lean: int = 0
+	if running:
+		lean = 3 if skin_id == "skin_ninja" else 1
+	var flow: int = -1 if (step == 0) else (0 if (step == 1 or step == 3) else 1)
+	var wing_phase: int = -3 if (step == 0) else (0 if (step == 1 or step == 3) else 3)
+
+	var outline := Color(0.10, 0.07, 0.14)
 	var sk: Dictionary = SaveManager.SKIN_CATALOG.get(skin_id, SaveManager.SKIN_CATALOG["skin_default"])
 	var hair_d: Color = sk["hair_d"]
 	var hair_m: Color = sk["hair_m"]
 	var hair_h: Color = sk["hair_h"]
 	var hair_spec: Color = hair_h.lightened(0.32)
-	var skin := Color(0.99, 0.89, 0.81)
+	var skin_c := Color(0.99, 0.89, 0.81)
 	var skin_shade := Color(0.88, 0.72, 0.64)
-	var blush := Color(0.96, 0.60, 0.62)
+	var blush := Color(0.96, 0.58, 0.62)
 	var eye_iris: Color = sk["eye"]
 
 	var robe_white: Color = sk["robe"]
-	var robe_shade: Color = robe_white.darkened(0.15)
-	var crimson_d: Color = sk["coat_d"]
-	var crimson_m: Color = sk["coat_m"]
-	var crimson_h: Color = crimson_m.lightened(0.22)
-	var gold := Color(0.98, 0.82, 0.30)
-	var gold_d := Color(0.72, 0.52, 0.16)
-	var boot_d := Color(0.18, 0.14, 0.20)
+	var robe_shade: Color = robe_white.darkened(0.16)
+	var coat_d: Color = sk["coat_d"]
+	var coat_m: Color = sk["coat_m"]
+	var coat_h: Color = coat_m.lightened(0.22)
+	var vfx_col: Color = sk.get("vfx_color", Color(1.0, 0.35, 0.25))
+	var gold := Color(0.99, 0.82, 0.28)
+	var gold_d := Color(0.72, 0.50, 0.14)
+	var boot_d := Color(0.14, 0.11, 0.18)
 
-	# Dải lụa cổ trang / Phi bạch (đổi màu linh hoạt theo Khăn Choàng mở khóa từ Bảng Truy Nã!)
+	# Khăn/dải lụa: Kiếm Khách mặc định ưu tiên dải đỏ rực chuẩn ảnh mẫu (trừ khi người chơi đổi khăn khác ở Bảng Truy Nã)
 	var sp: Dictionary = SaveManager.SCARF_PALETTES.get(scarf_id, SaveManager.SCARF_PALETTES["blue"])
-	var ribbon_d: Color = sp["dark"]
-	var ribbon_m: Color = sp["mid"]
-	var ribbon_h: Color = sp["hi"]
+	var ribbon_d: Color = Color(0.56, 0.08, 0.12) if (skin_id == "skin_default" and scarf_id == "blue") else (sp["dark"] as Color)
+	var ribbon_m: Color = Color(0.90, 0.16, 0.20) if (skin_id == "skin_default" and scarf_id == "blue") else (sp["mid"] as Color)
+	var ribbon_h: Color = Color(1.0, 0.44, 0.36) if (skin_id == "skin_default" and scarf_id == "blue") else (sp["hi"] as Color)
 
-	# 1. Đuôi tóc dài buộc cao (High Ponytail) & Dải lụa Phi Bạch tung bay phía sau
-	var tail_x: int = 8 - (3 if running else 0)
-	_fill_rect(img, tail_x, 12 + bob + flow, 8, 5, hair_d)
-	_fill_rect(img, tail_x - 3, 16 + bob + flow, 7, 8, hair_d)
-	_fill_rect(img, tail_x - 2, 16 + bob + flow, 4, 6, hair_m)
-	_fill_rect(img, tail_x - 5, 22 + bob + flow, 5, 6, hair_d)
-	# Dải lụa phi bạch uốn lượn mềm mại phía sau lưng
-	_fill_rect(img, tail_x - 2, 23 + bob - flow, 10, 3, ribbon_d)
-	_fill_rect(img, tail_x - 1, 23 + bob - flow, 8, 2, ribbon_m)
-	_fill_rect(img, tail_x - 5, 26 + bob - flow, 6, 3, ribbon_m)
-	_fill_rect(img, tail_x - 4, 26 + bob - flow, 4, 1, ribbon_h)
+	var cx: int = 23 + lean
+	var cy_head: int = 16 + bob
 
-	# 2. Búi tóc đỉnh đầu + Trâm cài vàng ngọc bích + Dải ruy băng tóc
-	_fill_circle(img, 18 + lean, 6 + bob, 4, hair_d)
-	_fill_circle(img, 18 + lean, 6 + bob, 3, hair_m)
-	_fill_rect(img, 13 + lean, 5 + bob, 11, 2, gold) # Trâm cài ngang
-	_fill_rect(img, 11 + lean, 4 + bob, 3, 3, ribbon_h) # Hạt ngọc đầu trâm
-	_fill_rect(img, 12 + lean, 8 + bob, 4, 3, ribbon_m) # Nơ lụa buộc tóc
+	# =========================================================================
+	# LỚP 1 (PHÍA SAU LƯNG): Cánh, Đuôi Hồ Ly, Kim Long Hoàng Đế, Tóc Dài, Dải Lụa
+	# =========================================================================
+	match skin_id:
+		"skin_default":
+			# Dải lụa đỏ rực tung bay 2 nhánh đầy khí thế sau lưng Chiến Giáp Kiếm Khách!
+			var sx: int = cx - 10 - (3 if running else 0)
+			_fill_rect(img, sx, 19 + bob + flow, 10, 4, ribbon_d)
+			_fill_rect(img, sx + 1, 19 + bob + flow, 8, 2, ribbon_m)
+			_fill_rect(img, sx - 5, 22 + bob - flow, 8, 3, ribbon_m)
+			_fill_rect(img, sx - 4, 22 + bob - flow, 6, 1, ribbon_h)
+			_fill_rect(img, sx - 3, 27 + bob + flow, 9, 3, ribbon_d)
+			_fill_rect(img, sx - 2, 27 + bob + flow, 7, 2, ribbon_m)
 
-	# 3. Đầu & Mái tóc Anime Cổ Trang bồng bềnh có vầng sáng ngang đỉnh tóc
-	_fill_circle(img, 21 + lean, 14 + bob, 8, hair_d)
-	_fill_circle(img, 21 + lean, 13 + bob, 7, hair_m)
-	_fill_rect(img, 16 + lean, 8 + bob, 10, 2, hair_h)
-	_fill_rect(img, 18 + lean, 8 + bob, 5, 1, hair_spec) # Vầng sáng tóc đặc trưng anime
+		"skin_fox":
+			# 3 CHIẾC ĐUÔI CỬU VĨ BẠCH HỒ BỒNG BỀNH VẪY THEO TỪNG FRAME!
+			var wag: int = -2 if step == 0 else (2 if step == 2 else 0)
+			var tx: int = cx - 12 - (2 if running else 0)
+			var fur_w := Color(0.99, 0.99, 1.0)
+			var fur_s := Color(0.76, 0.85, 0.96)
+			# Đuôi trên
+			_fill_circle(img, tx + 2, 24 + bob + wag, 5, fur_w)
+			_fill_circle(img, tx - 1, 21 + bob + wag, 4, fur_w)
+			_fill_circle(img, tx + 3, 25 + bob + wag, 3, fur_s)
+			# Đuôi giữa
+			_fill_circle(img, tx - 2, 31 + bob - wag, 5, fur_w)
+			_fill_circle(img, tx - 4, 30 + bob - wag, 3, fur_s)
+			# Đuôi dưới
+			_fill_circle(img, tx + 3, 35 + bob + wag, 4, fur_w)
+			_fill_circle(img, tx + 1, 36 + bob + wag, 3, fur_s)
 
-	# 4. Khuôn mặt Anime thanh tú (mắt lớn có tròng ngọc bích & chấm sáng long lanh)
-	_fill_rect(img, 18 + lean, 13 + bob, 10, 8, skin)
-	_fill_rect(img, 18 + lean, 13 + bob, 10, 1, skin_shade)
-	_fill_rect(img, 19 + lean, 20 + bob, 8, 1, skin_shade)
-	# Hai lọn tóc mai dài rủ hai bên má đặc trưng cổ trang
-	_fill_rect(img, 16 + lean, 12 + bob, 3, 12, hair_d)
-	_fill_rect(img, 17 + lean, 12 + bob, 2, 10, hair_m)
-	_fill_rect(img, 26 + lean, 12 + bob, 3, 9, hair_d)
-	# Tóc mái tỉa nhọn kiểu anime
-	_fill_rect(img, 18 + lean, 11 + bob, 10, 3, hair_m)
-	img.set_pixel(21 + lean, 14 + bob, hair_d)
-	img.set_pixel(25 + lean, 14 + bob, hair_d)
-	# Cặp mắt anime 3px chi tiết (mi đen + tròng ngọc + chấm sáng trắng)
-	_fill_rect(img, 20 + lean, 15 + bob, 3, 3, outline)
-	_fill_rect(img, 25 + lean, 15 + bob, 3, 3, outline)
-	_fill_rect(img, 21 + lean, 16 + bob, 2, 2, eye_iris)
-	_fill_rect(img, 25 + lean, 16 + bob, 2, 2, eye_iris)
-	img.set_pixel(20 + lean, 15 + bob, Color.WHITE)
-	img.set_pixel(25 + lean, 15 + bob, Color.WHITE)
+		"skin_angel":
+			# ĐÔI CÁNH THIÊN SỨ LÔNG VŨ TRẮNG KHỔNG LỒ VỖ NHỊP NHÀNG (wing_phase)!
+			var wing_w := Color(0.99, 0.99, 1.0)
+			var wing_s := Color(0.84, 0.88, 0.96)
+			var wy: int = 20 + bob + wing_phase
+			# Cánh trái
+			_fill_rect(img, cx - 18, wy, 12, 6, wing_w)
+			_fill_rect(img, cx - 20, wy + 2, 8, 5, wing_w)
+			_fill_rect(img, cx - 16, wy + 6, 10, 5, wing_s)
+			_fill_rect(img, cx - 13, wy + 10, 7, 4, wing_w)
+			# Cánh phải
+			_fill_rect(img, cx + 6, wy, 12, 6, wing_w)
+			_fill_rect(img, cx + 12, wy + 2, 8, 5, wing_w)
+			_fill_rect(img, cx + 6, wy + 6, 10, 5, wing_s)
+			_fill_rect(img, cx + 6, wy + 10, 7, 4, wing_w)
+
+		"skin_demon":
+			# ĐÔI CÁNH DƠI ÁC MA ĐEN-ĐỎ VỖ MẠNH MẼ THEO TỪNG FRAME!
+			var bat_d := Color(0.14, 0.05, 0.10)
+			var bat_m := Color(0.56, 0.08, 0.16)
+			var bat_hi := Color(0.90, 0.16, 0.26)
+			var wy: int = 19 + bob + wing_phase
+			# Cánh dơi trái
+			_fill_rect(img, cx - 19, wy, 13, 3, bat_d)
+			_fill_rect(img, cx - 18, wy + 3, 12, 6, bat_m)
+			_fill_rect(img, cx - 20, wy + 1, 3, 7, bat_d)
+			_fill_rect(img, cx - 14, wy + 8, 4, 4, bat_hi)
+			_fill_rect(img, cx - 19, wy + 7, 3, 4, bat_d)
+			# Cánh dơi phải
+			_fill_rect(img, cx + 6, wy, 13, 3, bat_d)
+			_fill_rect(img, cx + 6, wy + 3, 12, 6, bat_m)
+			_fill_rect(img, cx + 17, wy + 1, 3, 7, bat_d)
+			_fill_rect(img, cx + 10, wy + 8, 4, 4, bat_hi)
+			_fill_rect(img, cx + 16, wy + 7, 3, 4, bat_d)
+
+		"skin_emperor":
+			# KIM LONG HOÀNG KIM UỐN LƯỢN PHÍA SAU LƯNG HOÀNG ĐẾ THEO TỪNG FRAME!
+			var dw: int = -2 if step == 0 else (2 if step == 2 else 0)
+			var dr_glow := Color(1.0, 0.92, 0.42)
+			var dr_gold := Color(0.96, 0.72, 0.14)
+			var dr_dark := Color(0.68, 0.42, 0.06)
+			# Thân rồng cong hình chữ S sau lưng
+			_fill_circle(img, cx - 13, 16 + bob + dw, 4, dr_gold)
+			_fill_circle(img, cx - 13, 15 + bob + dw, 2, dr_glow)
+			_fill_circle(img, cx - 10, 11 + bob - dw, 3, dr_gold)
+			_fill_circle(img, cx + 12, 14 + bob - dw, 4, dr_gold)
+			_fill_circle(img, cx + 14, 12 + bob - dw, 3, dr_glow) # Đầu rồng vàng phía trên bên phải!
+			img.set_pixel(cx + 15, 11 + bob - dw, Color(1.0, 0.22, 0.16)) # Mắt rồng đỏ rực
+			_fill_circle(img, cx + 13, 21 + bob + dw, 4, dr_dark)
+			_fill_circle(img, cx + 11, 27 + bob - dw, 4, dr_gold)
+			_fill_circle(img, cx - 14, 24 + bob - dw, 4, dr_dark)
+			_fill_circle(img, cx - 12, 31 + bob + dw, 3, dr_glow)
+
+		"skin_vocaloid":
+			# HAI BÍM TÓC XANH NGỌC SIÊU DÀI NHÚN NHẢY LỆCH PHA ĐẶC TRƯNG VOCALOID!
+			var bounce_l: int = -2 if (step == 0 or step == 1) else 2
+			var bounce_r: int = -bounce_l
+			# Bím trái dài uốn lượn
+			_fill_rect(img, cx - 16, 15 + bob + bounce_l, 7, 15, hair_d)
+			_fill_rect(img, cx - 15, 16 + bob + bounce_l, 5, 13, hair_m)
+			_fill_rect(img, cx - 14, 17 + bob + bounce_l, 2, 8, hair_h)
+			_fill_rect(img, cx - 18, 28 + bob + bounce_l, 6, 10, hair_m)
+			_fill_rect(img, cx - 17, 30 + bob + bounce_l, 3, 7, hair_h)
+			# Bím phải dài uốn lượn
+			_fill_rect(img, cx + 9, 15 + bob + bounce_r, 7, 15, hair_d)
+			_fill_rect(img, cx + 10, 16 + bob + bounce_r, 5, 13, hair_m)
+			_fill_rect(img, cx + 11, 17 + bob + bounce_r, 2, 8, hair_h)
+			_fill_rect(img, cx + 12, 28 + bob + bounce_r, 6, 10, hair_m)
+			_fill_rect(img, cx + 13, 30 + bob + bounce_r, 3, 7, hair_h)
+			# Cặp nơ buộc 2 bên tóc
+			_fill_rect(img, cx - 11, 12 + bob, 4, 3, Color(0.12, 0.14, 0.22))
+			_fill_rect(img, cx + 7, 12 + bob, 4, 3, Color(0.12, 0.14, 0.22))
+
+		"skin_immortal", "skin_miko", "skin_witch":
+			# Tóc dài buông xõa bay nhẹ trong gió sau lưng
+			var sway_h: int = flow - (2 if running else 0)
+			_fill_rect(img, cx - 10 + sway_h, 19 + bob, 20, 17, hair_d)
+			_fill_rect(img, cx - 8 + sway_h, 20 + bob, 16, 14, hair_m)
+			_fill_rect(img, cx - 11 + sway_h, 30 + bob, 6, 7, hair_d)
+			_fill_rect(img, cx + 5 + sway_h, 30 + bob, 6, 7, hair_d)
+
+		"skin_ninja":
+			# Đuôi băng trán Ninja tung bay cực gắt phía sau đầu
+			var nx: int = cx - 12 - (3 if running else 0)
+			_fill_rect(img, nx, 13 + bob + flow, 7, 2, Color(0.16, 0.18, 0.26))
+			_fill_rect(img, nx - 4, 15 + bob - flow, 6, 2, Color(0.16, 0.18, 0.26))
+
+	# =========================================================================
+	# LỚP 2: ĐẦU, TÓC ANIME ĐẶC TRƯNG TỪNG SKIN & PHỤ KIỆN ĐỈNH ĐẦU
+	# =========================================================================
+	_fill_circle(img, cx, cy_head, 9, hair_d)
+	_fill_circle(img, cx, cy_head - 1, 8, hair_m)
+
+	# Tạo dáng tóc & phụ kiện đầu riêng cho 10 Skin!
+	match skin_id:
+		"skin_default":
+			# Tóc đen xoăn dựng kiểu anime (nhiều lọn tóc nhọn tỉa phóng khoáng)
+			_fill_rect(img, cx - 10, cy_head - 6, 4, 4, hair_d)
+			_fill_rect(img, cx - 6, cy_head - 11, 4, 4, hair_d)
+			_fill_rect(img, cx - 1, cy_head - 12, 4, 5, hair_m)
+			_fill_rect(img, cx + 4, cy_head - 10, 4, 4, hair_d)
+			_fill_rect(img, cx + 7, cy_head - 6, 4, 4, hair_d)
+		"skin_ninja":
+			# Tóc vàng dựng nhọn đặc trưng + Băng trán thép sáng loáng!
+			_fill_rect(img, cx - 9, cy_head - 8, 4, 4, hair_m)
+			_fill_rect(img, cx - 5, cy_head - 12, 4, 5, hair_h)
+			_fill_rect(img, cx, cy_head - 13, 4, 6, hair_h)
+			_fill_rect(img, cx + 5, cy_head - 11, 4, 5, hair_m)
+			_fill_rect(img, cx + 8, cy_head - 7, 3, 4, hair_m)
+			# Băng trán vải đen + miếng thép bạc ở giữa trán
+			_fill_rect(img, cx - 8, cy_head - 5, 16, 3, Color(0.14, 0.16, 0.24))
+			_fill_rect(img, cx - 4, cy_head - 5, 8, 3, Color(0.82, 0.88, 0.96))
+			_fill_rect(img, cx - 2, cy_head - 4, 4, 1, Color(0.32, 0.38, 0.48))
+		"skin_fox":
+			# ĐÔI TAI CÁO BẠCH HỒ CAO NHỌN LÔNG BỒNG BỀNH
+			var ear_in := Color(0.88, 0.72, 0.84)
+			_fill_rect(img, cx - 9, cy_head - 13, 5, 7, hair_h)
+			_fill_rect(img, cx - 8, cy_head - 15, 3, 3, hair_m)
+			_fill_rect(img, cx - 8, cy_head - 12, 3, 5, ear_in)
+			_fill_rect(img, cx + 4, cy_head - 13, 5, 7, hair_h)
+			_fill_rect(img, cx + 5, cy_head - 15, 3, 3, hair_m)
+			_fill_rect(img, cx + 5, cy_head - 12, 3, 5, ear_in)
+		"skin_angel":
+			# VÒNG HÀO QUANG VÀNG LƠ LỬNG TRÊN ĐẦU (bob riêng biệt!)
+			var halo_y: int = cy_head - 13 + (1 if (step % 2 == 1) else 0)
+			_fill_rect(img, cx - 7, halo_y, 14, 2, Color(1.0, 0.90, 0.36))
+			_fill_rect(img, cx - 5, halo_y - 1, 10, 1, Color(1.0, 0.98, 0.78))
+			_fill_rect(img, cx - 5, halo_y + 2, 10, 1, Color(0.95, 0.74, 0.18))
+		"skin_immortal":
+			# Búi tóc Tiên Nhân đỉnh đầu cài trâm bạc lam
+			_fill_circle(img, cx, cy_head - 10, 4, hair_d)
+			_fill_circle(img, cx, cy_head - 10, 3, hair_m)
+			_fill_rect(img, cx - 6, cy_head - 11, 12, 2, Color(0.76, 0.92, 1.0))
+			_fill_rect(img, cx - 7, cy_head - 12, 2, 3, Color(0.32, 0.74, 1.0))
+		"skin_demon":
+			# Tóc bạc dựng gai góc + cặp sừng ác ma nhỏ đỏ đen
+			_fill_rect(img, cx - 8, cy_head - 10, 4, 4, hair_m)
+			_fill_rect(img, cx - 2, cy_head - 12, 5, 5, hair_h)
+			_fill_rect(img, cx + 4, cy_head - 10, 4, 4, hair_m)
+			_fill_rect(img, cx - 9, cy_head - 12, 3, 4, Color(0.75, 0.10, 0.18))
+			_fill_rect(img, cx + 6, cy_head - 12, 3, 4, Color(0.75, 0.10, 0.18))
+		"skin_miko":
+			# MẶT NẠ CÁO KITSUNE TRẮNG VIỀN ĐỎ ĐEO NGHIÊNG BÊN MÁI TÓC!
+			_fill_circle(img, cx + 6, cy_head - 7, 5, Color(0.99, 0.98, 0.96))
+			_fill_rect(img, cx + 3, cy_head - 13, 2, 3, Color(0.99, 0.98, 0.96)) # Tai mặt nạ trái
+			_fill_rect(img, cx + 8, cy_head - 12, 2, 3, Color(0.99, 0.98, 0.96)) # Tai mặt nạ phải
+			_fill_rect(img, cx + 4, cy_head - 8, 2, 1, Color(0.92, 0.14, 0.18))  # Họa tiết đỏ mặt nạ
+			_fill_rect(img, cx + 7, cy_head - 7, 2, 1, Color(0.92, 0.14, 0.18))
+			img.set_pixel(cx + 6, cy_head - 5, Color(0.92, 0.14, 0.18))
+			# Nơ đỏ nhỏ bên trái tóc
+			_fill_rect(img, cx - 8, cy_head - 7, 4, 3, Color(0.92, 0.16, 0.22))
+		"skin_emperor":
+			# VƯƠNG MIỆN LONG ĐẾ HOÀNG KIM TRÊN ĐỈNH ĐẦU!
+			_fill_rect(img, cx - 6, cy_head - 11, 12, 4, gold_d)
+			_fill_rect(img, cx - 5, cy_head - 12, 10, 3, gold)
+			_fill_rect(img, cx - 6, cy_head - 14, 2, 3, gold)
+			_fill_rect(img, cx - 1, cy_head - 15, 3, 4, Color(1.0, 0.94, 0.56))
+			_fill_rect(img, cx + 4, cy_head - 14, 2, 3, gold)
+			img.set_pixel(cx, cy_head - 12, Color(0.98, 0.18, 0.20)) # Viên hồng ngọc giữa vương miện
+		"skin_witch":
+			# Cài tóc hoa tím vàng huyền bí
+			_fill_rect(img, cx - 7, cy_head - 9, 4, 3, Color(0.76, 0.36, 1.0))
+			_fill_rect(img, cx - 6, cy_head - 8, 2, 1, gold)
+
+	# Vầng sáng ngang đỉnh tóc chuẩn Anime
+	if skin_id != "skin_ninja":
+		_fill_rect(img, cx - 5, cy_head - 6, 10, 2, hair_h)
+		_fill_rect(img, cx - 3, cy_head - 6, 5, 1, hair_spec)
+
+	# =========================================================================
+	# LỚP 3: KHUÔN MẶT ANIME CHIBI THANH TÚ (Mắt to long lanh có tròng màu & chấm sáng)
+	# =========================================================================
+	_fill_rect(img, cx - 5, cy_head - 2, 11, 9, skin_c)
+	_fill_rect(img, cx - 5, cy_head - 2, 11, 1, skin_shade)
+	_fill_rect(img, cx - 4, cy_head + 6, 9, 1, skin_shade)
+	# Tóc mai rủ 2 bên má & mái tỉa nhọn kiểu anime
+	_fill_rect(img, cx - 7, cy_head - 3, 3, 12, hair_d)
+	_fill_rect(img, cx - 6, cy_head - 3, 2, 10, hair_m)
+	_fill_rect(img, cx + 5, cy_head - 3, 3, 10, hair_d)
+	_fill_rect(img, cx - 5, cy_head - 4, 11, 3, hair_m)
+	img.set_pixel(cx - 2, cy_head - 1, hair_d)
+	img.set_pixel(cx + 2, cy_head - 1, hair_d)
+	# Cặp mắt anime sắc nét 3x3px
+	_fill_rect(img, cx - 4, cy_head + 1, 3, 3, outline)
+	_fill_rect(img, cx + 2, cy_head + 1, 3, 3, outline)
+	_fill_rect(img, cx - 3, cy_head + 2, 2, 2, eye_iris)
+	_fill_rect(img, cx + 2, cy_head + 2, 2, 2, eye_iris)
+	img.set_pixel(cx - 4, cy_head + 1, Color.WHITE)
+	img.set_pixel(cx + 2, cy_head + 1, Color.WHITE)
 	# Má hồng nhẹ
-	_fill_rect(img, 19 + lean, 18 + bob, 2, 1, blush)
-	img.set_pixel(27 + lean, 18 + bob, blush)
+	_fill_rect(img, cx - 5, cy_head + 4, 2, 1, blush)
+	img.set_pixel(cx + 5, cy_head + 4, blush)
 
-	# 5. Cổ áo Hán phục giao lĩnh chữ Y + Khăn lụa vòng cổ
-	_fill_rect(img, 16 + lean, 21 + bob, 13, 3, ribbon_d)
-	_fill_rect(img, 17 + lean, 21 + bob, 11, 2, ribbon_m)
-	_fill_rect(img, 19 + lean, 21 + bob, 7, 1, ribbon_h)
+	# =========================================================================
+	# LỚP 4: TRANG PHỤC & GIÁP CHIBI RIÊNG BIỆT CHO TỪNG SKIN
+	# =========================================================================
+	var ty: int = 25 + bob
+	var skirt_fl: int = 2 if running else 0
+	match skin_id:
+		"skin_default":
+			# CHIẾN GIÁP HUYỀN BÍ (Giáp vai đen viền vàng, khăn lụa đỏ vòng cổ, áo choàng trắng-đỏ xẻ tà)
+			_fill_rect(img, cx - 7, ty - 2, 15, 3, ribbon_d)
+			_fill_rect(img, cx - 6, ty - 2, 13, 2, ribbon_m)
+			_fill_rect(img, cx - 8, ty, 17, 10, coat_d)
+			_fill_rect(img, cx - 5, ty + 1, 11, 9, robe_white)
+			# Giáp vai đen viền vàng kim nổi bật
+			_fill_rect(img, cx - 9, ty, 5, 6, coat_d)
+			_fill_rect(img, cx - 9, ty, 5, 1, gold)
+			_fill_rect(img, cx + 5, ty, 5, 6, coat_d)
+			_fill_rect(img, cx + 5, ty, 5, 1, gold)
+			# Thắt lưng đỏ vàng + Tà áo trắng viền đỏ bay phấp phới
+			_fill_rect(img, cx - 7, ty + 6, 15, 2, coat_m)
+			_fill_rect(img, cx - 2, ty + 6, 5, 2, gold)
+			_fill_rect(img, cx - 8 - skirt_fl, ty + 8, 17 + skirt_fl * 2, 8, robe_white)
+			_fill_rect(img, cx - 8 - skirt_fl, ty + 14, 17 + skirt_fl * 2, 2, coat_m)
+			_fill_rect(img, cx - 1, ty + 9, 3, 7, coat_d) # Đường xẻ tà giữa
 
-	# 6. Thân Hán phục trắng ngà - đỏ son viền vàng + Tay áo rộng (Quảng tụ) + Vạt váy thướt tha
-	_fill_rect(img, 15 + lean, 24 + bob, 14, 14, robe_shade)
-	_fill_rect(img, 16 + lean, 24 + bob, 12, 13, robe_white)
-	# Áo khoác lụa đỏ son viền vàng khoác ngoài hai bên vai
-	_fill_rect(img, 14 + lean, 24 + bob, 5, 11, crimson_d)
-	_fill_rect(img, 15 + lean, 24 + bob, 4, 10, crimson_m)
-	_fill_rect(img, 16 + lean, 24 + bob, 2, 6, crimson_h)
-	_fill_rect(img, 24 + lean, 24 + bob, 5, 10, crimson_m)
-	# Viền cổ áo chữ V đỏ vàng
-	_fill_rect(img, 19 + lean, 24 + bob, 2, 4, crimson_m)
-	_fill_rect(img, 22 + lean, 24 + bob, 2, 4, crimson_m)
-	# Đai lưng lụa + Ngọc bội vàng treo giữa eo
-	_fill_rect(img, 15 + lean, 30 + bob, 14, 2, crimson_d)
-	_fill_rect(img, 16 + lean, 30 + bob, 12, 1, gold)
-	_fill_rect(img, 20 + lean, 31 + bob, 3, 5, ribbon_m) # Dải ngọc bội rủ xuống vạt váy
-	_fill_rect(img, 21 + lean, 32 + bob, 1, 2, gold)
-	# Chân váy xòe chuyển động nhẹ khi chạy + viền hoa văn đỏ vàng
-	var skirt_fl: int = 1 if running else 0
-	_fill_rect(img, 14 + lean - skirt_fl, 35 + bob, 16 + skirt_fl * 2, 5, robe_white)
-	_fill_rect(img, 14 + lean - skirt_fl, 38 + bob, 16 + skirt_fl * 2, 2, crimson_m)
-	_fill_rect(img, 14 + lean - skirt_fl, 37 + bob, 16 + skirt_fl * 2, 1, gold_d)
+		"skin_ninja":
+			# Áo khoác Ninja cam-đen kéo khóa + quần đen gọn gàng tốc độ!
+			_fill_rect(img, cx - 7, ty - 1, 15, 11, coat_m)
+			_fill_rect(img, cx - 7, ty - 1, 15, 3, robe_white) # Cổ áo cao đen
+			_fill_rect(img, cx - 1, ty + 2, 3, 8, robe_white)  # Khóa kéo đen giữa ngực
+			_fill_rect(img, cx - 8, ty + 1, 3, 8, coat_d)
+			_fill_rect(img, cx + 6, ty + 1, 3, 8, coat_d)
+			_fill_rect(img, cx - 7, ty + 9, 15, 5, robe_white)
+			_fill_rect(img, cx - 7, ty + 8, 15, 2, Color(0.95, 0.95, 0.95)) # Đai băng quấn eo
 
-	# 7. Đôi hài vải thêu cổ trang bước uyển chuyển
+		"skin_miko":
+			# Áo trắng thần xã (Haori) tay rộng + Váy Hakama đỏ rực
+			_fill_rect(img, cx - 8, ty, 17, 8, robe_white)
+			_fill_rect(img, cx - 3, ty, 7, 3, coat_m) # Cổ đỏ
+			_fill_rect(img, cx - 10, ty + 1, 4, 8, robe_white) # Tay áo rộng trái
+			_fill_rect(img, cx + 7, ty + 1, 4, 8, robe_white)  # Tay áo rộng phải
+			_fill_rect(img, cx - 8 - skirt_fl, ty + 7, 17 + skirt_fl * 2, 10, coat_m)
+			_fill_rect(img, cx - 7 - skirt_fl, ty + 7, 15 + skirt_fl * 2, 2, coat_d)
+			_fill_rect(img, cx - 2, ty + 7, 5, 4, Color(0.99, 0.95, 0.88)) # Nơ trắng trước hakama
+
+		"skin_vocaloid":
+			# Trang phục Idol Vocaloid: áo sơ mi trắng cà vạt xanh ngọc + váy xếp ly đen viền xanh
+			_fill_rect(img, cx - 6, ty, 13, 8, robe_white)
+			_fill_rect(img, cx - 1, ty + 1, 3, 7, coat_m) # Cà vạt xanh ngọc nổi bật
+			_fill_rect(img, cx - 8, ty + 2, 3, 6, coat_d) # Ống tay đen viền cyan
+			_fill_rect(img, cx + 6, ty + 2, 3, 6, coat_d)
+			_fill_rect(img, cx - 8 - skirt_fl, ty + 8, 17 + skirt_fl * 2, 6, coat_d)
+			_fill_rect(img, cx - 8 - skirt_fl, ty + 13, 17 + skirt_fl * 2, 2, coat_m)
+
+		"skin_emperor":
+			# LONG BÀO HOÀNG ĐẾ ĐEN VÀNG CỰC OAI NGHIÊM
+			_fill_rect(img, cx - 8, ty - 1, 17, 17, robe_white)
+			_fill_rect(img, cx - 9, ty, 5, 5, gold) # Giáp vai rồng vàng
+			_fill_rect(img, cx + 5, ty, 5, 5, gold)
+			_fill_rect(img, cx - 4, ty, 9, 16, coat_d)
+			_fill_rect(img, cx - 2, ty + 1, 5, 14, coat_m) # Dải rồng vàng dọc thân
+			_fill_rect(img, cx - 8, ty + 7, 17, 2, gold)   # Đai ngọc hoàng kim
+			_fill_rect(img, cx - 8 - skirt_fl, ty + 14, 17 + skirt_fl * 2, 2, gold)
+
+		_:
+			# Tiên Nhân / Hồ Ly / Ma Nữ / Ác Ma / Thiên Sứ (Áo choàng & váy cổ trang nhiều tầng)
+			_fill_rect(img, cx - 7, ty - 1, 15, 2, coat_m)
+			_fill_rect(img, cx - 7, ty + 1, 15, 13, robe_shade)
+			_fill_rect(img, cx - 6, ty + 1, 13, 12, robe_white)
+			_fill_rect(img, cx - 9, ty + 1, 5, 10, coat_d)
+			_fill_rect(img, cx - 8, ty + 1, 4, 9, coat_m)
+			_fill_rect(img, cx + 5, ty + 1, 5, 10, coat_m)
+			_fill_rect(img, cx - 7, ty + 7, 15, 2, coat_d)
+			_fill_rect(img, cx - 6, ty + 7, 13, 1, gold)
+			_fill_rect(img, cx - 8 - skirt_fl, ty + 11, 17 + skirt_fl * 2, 6, robe_white)
+			_fill_rect(img, cx - 8 - skirt_fl, ty + 15, 17 + skirt_fl * 2, 2, coat_m)
+			_fill_rect(img, cx - 8 - skirt_fl, ty + 14, 17 + skirt_fl * 2, 1, gold_d)
+
+	# =========================================================================
+	# LỚP 5: ĐÔI CHÂN / HÀI CHUYỂN ĐỘNG THEO TỪNG SKIN (Thiên Sứ/Tiên Nhân bay nhẹ)
+	# =========================================================================
+	var foot_y: int = 41 + (bob if is_floating else 0)
 	var left_dy: int = -2 if (running and step == 0) else 0
 	var right_dy: int = -2 if (running and step == 2) else 0
-	var left_dx: int = -1 if (running and step == 0) else (1 if (running and step == 2) else 0)
+	var left_dx: int = -2 if (running and step == 0) else (1 if (running and step == 2) else 0)
 	var right_dx: int = -left_dx
-	_fill_rect(img, 16 + lean + left_dx, 40 + left_dy, 4, 5, boot_d)
-	_fill_rect(img, 17 + lean + left_dx, 43 + left_dy, 3, 2, crimson_m)
-	_fill_rect(img, 23 + lean + right_dx, 40 + right_dy, 4, 5, boot_d)
-	_fill_rect(img, 24 + lean + right_dx, 43 + right_dy, 3, 2, crimson_m)
+	if is_floating and not running:
+		left_dy = -1
+		right_dy = 0
+	var boot_trim: Color = coat_m if skin_id != "skin_emperor" else gold
+	_fill_rect(img, cx - 6 + left_dx, foot_y + left_dy, 4, 6, boot_d)
+	_fill_rect(img, cx - 5 + left_dx, foot_y + 4 + left_dy, 3, 2, boot_trim)
+	_fill_rect(img, cx + 2 + right_dx, foot_y + right_dy, 4, 6, boot_d)
+	_fill_rect(img, cx + 3 + right_dx, foot_y + 4 + right_dy, 3, 2, boot_trim)
 
-	# 8. Vẽ Vũ Khí & Animation tấn công riêng biệt cho 4 hệ: KIẾM / ĐAO / CUNG TÊN / GẬY PHÉP!
-	_draw_hero_weapon_pose(img, weapon_type, attacking, sword_pose, bob, lean, gold, crimson_m)
+	# =========================================================================
+	# LỚP 6: VŨ KHÍ + HIỆU ỨNG KIẾM LỬA / LINH KHÍ THEO SKIN & HỆ VŨ KHÍ
+	# =========================================================================
+	_draw_hero_weapon_pose(img, weapon_type, attacking, sword_pose, bob + 3, lean + 2, gold, vfx_col, skin_id)
+
+	# =========================================================================
+	# LỚP 7 (TRƯỚC MẶT): BƯỚM TÍM MA NỮ BAY LƯỢN QUANH NGƯỜI THEO TỪNG FRAME!
+	# =========================================================================
+	if skin_id == "skin_witch":
+		var b_col := Color(0.86, 0.48, 1.0)
+		var b_hi := Color(1.0, 0.88, 1.0)
+		var bx1: int = 7 + (step * 2)
+		var by1: int = 13 + (2 if (step % 2 == 1) else -2)
+		var bx2: int = 39 - (step * 2)
+		var by2: int = 24 + (-2 if (step % 2 == 1) else 2)
+		var bx3: int = 11 + ((3 - step) * 2)
+		var by3: int = 36 + flow
+		# Vẽ 3 chú bướm tím mini vỗ cánh
+		for b_pos: Vector2i in [Vector2i(bx1, by1), Vector2i(bx2, by2), Vector2i(bx3, by3)]:
+			_fill_rect(img, b_pos.x - 2, b_pos.y - 1, 2, 2, b_col)
+			_fill_rect(img, b_pos.x + 1, b_pos.y - 1, 2, 2, b_col)
+			img.set_pixel(clampi(b_pos.x, 0, w - 1), clampi(b_pos.y, 0, h - 1), b_hi)
 
 	_apply_clean_outline(img, outline)
 	if modulate_col != Color.WHITE:
@@ -331,109 +641,107 @@ static func _make_hero_frame(step: int, running: bool, attacking: bool, modulate
 	return ImageTexture.create_from_image(img)
 
 
-## Vẽ tạo hình và các khung hình tấn công riêng cho 4 loại vũ khí cổ trang:
-## - "sword" (Kiếm): Đâm lên -> Chém ngang -> Kiếm khí ngọc bích.
-## - "saber" (Đại Đao): Giơ đại đao bản rộng cong -> Bổ chẻ rực lửa -> Quét bán nguyệt đỏ vàng.
-## - "bow" (Cung Tên): Giương cánh cung cong -> Kéo dây tên sáng -> Bắn luồng tiễn rực sáng.
-## - "staff" (Gậy Phép): Gậy ngọc có vòng tròn thái cực/hạt châu phát sáng, giơ cao tụ pháp lực & phóng cầu phép!
-static func _draw_hero_weapon_pose(img: Image, weapon_type: String, attacking: bool, pose: int, bob: int, lean: int, gold: Color, crimson: Color) -> void:
+## Vẽ tạo hình và các khung hình tấn công riêng cho 4 loại vũ khí cổ trang + Hào quang lưỡi kiếm theo Skin!
+## - Kiếm Khách mặc định cầm thanh KIẾM LỬA ĐỎ RỰC ngay cả khi đứng/chạy giống hệt ảnh mẫu!
+static func _draw_hero_weapon_pose(img: Image, weapon_type: String, attacking: bool, pose: int, bob: int, lean: int, gold: Color, accent_col: Color, skin_id: String = "skin_default") -> void:
 	var steel_d := Color(0.46, 0.66, 0.80)
 	var steel_m := Color(0.84, 0.95, 1.0)
 	var steel_hi := Color(1.0, 1.0, 1.0)
 	var wood_c := Color(0.48, 0.28, 0.14)
+	var is_flame_hero: bool = (skin_id == "skin_default" or skin_id == "skin_demon")
 
 	match weapon_type:
 		"saber":
-			# ĐẠI ĐAO BẢN RỘNG CONG UY LỰC (Ánh đỏ lửa - vàng kim)
-			var saber_glow := Color(1.0, 0.44, 0.22)
+			var saber_glow: Color = accent_col if is_flame_hero else Color(1.0, 0.44, 0.22)
 			if attacking:
-				if pose == 1: # Giơ cao đại đao chém bổ xuống
-					_fill_rect(img, 24, 6 + bob, 6, 18, saber_glow)
-					_fill_rect(img, 26, 7 + bob, 3, 16, steel_hi)
-					_fill_rect(img, 23, 24 + bob, 8, 3, gold)
-				elif pose == 2: # Quét ngang đại đao bản rộng
-					_fill_rect(img, 25, 22 + bob, 17, 6, saber_glow)
-					_fill_rect(img, 26, 23 + bob, 15, 3, steel_hi)
-					_fill_rect(img, 23, 22 + bob, 3, 7, gold)
-				else: # Bổ chẻ Bá Vương Trảm rực cam vàng
-					_fill_rect(img, 22, 11 + bob, 20, 18, Color(1.0, 0.52, 0.18, 0.78))
-					_fill_rect(img, 25, 16 + bob, 17, 8, Color(1.0, 0.94, 0.72))
-					_fill_rect(img, 22, 18 + bob, 4, 7, gold)
+				if pose == 1:
+					_fill_rect(img, 26, 6 + bob, 6, 18, saber_glow)
+					_fill_rect(img, 28, 7 + bob, 3, 16, steel_hi)
+					_fill_rect(img, 25, 24 + bob, 8, 3, gold)
+				elif pose == 2:
+					_fill_rect(img, 27, 22 + bob, 18, 6, saber_glow)
+					_fill_rect(img, 28, 23 + bob, 16, 3, steel_hi)
+					_fill_rect(img, 25, 22 + bob, 3, 7, gold)
+				else:
+					_fill_rect(img, 24, 11 + bob, 22, 18, Color(saber_glow.r, saber_glow.g, saber_glow.b, 0.82))
+					_fill_rect(img, 27, 16 + bob, 18, 8, Color(1.0, 0.94, 0.72))
+					_fill_rect(img, 24, 18 + bob, 4, 7, gold)
 			else:
-				# Đại đao vác sau lưng với chuôi vàng & tua rua đỏ
 				_fill_rect(img, 8 + lean, 18 + bob, 4, 14, steel_d)
 				_fill_rect(img, 9 + lean, 19 + bob, 2, 12, steel_m)
 				_fill_rect(img, 7 + lean, 31 + bob, 6, 2, gold)
-				_fill_rect(img, 9 + lean, 33 + bob, 2, 4, crimson)
+				_fill_rect(img, 9 + lean, 33 + bob, 2, 4, accent_col)
 
 		"bow":
-			# TRƯỜNG CUNG CỔ TRANG (Giương cung kéo dây bắn tên sáng)
 			var bow_col := Color(0.68, 0.44, 0.18)
-			var arrow_glow := Color(0.65, 1.0, 0.48) if pose < 4 else Color(1.0, 0.65, 0.22)
+			var arrow_glow: Color = accent_col if pose >= 3 else Color(0.65, 1.0, 0.48)
 			if attacking:
-				# Thân cung cong đặt phía trước tay phải
-				_fill_rect(img, 30, 14 + bob, 3, 5, bow_col)
-				_fill_rect(img, 32, 19 + bob, 3, 11, bow_col)
-				_fill_rect(img, 30, 30 + bob, 3, 5, bow_col)
-				# Dây cung căng & Mũi tên phát sáng chuẩn bị/đang phóng
-				_fill_rect(img, 27, 16 + bob, 1, 17, Color(0.95, 0.92, 0.85))
-				var arrow_x: int = 25 if pose == 1 else (28 if pose == 2 else 30)
-				_fill_rect(img, arrow_x, 23 + bob, 13, 3, arrow_glow)
+				_fill_rect(img, 32, 14 + bob, 3, 5, bow_col)
+				_fill_rect(img, 34, 19 + bob, 3, 11, bow_col)
+				_fill_rect(img, 32, 30 + bob, 3, 5, bow_col)
+				_fill_rect(img, 29, 16 + bob, 1, 17, Color(0.95, 0.92, 0.85))
+				var arrow_x: int = 27 if pose == 1 else (30 if pose == 2 else 32)
+				_fill_rect(img, arrow_x, 23 + bob, 14, 3, arrow_glow)
 				_fill_rect(img, arrow_x + 2, 24 + bob, 11, 1, Color.WHITE)
 				if pose >= 3:
-					_fill_circle(img, 36, 24 + bob, 4, Color(1.0, 0.88, 0.35, 0.8))
+					_fill_circle(img, 38, 24 + bob, 4, Color(1.0, 0.88, 0.35, 0.8))
 			else:
-				# Cung đeo chéo sau lưng
 				_fill_rect(img, 9 + lean, 16 + bob, 2, 16, bow_col)
 				_fill_rect(img, 11 + lean, 14 + bob, 3, 3, gold)
 				_fill_rect(img, 11 + lean, 31 + bob, 3, 3, gold)
 
 		"staff":
-			# GẬY PHÉP / TIÊN TRƯỢNG CỔ TRANG (Đỉnh gắn vòng Thái Cực & Linh Châu phát sáng)
-			var orb_col := Color(0.45, 0.82, 1.0) if pose < 4 else Color(0.88, 0.46, 1.0)
+			var orb_col: Color = accent_col
 			if attacking:
-				# Giơ cao gậy phép về phía trước tụ linh khí
-				var tilt_x: int = 30 if pose == 1 else 32
+				var tilt_x: int = 32 if pose == 1 else 34
 				_fill_rect(img, tilt_x, 12 + bob, 3, 26, wood_c)
 				_fill_rect(img, tilt_x - 2, 9 + bob, 7, 3, gold)
 				_fill_circle(img, tilt_x + 1, 8 + bob, 5 if pose >= 3 else 4, orb_col)
 				_fill_circle(img, tilt_x + 1, 8 + bob, 2, Color.WHITE)
 				if pose >= 2:
-					# Vòng pháp trận sáng lóe trước đầu trượng
-					_fill_circle(img, 38, 16 + bob, 4, orb_col)
-					_fill_circle(img, 38, 16 + bob, 2, Color.WHITE)
+					_fill_circle(img, 40, 16 + bob, 4, orb_col)
+					_fill_circle(img, 40, 16 + bob, 2, Color.WHITE)
 			else:
-				# Cầm gậy phép dựng đứng bên cạnh với linh châu sáng dịu
 				_fill_rect(img, 10 + lean, 14 + bob, 3, 25, wood_c)
 				_fill_rect(img, 9 + lean, 12 + bob, 5, 2, gold)
 				_fill_circle(img, 11 + lean, 10 + bob, 3, orb_col)
 				img.set_pixel(11 + lean, 9 + bob, Color.WHITE)
 
-		_: # "sword" (Thanh Phong Cổ Kiếm mặc định)
+		_: # "sword" — Thanh Kiếm Cổ Trang (với hiệu ứng Kiếm Lửa Đỏ rực chuẩn ảnh mẫu cho Kiếm Khách!)
+			var blade_edge: Color = Color(1.0, 0.24, 0.16) if is_flame_hero else steel_d
+			var blade_core: Color = Color(1.0, 0.78, 0.36) if is_flame_hero else steel_m
 			if attacking:
 				if pose == 1:
-					_fill_rect(img, 28, 10 + bob, 3, 17, steel_d)
-					_fill_rect(img, 29, 10 + bob, 2, 16, steel_m)
-					_fill_rect(img, 30, 11 + bob, 1, 12, steel_hi)
-					_fill_rect(img, 26, 26 + bob, 7, 2, gold)
+					_fill_rect(img, 30, 9 + bob, 4, 18, blade_edge)
+					_fill_rect(img, 31, 10 + bob, 2, 16, blade_core)
+					_fill_rect(img, 32, 11 + bob, 1, 12, steel_hi)
+					_fill_rect(img, 28, 26 + bob, 7, 2, gold)
 				elif pose == 2:
-					_fill_rect(img, 27, 24 + bob, 15, 4, steel_d)
-					_fill_rect(img, 28, 24 + bob, 14, 2, steel_m)
-					_fill_rect(img, 29, 24 + bob, 12, 1, steel_hi)
-					_fill_rect(img, 25, 23 + bob, 2, 6, gold)
+					_fill_rect(img, 29, 23 + bob, 17, 5, blade_edge)
+					_fill_rect(img, 30, 24 + bob, 15, 3, blade_core)
+					_fill_rect(img, 31, 25 + bob, 12, 1, steel_hi)
+					_fill_rect(img, 27, 23 + bob, 2, 6, gold)
 				elif pose == 3:
-					_fill_rect(img, 26, 18 + bob, 16, 6, steel_m)
-					_fill_rect(img, 28, 19 + bob, 14, 3, steel_hi)
-					_fill_rect(img, 24, 20 + bob, 2, 5, gold)
+					_fill_rect(img, 28, 18 + bob, 18, 6, accent_col)
+					_fill_rect(img, 30, 19 + bob, 15, 3, steel_hi)
+					_fill_rect(img, 26, 20 + bob, 2, 5, gold)
 				else:
-					_fill_rect(img, 24, 12 + bob, 18, 15, Color(0.42, 0.95, 0.88, 0.75))
-					_fill_rect(img, 26, 16 + bob, 16, 6, steel_hi)
-					_fill_rect(img, 24, 18 + bob, 3, 6, gold)
+					_fill_rect(img, 26, 11 + bob, 20, 17, Color(accent_col.r, accent_col.g, accent_col.b, 0.80))
+					_fill_rect(img, 28, 16 + bob, 17, 6, steel_hi)
+					_fill_rect(img, 26, 18 + bob, 3, 6, gold)
 			else:
-				_fill_rect(img, 10 + lean, 31 + bob, 5, 3, Color(0.14, 0.12, 0.18))
-				_fill_rect(img, 7 + lean, 33 + bob, 5, 2, Color(0.14, 0.12, 0.18))
-				_fill_rect(img, 13 + lean, 29 + bob, 3, 3, gold)
-				_fill_rect(img, 11 + lean, 34 + bob, 2, 4, crimson)
+				if is_flame_hero:
+					# Kiếm lửa đỏ cầm sẵn bên tay phải hệt như nhân vật Kiếm Khách trong ảnh mẫu!
+					_fill_rect(img, 31 + lean, 31 + bob, 3, 2, gold)
+					_fill_rect(img, 33 + lean, 32 + bob, 4, 3, blade_edge)
+					_fill_rect(img, 36 + lean, 34 + bob, 5, 3, blade_edge)
+					_fill_rect(img, 34 + lean, 33 + bob, 5, 2, blade_core)
+					_fill_rect(img, 39 + lean, 36 + bob, 4, 2, Color(1.0, 0.92, 0.65))
+				else:
+					_fill_rect(img, 10 + lean, 31 + bob, 5, 3, Color(0.14, 0.12, 0.18))
+					_fill_rect(img, 7 + lean, 33 + bob, 5, 2, Color(0.14, 0.12, 0.18))
+					_fill_rect(img, 13 + lean, 29 + bob, 3, 3, gold)
+					_fill_rect(img, 11 + lean, 34 + bob, 2, 4, accent_col)
 
 
 ## Quái vật & Boss HD-2D độ phân giải cao có đổ bóng nhiều sắc độ và viền sắc nét
@@ -833,14 +1141,23 @@ static func _make_butterfly_image() -> Image:
 	return img
 
 
-## Chân dung Nữ Kiếm Khách Anime Cổ Trang 48x48 (tự động đổi theo 10 Trang Phục Gacha & Màu Khăn Choàng)
+## Chân dung 10 Skin Anime Chibi 48x48 (hiển thị cực nét trên HUD, Vòng Quay Gacha & Tủ Đồ 5x2!)
 static func _make_hero_portrait_image(scarf_id: String = "blue", skin_id: String = "skin_default") -> Image:
-	var w := 48
-	var h := 48
+	var w: int = 48
+	var h: int = 48
 	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
 	var sk: Dictionary = SaveManager.SKIN_CATALOG.get(skin_id, SaveManager.SKIN_CATALOG["skin_default"])
-	var border_col: Color = sk["tag_color"] if bool(sk["has_vfx"]) else Color(0.88, 0.70, 0.32)
-	img.fill(Color(0.14, 0.08, 0.11))
+	var has_vfx: bool = bool(sk.get("has_vfx", false))
+	var vcol: Color = sk.get("vfx_color", Color(0.95, 0.35, 0.25))
+	var border_col: Color = sk["tag_color"] if has_vfx else Color(0.88, 0.70, 0.32)
+	var bg_col: Color = Color(0.11, 0.08, 0.14).lerp(vcol.darkened(0.68), 0.45)
+	img.fill(bg_col)
+
+	# Hào quang nền phía sau nhân vật theo chủ đề skin
+	if has_vfx or skin_id == "skin_default":
+		_fill_circle(img, 24, 24, 18, Color(vcol.r, vcol.g, vcol.b, 0.24))
+		_fill_circle(img, 24, 24, 13, Color(vcol.r, vcol.g, vcol.b, 0.22))
+
 	# Khung viền cổ trang vàng đồng (hoặc ánh sắc hiếm của skin)
 	_fill_rect(img, 0, 0, w, 2, border_col)
 	_fill_rect(img, 0, h - 2, w, 2, border_col)
@@ -849,36 +1166,131 @@ static func _make_hero_portrait_image(scarf_id: String = "blue", skin_id: String
 	_fill_rect(img, 3, 3, w - 6, 1, sk["coat_m"])
 	_fill_rect(img, 3, h - 4, w - 6, 1, sk["coat_m"])
 
+	var hair_d: Color = sk["hair_d"]
+	var hair_m: Color = sk["hair_m"]
+	var hair_h: Color = sk["hair_h"]
+	var gold := Color(0.99, 0.82, 0.28)
 	var sp: Dictionary = SaveManager.SCARF_PALETTES.get(scarf_id, SaveManager.SCARF_PALETTES["blue"])
-	# Hán phục theo bộ Trang Phục đang mặc
-	_fill_rect(img, 8, 34, 32, 12, sk["coat_m"])
-	_fill_rect(img, 16, 34, 16, 12, sk["robe"])
-	_fill_rect(img, 12, 31, 24, 5, sp["mid"])
-	_fill_rect(img, 16, 31, 16, 2, sp["hi"])
+	var col_mid: Color = Color(0.90, 0.16, 0.20) if (skin_id == "skin_default" and scarf_id == "blue") else (sp["mid"] as Color)
+	var col_hi: Color = Color(1.0, 0.44, 0.36) if (skin_id == "skin_default" and scarf_id == "blue") else (sp["hi"] as Color)
 
-	# Búi tóc đỉnh đầu + Trâm cài vàng & ngọc
-	_fill_circle(img, 24, 8, 5, sk["hair_d"])
-	_fill_rect(img, 14, 7, 20, 2, Color(0.98, 0.82, 0.30))
-	_fill_rect(img, 12, 6, 4, 4, sp["hi"])
+	# Phụ kiện phía sau vai/đầu (Cánh Thiên Sứ, Cánh Ác Ma, 2 Bím Tóc Vocaloid, Bướm Ma Nữ, Rồng Hoàng Đế)
+	match skin_id:
+		"skin_vocaloid":
+			_fill_rect(img, 4, 16, 8, 26, hair_d)
+			_fill_rect(img, 5, 17, 6, 24, hair_m)
+			_fill_rect(img, 6, 19, 3, 14, hair_h)
+			_fill_rect(img, 36, 16, 8, 26, hair_d)
+			_fill_rect(img, 37, 17, 6, 24, hair_m)
+			_fill_rect(img, 38, 19, 3, 14, hair_h)
+		"skin_angel":
+			_fill_rect(img, 3, 24, 11, 14, Color(0.98, 0.98, 1.0))
+			_fill_rect(img, 34, 24, 11, 14, Color(0.98, 0.98, 1.0))
+		"skin_demon":
+			_fill_rect(img, 3, 22, 11, 14, Color(0.28, 0.05, 0.10))
+			_fill_rect(img, 34, 22, 11, 14, Color(0.28, 0.05, 0.10))
+			_fill_rect(img, 5, 25, 7, 8, Color(0.75, 0.10, 0.20))
+			_fill_rect(img, 36, 25, 7, 8, Color(0.75, 0.10, 0.20))
+		"skin_emperor":
+			_fill_circle(img, 9, 14, 5, Color(0.96, 0.72, 0.14))
+			_fill_circle(img, 39, 16, 5, Color(0.96, 0.72, 0.14))
+			_fill_circle(img, 39, 15, 3, Color(1.0, 0.94, 0.48))
+			img.set_pixel(40, 14, Color(1.0, 0.20, 0.16))
+		"skin_witch":
+			_fill_rect(img, 6, 10, 4, 3, Color(0.86, 0.44, 1.0))
+			_fill_rect(img, 38, 13, 4, 3, Color(0.86, 0.44, 1.0))
+			_fill_rect(img, 7, 30, 4, 3, Color(0.76, 0.34, 1.0))
 
-	# Mái tóc bồng bềnh theo màu Skin
-	_fill_circle(img, 24, 21, 13, sk["hair_d"])
-	_fill_circle(img, 24, 20, 11, sk["hair_m"])
-	_fill_rect(img, 16, 11, 16, 2, sk["hair_h"])
-	_fill_rect(img, 20, 11, 8, 1, (sk["hair_h"] as Color).lightened(0.32))
+	# Thân áo & cổ áo chuẩn từng Skin
+	_fill_rect(img, 8, 35, 32, 11, sk["coat_m"])
+	_fill_rect(img, 16, 35, 16, 11, sk["robe"])
+	if skin_id == "skin_default":
+		_fill_rect(img, 11, 32, 26, 5, col_mid)
+		_fill_rect(img, 15, 32, 18, 2, col_hi)
+		_fill_rect(img, 8, 35, 8, 2, gold)
+		_fill_rect(img, 32, 35, 8, 2, gold)
+	elif skin_id == "skin_emperor":
+		_fill_rect(img, 8, 35, 32, 11, sk["robe"])
+		_fill_rect(img, 18, 35, 12, 11, gold)
+		_fill_rect(img, 10, 34, 8, 3, gold)
+		_fill_rect(img, 30, 34, 8, 3, gold)
+	elif skin_id == "skin_vocaloid":
+		_fill_rect(img, 12, 35, 24, 11, sk["robe"])
+		_fill_rect(img, 22, 35, 4, 10, sk["coat_m"])
+	else:
+		_fill_rect(img, 13, 33, 22, 4, sk["coat_d"])
+		_fill_rect(img, 17, 33, 14, 2, sk["coat_m"])
 
-	# Khuôn mặt anime thanh tú, 2 lọn tóc mai dài, cặp mắt theo màu Skin
-	_fill_rect(img, 16, 16, 16, 14, Color(0.99, 0.89, 0.81))
-	_fill_rect(img, 13, 15, 4, 18, sk["hair_d"])
-	_fill_rect(img, 31, 15, 4, 18, sk["hair_d"])
-	_fill_rect(img, 18, 20, 4, 4, Color(0.10, 0.08, 0.14))
-	_fill_rect(img, 26, 20, 4, 4, Color(0.10, 0.08, 0.14))
-	_fill_rect(img, 19, 21, 3, 3, sk["eye"])
-	_fill_rect(img, 27, 21, 3, 3, sk["eye"])
-	img.set_pixel(19, 20, Color.WHITE)
-	img.set_pixel(27, 20, Color.WHITE)
-	_fill_rect(img, 17, 25, 3, 2, Color(0.96, 0.60, 0.62))
-	_fill_rect(img, 28, 25, 3, 2, Color(0.96, 0.60, 0.62))
+	# Đầu & Tóc nền
+	_fill_circle(img, 24, 23, 12, hair_d)
+	_fill_circle(img, 24, 22, 10, hair_m)
+
+	# Phụ kiện đỉnh đầu đặc trưng từng Skin!
+	match skin_id:
+		"skin_default":
+			_fill_rect(img, 12, 12, 5, 5, hair_d)
+			_fill_rect(img, 17, 8, 5, 5, hair_m)
+			_fill_rect(img, 23, 7, 5, 6, hair_m)
+			_fill_rect(img, 29, 9, 5, 5, hair_d)
+			_fill_rect(img, 33, 13, 4, 5, hair_d)
+		"skin_immortal":
+			_fill_circle(img, 24, 9, 5, hair_d)
+			_fill_rect(img, 15, 8, 18, 2, Color(0.75, 0.92, 1.0))
+		"skin_ninja":
+			_fill_rect(img, 13, 10, 5, 5, hair_m)
+			_fill_rect(img, 18, 6, 5, 6, hair_h)
+			_fill_rect(img, 24, 5, 5, 7, hair_h)
+			_fill_rect(img, 30, 8, 5, 6, hair_m)
+			# Băng trán thép
+			_fill_rect(img, 13, 14, 22, 4, Color(0.14, 0.16, 0.24))
+			_fill_rect(img, 18, 14, 12, 4, Color(0.84, 0.90, 0.98))
+			_fill_rect(img, 20, 15, 8, 1, Color(0.32, 0.38, 0.48))
+		"skin_fox":
+			# Tai cáo trắng to dựng đứng!
+			var ear_in := Color(0.90, 0.72, 0.84)
+			_fill_rect(img, 11, 5, 7, 10, hair_h)
+			_fill_rect(img, 13, 7, 4, 7, ear_in)
+			_fill_rect(img, 30, 5, 7, 10, hair_h)
+			_fill_rect(img, 31, 7, 4, 7, ear_in)
+		"skin_angel":
+			# Vòng hào quang vàng tỏa sáng phía trên!
+			_fill_rect(img, 14, 5, 20, 3, Color(1.0, 0.90, 0.36))
+			_fill_rect(img, 17, 4, 14, 1, Color(1.0, 0.99, 0.80))
+		"skin_demon":
+			_fill_rect(img, 12, 8, 4, 6, Color(0.78, 0.10, 0.18))
+			_fill_rect(img, 32, 8, 4, 6, Color(0.78, 0.10, 0.18))
+			_fill_rect(img, 19, 8, 10, 5, hair_h)
+		"skin_miko":
+			# Mặt nạ cáo Kitsune đeo nghiêng trên góc phải đầu!
+			_fill_circle(img, 33, 12, 6, Color(0.99, 0.98, 0.96))
+			_fill_rect(img, 29, 5, 3, 4, Color(0.99, 0.98, 0.96))
+			_fill_rect(img, 35, 6, 3, 4, Color(0.99, 0.98, 0.96))
+			_fill_rect(img, 30, 11, 3, 2, Color(0.92, 0.14, 0.18))
+			_fill_rect(img, 34, 12, 3, 2, Color(0.92, 0.14, 0.18))
+		"skin_emperor":
+			# Vương miện Hoàng Đế rực vàng!
+			_fill_rect(img, 15, 7, 18, 5, Color(0.72, 0.50, 0.12))
+			_fill_rect(img, 16, 6, 16, 4, gold)
+			_fill_rect(img, 22, 4, 4, 5, Color(1.0, 0.96, 0.62))
+			_fill_rect(img, 23, 7, 2, 2, Color(0.98, 0.16, 0.20))
+
+	if skin_id != "skin_ninja":
+		_fill_rect(img, 16, 13, 16, 2, hair_h)
+		_fill_rect(img, 20, 13, 8, 1, hair_h.lightened(0.32))
+
+	# Khuôn mặt anime thanh tú, cặp mắt sắc nét theo màu Skin
+	_fill_rect(img, 16, 18, 16, 14, Color(0.99, 0.89, 0.81))
+	_fill_rect(img, 13, 17, 4, 17, hair_d)
+	_fill_rect(img, 31, 17, 4, 17, hair_d)
+	_fill_rect(img, 16, 17, 16, 3, hair_m)
+	_fill_rect(img, 18, 22, 4, 4, Color(0.10, 0.08, 0.14))
+	_fill_rect(img, 26, 22, 4, 4, Color(0.10, 0.08, 0.14))
+	_fill_rect(img, 19, 23, 3, 3, sk["eye"])
+	_fill_rect(img, 27, 23, 3, 3, sk["eye"])
+	img.set_pixel(19, 22, Color.WHITE)
+	img.set_pixel(27, 22, Color.WHITE)
+	_fill_rect(img, 17, 27, 3, 2, Color(0.96, 0.58, 0.62))
+	_fill_rect(img, 28, 27, 3, 2, Color(0.96, 0.58, 0.62))
 	return img
 
 
