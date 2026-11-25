@@ -252,6 +252,7 @@ func show_main_menu() -> void:
 	_hide_all_panels()
 	main_menu_panel.visible = true
 	_refresh_all_menus()
+	AudioManager.play_bgm("ambient", false)
 
 
 func _hide_all_panels() -> void:
@@ -2057,12 +2058,14 @@ func _on_stage_cleared(result: Dictionary) -> void:
 		% [int(result.get("score", 0)), float(result.get("time", 0.0)), int(result.get("gold_reward", 0))]
 	)
 	_next_stage_btn.visible = bool(result.get("has_next_stage", false))
+	AudioManager.play_bgm("ambient", false)
 
 
 func _on_player_died() -> void:
 	get_tree().paused = true
 	_hide_all_panels()
 	gameover_panel.visible = true
+	AudioManager.play_bgm("ambient", false)
 
 
 ## ============================================================================

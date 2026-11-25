@@ -170,10 +170,12 @@ func enter_town_hub() -> void:
 		companion_pet.global_position = player.global_position + Vector3(-1.2, 1.6, -0.4)
 	player.hp_changed.emit(player.current_hp, player.max_hp)
 	player.energy_changed.emit(player.current_energy, player.max_energy)
+	player.current_ultimate = player.max_ultimate
+	player.ultimate_changed.emit(player.current_ultimate, player.max_ultimate)
 
 	environment_builder.build_map_for_theme("hamlet_hub")
-	var chosen_hub_weather := environment_builder.apply_random_time_of_day(true)
-	AudioManager.play_stage_ambience(chosen_hub_weather)
+	environment_builder.apply_random_time_of_day(true)
+	AudioManager.play_bgm("ambient", false)
 
 	wave_portal.set_portal_active(true, SaveManager.unlocked_stage, false)
 	wave_portal._label_3d.text = "CỔNG CHIẾN ĐẤU (MÀN " + str(SaveManager.unlocked_stage) + ")\n(Bước vào để chọn màn đánh quái)"
@@ -205,11 +207,14 @@ func load_and_start_stage(stage_id: int) -> void:
 		companion_pet.global_position = player.global_position + Vector3(-1.2, 1.6, -0.4)
 	player.hp_changed.emit(player.current_hp, player.max_hp)
 	player.energy_changed.emit(player.current_energy, player.max_energy)
+	player.current_ultimate = player.max_ultimate
+	player.ultimate_changed.emit(player.current_ultimate, player.max_ultimate)
 
 	# Dựng kiến trúc Map riêng của từng màn chơi + Chọn ngẫu nhiên thời điểm ánh sáng tự động!
 	environment_builder.build_map_for_theme(current_stage_data.map_theme)
-	var chosen_weather := environment_builder.apply_random_time_of_day(true)
-	AudioManager.play_stage_ambience(chosen_weather)
+	environment_builder.apply_random_time_of_day(true)
+	# Chuyển sang bản nhạc chiến đấu hào hùng Heavenly ngay khi bắt đầu vào màn chiến đấu!
+	AudioManager.play_bgm("battle", true)
 
 	wave_portal.set_portal_active(false)
 	GameManager.start_stage(stage_id, current_stage_data.waves.size())
