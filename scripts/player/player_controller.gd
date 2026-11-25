@@ -638,6 +638,29 @@ func take_damage(amount: float, knockback: Vector3 = Vector3.ZERO, attacker: Nod
 		_invuln_timer = 0.25
 		return
 
+	current_hp = maxf(0.0, current_hp - amount)
+	GameManager.damage_taken_in_stage += amount
+	SaveManager.reset_no_damage_goblin_streak()
+	_invuln_timer = 0.55
+	_knockback_vel = Vector3(knockback.x, 0.0, knockback.z)
+	anim_sprite.play("hurt")
+	AudioManager.play_sfx("hurt")
+	hp_changed.emit(current_hp, max_hp)
+	DamageNumber3D.spawn(get_parent(), global_position, int(round(amount)), false, false)
+
+	if camera_rig:
+		camera_rig.shake(0.22, 0.15)
+	GameManager.trigger_hit_stop(0.05, 0.1)
+
+	# Nhấp nháy đỏ khi trúng đòn
+	var tw := create_tween()
+	anim_sprite.modulate = Color(1.0, 0.35, 0.35)
+	tw.tween_property(anim_sprite, "modulate", Color.WHITE, 0.35)
+
+	if current_hp <= 0.0:
+		_is_dead = true
+		GameManager.notify_player_died()
+
 
 ## Kích hoạt Phản Đòn Hoàn Hảo: Chớp sóng vàng kim + Hit-Stop kịch tính + Hồi Chân Khí + Phá 2 Khiên Giáp kẻ tấn công!
 func _execute_perfect_parry(attacker: Node) -> void:
@@ -667,28 +690,6 @@ func _execute_perfect_parry(attacker: Node) -> void:
 			if is_instance_valid(e) and e.global_position.distance_to(global_position) <= 4.2:
 				if e.has_method("on_parried_by_player"):
 					e.on_parried_by_player(counter_dmg, global_position)
-	current_hp = maxf(0.0, current_hp - amount)
-	GameManager.damage_taken_in_stage += amount
-	SaveManager.reset_no_damage_goblin_streak()
-	_invuln_timer = 0.55
-	_knockback_vel = Vector3(knockback.x, 0.0, knockback.z)
-	anim_sprite.play("hurt")
-	AudioManager.play_sfx("hurt")
-	hp_changed.emit(current_hp, max_hp)
-	DamageNumber3D.spawn(get_parent(), global_position, int(round(amount)), false, false)
-
-	if camera_rig:
-		camera_rig.shake(0.22, 0.15)
-	GameManager.trigger_hit_stop(0.05, 0.1)
-
-	# Nhấp nháy đỏ khi trúng đòn
-	var tw := create_tween()
-	anim_sprite.modulate = Color(1.0, 0.35, 0.35)
-	tw.tween_property(anim_sprite, "modulate", Color.WHITE, 0.35)
-
-	if current_hp <= 0.0:
-		_is_dead = true
-		GameManager.notify_player_died()
 
 
 func heal(amount: float) -> void:
