@@ -732,9 +732,6 @@ func take_damage(amount: float, knockback: Vector3 = Vector3.ZERO, attacker: Nod
 		return
 
 	# ĐỠ ĐÒN HOÀN HẢO (PERFECT PARRY)!
-	if _skin_vfx_ring and _skin_vfx_ring.visible:
-		_skin_vfx_ring.rotation.y += delta * 2.4
-
 	if _parry_window_timer > 0.0:
 		_execute_perfect_parry(attacker)
 		return
