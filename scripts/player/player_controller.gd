@@ -808,6 +808,11 @@ func take_damage(amount: float, knockback: Vector3 = Vector3.ZERO, attacker: Nod
 	tw.tween_property(anim_sprite, "modulate", Color.WHITE, 0.35)
 
 	if current_hp <= 0.0:
+		# Nội tại Hồi Sinh Bất Tử của Phượng Hoàng Lửa (1 lần mỗi màn)!
+		for pet_n in get_tree().get_nodes_in_group("spirit_pet"):
+			if is_instance_valid(pet_n) and pet_n.has_method("try_phoenix_revive"):
+				if pet_n.try_phoenix_revive():
+					return
 		_is_dead = true
 		GameManager.notify_player_died()
 

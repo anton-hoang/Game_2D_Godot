@@ -118,7 +118,8 @@ func _setup_input_map() -> void:
 	_bind_action_keys("dash", [KEY_L, KEY_C])
 	_bind_action_keys("parry", [KEY_SHIFT, KEY_Q])
 	_bind_action_mouse("parry", MOUSE_BUTTON_RIGHT)
-	_bind_action_keys("interact", [KEY_E, KEY_F, KEY_ENTER])
+	_bind_action_keys("pet_skill", [KEY_F, KEY_V])
+	_bind_action_keys("interact", [KEY_E, KEY_ENTER])
 	_bind_action_keys("pause", [KEY_ESCAPE, KEY_P])
 
 	# Tay cầm (Gamepad)

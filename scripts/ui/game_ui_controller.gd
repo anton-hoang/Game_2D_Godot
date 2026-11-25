@@ -54,11 +54,18 @@ var quest_board_panel: Control
 var inventory_panel: Control
 var shop_panel: Control
 var gacha_panel: Control
+var pet_panel: Control
 
 var _hero_portrait_rect: TextureRect
 var _hero_title_label: Label
 var _weapon_hud_label: Label
+var _pet_hud_label: Label
 var _relic_hud_label: Label
+var _pet_sanctuary_res_lbl: Label
+var _pet_gacha_result_lbl: Label
+var _pet_gacha_btn: Button
+var _pet_cards_grid: GridContainer
+var _pet_skill_cd_rem: float = 0.0
 var _quest_list_box: VBoxContainer
 var _scarf_buttons_box: HBoxContainer
 var _pet_buttons_box: HBoxContainer
@@ -116,6 +123,7 @@ func _ready() -> void:
 	_build_inventory_panel()
 	_build_shop_panel()
 	_build_gacha_panel()
+	_build_pet_sanctuary_panel()
 
 	GameManager.stats_updated.connect(_on_stats_updated)
 	GameManager.stage_cleared.connect(_on_stage_cleared)
@@ -180,6 +188,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif gacha_panel and gacha_panel.visible:
 			_hide_all_panels()
 			get_tree().paused = false
+		elif pet_panel and pet_panel.visible:
+			_hide_all_panels()
+			get_tree().paused = false
 		elif relic_panel and relic_panel.visible:
 			return # Bắt buộc chọn 1 Bùa Cổ Ngữ trước khi tiếp tục
 		elif GameManager.is_stage_active:
@@ -194,6 +205,12 @@ func _unhandled_input(event: InputEvent) -> void:
 				get_tree().paused = false
 			elif not main_menu_panel.visible and not relic_panel.visible:
 				show_inventory()
+		elif kev.keycode == KEY_C:
+			if pet_panel and pet_panel.visible:
+				_hide_all_panels()
+				get_tree().paused = false
+			elif not main_menu_panel.visible and not relic_panel.visible:
+				show_pet_sanctuary()
 		elif kev.keycode == KEY_G:
 			toggle_dof_requested.emit()
 		elif kev.keycode == KEY_H and hud_root:
@@ -215,6 +232,32 @@ func bind_player(player: PlayerController) -> void:
 	_on_player_hp_changed(player.current_hp, player.max_hp)
 	_on_player_energy_changed(player.current_energy, player.max_energy)
 	_on_player_ultimate_changed(player.current_ultimate, player.max_ultimate)
+
+
+func bind_pet(pet: SpiritCompanion3D) -> void:
+	if pet == null:
+		return
+	if not pet.pet_skill_cd_changed.is_connected(_on_pet_skill_cd_changed):
+		pet.pet_skill_cd_changed.connect(_on_pet_skill_cd_changed)
+	_on_pet_skill_cd_changed(pet._active_skill_cd, pet._active_skill_max_cd)
+
+
+func _on_pet_skill_cd_changed(rem: float, _total: float) -> void:
+	_pet_skill_cd_rem = rem
+	_refresh_pet_hud_line()
+
+
+func _refresh_pet_hud_line() -> void:
+	if _pet_hud_label == null:
+		return
+	var pid: String = SaveManager.equipped_pet
+	var pd: Dictionary = SaveManager.PET_CATALOG.get(pid, SaveManager.PET_CATALOG["fox"])
+	var pname: String = SaveManager.get_pet_display_name(pid)
+	var plv: int = SaveManager.get_pet_level(pid)
+	var sname: String = str(pd.get("skill_name", ""))
+	var cd_txt: String = "SẴN SÀNG!" if _pet_skill_cd_rem <= 0.05 else ("Hồi %.1fs" % _pet_skill_cd_rem)
+	_pet_hud_label.text = "✦ Linh Thú [F] (%s • Cấp %d): %s [%s]  •  [C] Tiến Hóa & Gacha Pet" % [pname, plv, sname, cd_txt]
+	_pet_hud_label.modulate = (pd.get("color", Color(1.0, 0.86, 0.45)) as Color).lightened(0.15) if _pet_skill_cd_rem <= 0.05 else Color(0.76, 0.72, 0.66)
 
 
 ## Cập nhật nhãn thời tiết cổ trang mỗi khi ánh sáng tự động đổi ngẫu nhiên
@@ -256,9 +299,18 @@ func show_main_menu() -> void:
 
 
 func _hide_all_panels() -> void:
-	for p in [main_menu_panel, stage_select_panel, upgrade_panel, pause_panel, result_panel, gameover_panel, dialogue_panel, relic_panel, quest_board_panel, inventory_panel, shop_panel, gacha_panel]:
+	for p in [main_menu_panel, stage_select_panel, upgrade_panel, pause_panel, result_panel, gameover_panel, dialogue_panel, relic_panel, quest_board_panel, inventory_panel, shop_panel, gacha_panel, pet_panel]:
 		if p:
 			p.visible = false
+
+
+## Mở Linh Thú Các (Quay Gacha Rồng / Phượng Hoàng & Tiến Hóa Cấp 1 -> 3!)
+func show_pet_sanctuary() -> void:
+	get_tree().paused = true
+	_hide_all_panels()
+	_refresh_pet_sanctuary_ui()
+	if pet_panel:
+		pet_panel.visible = true
 
 
 ## Mở Shop Gacha Trang Phục & Tủ 10 Skin Cổ Trang
@@ -331,6 +383,7 @@ func _refresh_hero_cosmetic_hud() -> void:
 		_weapon_hud_label.modulate = wd.get("color", Color(1.0, 0.88, 0.50))
 	if ultimate_bar and ultimate_label:
 		_on_player_ultimate_changed(ultimate_bar.value, ultimate_bar.max_value)
+	_refresh_pet_hud_line()
 
 
 func show_npc_dialogue(npc_data: Dictionary) -> void:
@@ -513,10 +566,10 @@ func _build_hud() -> void:
 	_hp_badge_lbl.modulate = Color(1.0, 0.90, 0.52)
 	badge.add_child(_hp_badge_lbl)
 
-	# Dòng gợi ý thao tác ngắn gọn, Vũ Khí đang cầm & Bùa Cổ Ngữ bên dưới bảng máu
+	# Dòng gợi ý thao tác ngắn gọn, Vũ Khí, Linh Thú [F] & Bùa Cổ Ngữ bên dưới bảng máu
 	var controls_hint := Label.new()
 	controls_hint.position = Vector2(22, 134)
-	controls_hint.text = "WASD: Di chuyển • [I] Rương 7x7 • [E] Tương tác • [J] Công • [K] Tuyệt kỹ • [U/R] CHIÊU CUỐI • [L] Né • [Shift] Đỡ"
+	controls_hint.text = "WASD: Đi • [I] Rương • [C] Linh Thú • [E] Tương tác • [J] Công • [K] Kỹ • [U] CHIÊU CUỐI • [F] Skill Pet • [Shift] Đỡ"
 	controls_hint.add_theme_font_size_override("font_size", 12)
 	controls_hint.modulate = Color(0.96, 0.90, 0.74, 0.92)
 	hud_root.add_child(controls_hint)
@@ -525,10 +578,15 @@ func _build_hud() -> void:
 	_weapon_hud_label.position = Vector2(22, 154)
 	_weapon_hud_label.add_theme_font_size_override("font_size", 13)
 	hud_root.add_child(_weapon_hud_label)
+
+	_pet_hud_label = Label.new()
+	_pet_hud_label.position = Vector2(22, 173)
+	_pet_hud_label.add_theme_font_size_override("font_size", 13)
+	hud_root.add_child(_pet_hud_label)
 	_refresh_hero_cosmetic_hud()
 
 	_relic_hud_label = Label.new()
-	_relic_hud_label.position = Vector2(22, 174)
+	_relic_hud_label.position = Vector2(22, 192)
 	_relic_hud_label.text = ""
 	_relic_hud_label.add_theme_font_size_override("font_size", 13)
 	_relic_hud_label.modulate = Color(0.55, 0.96, 1.0)
@@ -808,6 +866,10 @@ func _build_main_menu() -> void:
 
 	vbox.add_child(_create_button("❖ TỤ BẢO CÁC — SHOP GACHA TRANG PHỤC (10 SKIN)", func() -> void:
 		show_gacha_shop()
+	))
+
+	vbox.add_child(_create_button("❖ LINH THÚ CÁC — TIẾN HÓA & GACHA RỒNG / PHƯỢNG HOÀNG (PHÍM C)", func() -> void:
+		show_pet_sanctuary()
 	))
 
 	vbox.add_child(_create_button("❖ BẢNG TRUY NÃ & TỦ KHĂN CHOÀNG (NHIỆM VỤ)", func() -> void:
@@ -1265,24 +1327,29 @@ func _refresh_quest_board() -> void:
 		claim_btn.disabled = claimed or not done
 		row.add_child(claim_btn)
 
-	# Hàng nút chọn Bạn Đồng Hành Linh Thú (Tiểu Hồ Ly Bạch Tuyết / Tiên Hạc Cổ Trang)
+	# Hàng nút chọn Bạn Đồng Hành Linh Thú (hiển thị tất cả Linh Thú đã mở khóa + nút mở Linh Thú Các!)
 	if _pet_buttons_box:
 		for pc in _pet_buttons_box.get_children():
 			pc.queue_free()
-		var pet_choices := [
-			{"id": "fox", "label": "🦊 Tiểu Hồ Ly Bạch Tuyết (Linh Cầu Hồng Ngọc)"},
-			{"id": "crane", "label": "🕊 Tiên Hạc Trắng (Linh Khí Ngọc Bích)"},
-		]
-		for pc_data in pet_choices:
-			var p_key: String = str(pc_data["id"])
+		for pid in SaveManager.PET_CATALOG.keys():
+			var p_key: String = str(pid)
+			if not SaveManager.owned_pets.has(p_key):
+				continue
 			var is_eq: bool = (SaveManager.equipped_pet == p_key)
-			var pbtn := _create_button(("★ " if is_eq else "") + str(pc_data["label"]), func() -> void:
+			var pname: String = SaveManager.get_pet_display_name(p_key)
+			var plv: int = SaveManager.get_pet_level(p_key)
+			var pbtn := _create_button(("%s%s (Cấp %d)" % ["★ " if is_eq else "", pname, plv]), func() -> void:
 				SaveManager.equip_pet(p_key)
 				AudioManager.play_sfx("pickup", 1.2)
 				_refresh_quest_board()
 			)
-			pbtn.custom_minimum_size = Vector2(320, 36)
+			pbtn.custom_minimum_size = Vector2(180, 36)
 			_pet_buttons_box.add_child(pbtn)
+		var open_pet_btn := _create_button("✦ Tiến Hóa & Gacha Pet", func() -> void:
+			show_pet_sanctuary()
+		)
+		open_pet_btn.custom_minimum_size = Vector2(190, 36)
+		_pet_buttons_box.add_child(open_pet_btn)
 
 	# Hàng nút chọn Màu Khăn Choàng đã mở khóa
 	for sc in _scarf_buttons_box.get_children():
@@ -1745,7 +1812,20 @@ func _build_gacha_panel() -> void:
 	_gacha_wardrobe_grid.add_theme_constant_override("v_separation", 8)
 	ward_center.add_child(_gacha_wardrobe_grid)
 
-	vbox.add_child(_create_button("ĐÓNG TỤ BẢO CÁC", func() -> void:
+	var gacha_foot := HBoxContainer.new()
+	gacha_foot.alignment = BoxContainer.ALIGNMENT_CENTER
+	gacha_foot.add_theme_constant_override("separation", 14)
+	vbox.add_child(gacha_foot)
+
+	var pet_tab_btn := _create_button("❖ SANG GACHA & TIẾN HÓA LINH THÚ (RỒNG / PHƯỢNG HOÀNG)", func() -> void:
+		if _gacha_wheel and _gacha_wheel.is_spinning:
+			return
+		show_pet_sanctuary()
+	)
+	pet_tab_btn.custom_minimum_size = Vector2(440, 38)
+	gacha_foot.add_child(pet_tab_btn)
+
+	var close_gacha_btn := _create_button("ĐÓNG TỤ BẢO CÁC", func() -> void:
 		if _gacha_wheel and _gacha_wheel.is_spinning:
 			return
 		if not main_menu_panel.visible:
@@ -1753,7 +1833,199 @@ func _build_gacha_panel() -> void:
 			get_tree().paused = false
 		else:
 			show_main_menu()
+	)
+	close_gacha_btn.custom_minimum_size = Vector2(220, 38)
+	gacha_foot.add_child(close_gacha_btn)
+
+
+## ============================================================================
+## LINH THÚ CÁC: QUAY GACHA RỒNG / PHƯỢNG HOÀNG & TIẾN HÓA LINH THÚ CẤP 1 -> 3!
+## ============================================================================
+func _build_pet_sanctuary_panel() -> void:
+	pet_panel = _create_center_modal(960, 610)
+	var vbox := _get_modal_vbox(pet_panel)
+
+	var title := Label.new()
+	title.text = "【 LINH THÚ CÁC — TIẾN HÓA CẤP 1→3 & GACHA RỒNG / PHƯỢNG HOÀNG 】"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	WuxiaFontTheme.apply_headline_style(title, 19)
+	title.modulate = Color(1.0, 0.88, 0.42)
+	vbox.add_child(title)
+
+	_pet_sanctuary_res_lbl = Label.new()
+	_pet_sanctuary_res_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_pet_sanctuary_res_lbl.add_theme_font_size_override("font_size", 14)
+	_pet_sanctuary_res_lbl.modulate = Color(0.95, 0.90, 0.72)
+	vbox.add_child(_pet_sanctuary_res_lbl)
+
+	# Khu vực Quay Gacha Linh Thú (50 Lượng -> Tiểu Thanh Long ★★ / Phượng Hoàng Lửa ★★★ / Hồn Yêu!)
+	var gacha_bar := _create_classical_panel(Color(0.16, 0.08, 0.14, 0.96), Color(0.95, 0.74, 0.30, 1.0))
+	vbox.add_child(gacha_bar)
+	var gb_hbox := HBoxContainer.new()
+	gb_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	gb_hbox.add_theme_constant_override("separation", 16)
+	gacha_bar.add_child(gb_hbox)
+
+	_pet_gacha_btn = _create_button("✦ QUAY GACHA LINH THÚ (50 Lượng)", func() -> void:
+		var res := SaveManager.roll_pet_gacha()
+		if res.is_empty():
+			AudioManager.play_sfx("hurt", 0.9)
+			_pet_gacha_result_lbl.text = "Không đủ 50 Lượng để triệu hồi Linh Thú!"
+			_pet_gacha_result_lbl.modulate = Color(1.0, 0.45, 0.45)
+			return
+		var is_pet: bool = (str(res["kind"]) == "pet")
+		AudioManager.play_sfx("victory" if is_pet else "pickup", 1.25)
+		if is_pet:
+			var note: String = "MỞ KHÓA MỚI & XUẤT CHIẾN!" if bool(res["is_new"]) else ("Đã có — Quy đổi +%d Hồn Yêu!" % int(res["bonus_souls"]))
+			_pet_gacha_result_lbl.text = "★ TRIỆU HỒI THÀNH CÔNG: [%s] %s — %s" % [str(res["rarity"]), str(res["name"]), note]
+			_pet_gacha_result_lbl.modulate = res["color"]
+		else:
+			_pet_gacha_result_lbl.text = "✦ NHẬN ĐƯỢC: %s (Dùng để Tiến Hóa Linh Thú lên Cấp 2 & Cấp 3!)" % str(res["name"])
+			_pet_gacha_result_lbl.modulate = Color(0.84, 0.58, 1.0)
+		_refresh_pet_sanctuary_ui()
+	)
+	_pet_gacha_btn.custom_minimum_size = Vector2(310, 44)
+	gb_hbox.add_child(_pet_gacha_btn)
+
+	_pet_gacha_result_lbl = Label.new()
+	_pet_gacha_result_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_pet_gacha_result_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_pet_gacha_result_lbl.add_theme_font_size_override("font_size", 13)
+	_pet_gacha_result_lbl.modulate = Color(0.95, 0.90, 0.78)
+	_pet_gacha_result_lbl.text = "Quay Gacha để triệu hồi Tiểu Thanh Long ★★ & Phượng Hoàng Lửa ★★★ (Bảo hiểm 4 lượt chắc chắn ra Pet hiếm!)."
+	gb_hbox.add_child(_pet_gacha_result_lbl)
+
+	# Lưới 2x2 hiển thị 4 Thẻ Linh Thú (Ảnh tiến hóa + Kỹ năng [F] + Nút Xuất Chiến & Tiến Hóa!)
+	_pet_cards_grid = GridContainer.new()
+	_pet_cards_grid.columns = 2
+	_pet_cards_grid.add_theme_constant_override("h_separation", 12)
+	_pet_cards_grid.add_theme_constant_override("v_separation", 10)
+	vbox.add_child(_pet_cards_grid)
+
+	vbox.add_child(_create_button("ĐÓNG LINH THÚ CÁC (PHÍM C / ESC)", func() -> void:
+		if not main_menu_panel.visible:
+			_hide_all_panels()
+			get_tree().paused = false
+		else:
+			show_main_menu()
 	))
+
+
+func _refresh_pet_sanctuary_ui() -> void:
+	if _pet_cards_grid == null:
+		return
+	if _pet_sanctuary_res_lbl:
+		_pet_sanctuary_res_lbl.text = "Ngân Lượng: %d Lượng  •  Hồn Yêu (từ Boss/Tank): %d  •  Bảo hiểm Gacha Pet: %d / 4  •  Phím [F / V]: Kỹ Năng Linh Thú!" % [
+			SaveManager.gold, SaveManager.demon_souls, SaveManager.pet_gacha_pity
+		]
+	if _pet_gacha_btn:
+		_pet_gacha_btn.disabled = SaveManager.gold < SaveManager.PET_GACHA_COST
+
+	for c in _pet_cards_grid.get_children():
+		c.queue_free()
+
+	for pid in SaveManager.PET_CATALOG.keys():
+		var p_key: String = str(pid)
+		var pd: Dictionary = SaveManager.PET_CATALOG[p_key]
+		var owned: bool = SaveManager.owned_pets.has(p_key)
+		var equipped: bool = (SaveManager.equipped_pet == p_key)
+		var lv: int = SaveManager.get_pet_level(p_key)
+		var pcol: Color = pd["color"]
+		var disp_name: String = SaveManager.get_pet_display_name(p_key)
+		var costs: Dictionary = SaveManager.get_pet_evolve_costs(p_key)
+
+		var card := _create_classical_panel(
+			Color(0.18, 0.10, 0.10, 0.96) if equipped else Color(0.11, 0.07, 0.08, 0.95),
+			Color(1.0, 0.88, 0.34, 1.0) if equipped else (pcol if owned else Color(0.38, 0.30, 0.28, 0.8))
+		)
+		card.custom_minimum_size = Vector2(445, 182)
+		_pet_cards_grid.add_child(card)
+
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 12)
+		card.add_child(row)
+
+		# Ảnh Linh Thú theo đúng Cấp Tiến Hóa hiện tại
+		var icon_wrap := _create_classical_panel(Color(0.08, 0.05, 0.09, 0.95), pcol if owned else Color(0.35, 0.30, 0.32))
+		icon_wrap.custom_minimum_size = Vector2(88, 88)
+		icon_wrap.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		row.add_child(icon_wrap)
+
+		var icon := TextureRect.new()
+		icon.texture = PixelArtGenerator.get_pet_icon_texture(p_key, lv)
+		icon.custom_minimum_size = Vector2(68, 68)
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		icon.modulate = Color.WHITE if owned else Color(0.35, 0.35, 0.40, 0.72)
+		icon_wrap.add_child(icon)
+
+		var info_col := VBoxContainer.new()
+		info_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		info_col.add_theme_constant_override("separation", 4)
+		row.add_child(info_col)
+
+		var name_lbl := Label.new()
+		var tier_txt: String = "Cấp %d/3" % lv if owned else "CHƯA MỞ (QUAY GACHA)"
+		name_lbl.text = "[%s] %s — %s" % [str(pd["rarity"]), disp_name, tier_txt]
+		name_lbl.add_theme_font_size_override("font_size", 14)
+		name_lbl.modulate = pcol if owned else Color(0.68, 0.64, 0.60)
+		info_col.add_child(name_lbl)
+
+		var skill_lbl := Label.new()
+		skill_lbl.text = "✦ Skill [F]: %s — %s" % [str(pd["skill_name"]), str(pd["skill_desc"])]
+		skill_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		skill_lbl.add_theme_font_size_override("font_size", 12)
+		skill_lbl.modulate = Color(0.94, 0.88, 0.76)
+		info_col.add_child(skill_lbl)
+
+		var btn_row := HBoxContainer.new()
+		btn_row.add_theme_constant_override("separation", 6)
+		info_col.add_child(btn_row)
+
+		if owned:
+			var eq_btn := _create_button("★ ĐANG DẪN" if equipped else "XUẤT CHIẾN", func() -> void:
+				SaveManager.equip_pet(p_key)
+				AudioManager.play_sfx("pickup", 1.2)
+				_refresh_pet_sanctuary_ui()
+			)
+			eq_btn.custom_minimum_size = Vector2(104, 34)
+			eq_btn.disabled = equipped
+			btn_row.add_child(eq_btn)
+
+			if bool(costs["maxed"]):
+				var max_lbl := Label.new()
+				max_lbl.text = "★ ĐẠT TỐI THƯỢNG CẤP 3 ★"
+				max_lbl.add_theme_font_size_override("font_size", 12)
+				max_lbl.modulate = Color(1.0, 0.88, 0.34)
+				btn_row.add_child(max_lbl)
+			else:
+				var g_cost: int = int(costs["gold"])
+				var s_cost: int = int(costs["souls"])
+				var ev_g := _create_button("Tiến Hóa (%dV)" % g_cost, func() -> void:
+					if SaveManager.evolve_pet(p_key, false):
+						AudioManager.play_sfx("victory", 1.3)
+						_refresh_pet_sanctuary_ui()
+						show_wave_banner("TIẾN HÓA LINH THÚ!", SaveManager.get_pet_display_name(p_key) + " đã đột phá Cấp " + str(SaveManager.get_pet_level(p_key)) + "!")
+				)
+				ev_g.custom_minimum_size = Vector2(114, 34)
+				ev_g.disabled = SaveManager.gold < g_cost
+				btn_row.add_child(ev_g)
+
+				var ev_s := _create_button("Hồn Yêu (%d)" % s_cost, func() -> void:
+					if SaveManager.evolve_pet(p_key, true):
+						AudioManager.play_sfx("victory", 1.35)
+						_refresh_pet_sanctuary_ui()
+						show_wave_banner("TIẾN HÓA LINH THÚ!", SaveManager.get_pet_display_name(p_key) + " đã đột phá Cấp " + str(SaveManager.get_pet_level(p_key)) + "!")
+				)
+				ev_s.custom_minimum_size = Vector2(106, 34)
+				ev_s.disabled = SaveManager.demon_souls < s_cost
+				btn_row.add_child(ev_s)
+		else:
+			var lock_lbl := Label.new()
+			lock_lbl.text = "🔒 Quay Gacha Linh Thú phía trên để triệu hồi!"
+			lock_lbl.add_theme_font_size_override("font_size", 12)
+			lock_lbl.modulate = Color(0.85, 0.65, 0.45)
+			btn_row.add_child(lock_lbl)
 
 
 func _perform_gacha_roll(count: int) -> void:

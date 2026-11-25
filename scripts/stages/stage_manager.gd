@@ -168,6 +168,7 @@ func enter_town_hub() -> void:
 	player.global_position = Vector3(1.5, 0.2, 2.2)
 	if companion_pet and is_instance_valid(companion_pet):
 		companion_pet.global_position = player.global_position + Vector3(-1.2, 1.6, -0.4)
+		companion_pet.reset_stage_passives()
 	player.hp_changed.emit(player.current_hp, player.max_hp)
 	player.energy_changed.emit(player.current_energy, player.max_energy)
 	player.current_ultimate = player.max_ultimate
@@ -205,6 +206,7 @@ func load_and_start_stage(stage_id: int) -> void:
 	player.global_position = Vector3(1.5, 0.2, 2.2)
 	if companion_pet and is_instance_valid(companion_pet):
 		companion_pet.global_position = player.global_position + Vector3(-1.2, 1.6, -0.4)
+		companion_pet.reset_stage_passives()
 	player.hp_changed.emit(player.current_hp, player.max_hp)
 	player.energy_changed.emit(player.current_energy, player.max_energy)
 	player.current_ultimate = player.max_ultimate
@@ -330,6 +332,13 @@ func _spawn_loot_drops(pos: Vector3, enemy_stats: EnemyStats) -> void:
 		bag_p.global_position = pos + Vector3(randf_range(-0.6, 0.6), 0.2, randf_range(-0.6, 0.6))
 
 	var is_boss_enemy: bool = (enemy_stats.archetype == "boss")
+	# Rơi Hồn Yêu Tiến Hóa Linh Thú trực tiếp khi hạ Boss (+3 Hồn Yêu) hoặc Quái Tank (+1 Hồn Yêu)!
+	if is_boss_enemy:
+		SaveManager.add_demon_souls(3)
+		DamageNumber3D.spawn(entities_root, pos + Vector3(0.0, 1.3, 0.0), 0, true, false, "✦ +3 HỒN YÊU TIẾN HÓA! ✦")
+	elif enemy_stats.archetype == "tank":
+		SaveManager.add_demon_souls(1)
+		DamageNumber3D.spawn(entities_root, pos + Vector3(0.0, 1.1, 0.0), 0, true, false, "+1 HỒN YÊU!")
 	var weapon_drop_chance: float = 1.0 if is_boss_enemy else (0.35 if enemy_stats.archetype == "tank" else 0.22)
 	if randf() < weapon_drop_chance:
 		var wp := Pickup3D.new()

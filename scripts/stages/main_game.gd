@@ -20,6 +20,7 @@ func _ready() -> void:
 		add_child(ui_controller)
 
 	ui_controller.bind_player(stage_manager.player)
+	ui_controller.bind_pet(stage_manager.companion_pet)
 	ui_controller.start_stage_requested.connect(_on_start_stage_requested)
 	ui_controller.enter_town_hub_requested.connect(_on_enter_town_hub_requested)
 	ui_controller.npc_service_requested.connect(_on_npc_service_requested)
@@ -51,6 +52,7 @@ func _on_weather_lighting_changed(_mode: String, display_name: String) -> void:
 func _on_enter_town_hub_requested() -> void:
 	stage_manager.enter_town_hub()
 	ui_controller.bind_player(stage_manager.player)
+	ui_controller.bind_pet(stage_manager.companion_pet)
 
 
 func _on_npc_service_requested(role: String) -> void:
@@ -105,6 +107,7 @@ func _on_relic_chosen(relic_id: String) -> void:
 func _on_start_stage_requested(stage_id: int) -> void:
 	stage_manager.load_and_start_stage(stage_id)
 	ui_controller.bind_player(stage_manager.player)
+	ui_controller.bind_pet(stage_manager.companion_pet)
 	ui_controller.update_relics_hud({})
 
 

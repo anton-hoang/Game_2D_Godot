@@ -119,21 +119,33 @@ static func get_enemy_sprite_frames(archetype: String, tint: Color = Color.WHITE
 	return frames
 
 
-static func get_pet_sprite_frames(pet_type: String = "fox") -> SpriteFrames:
-	var key := "pet_frames_" + pet_type
+static func get_pet_sprite_frames(pet_type: String = "fox", evo_level: int = 1) -> SpriteFrames:
+	var lv: int = clampi(evo_level, 1, 3)
+	var key := "pet_frames_v2_" + pet_type + "_lv" + str(lv)
 	if _cache.has(key):
 		return _cache[key]
 	var frames := SpriteFrames.new()
 	if frames.has_animation("default"):
 		frames.remove_animation("default")
-	_add_anim(frames, "float", 6.5, true, [
-		_make_pet_frame(pet_type, 0),
-		_make_pet_frame(pet_type, 1),
-		_make_pet_frame(pet_type, 2),
-		_make_pet_frame(pet_type, 1),
+	var fps: float = 6.5 + float(lv - 1) * 1.2
+	_add_anim(frames, "float", fps, true, [
+		_make_pet_frame(pet_type, 0, lv),
+		_make_pet_frame(pet_type, 1, lv),
+		_make_pet_frame(pet_type, 2, lv),
+		_make_pet_frame(pet_type, 1, lv),
 	])
 	_cache[key] = frames
 	return frames
+
+
+static func get_pet_icon_texture(pet_type: String = "fox", evo_level: int = 1) -> ImageTexture:
+	var lv: int = clampi(evo_level, 1, 3)
+	var key := "pet_icon_v2_" + pet_type + "_lv" + str(lv)
+	if _cache.has(key):
+		return _cache[key]
+	var tex := _make_pet_frame(pet_type, 0, lv)
+	_cache[key] = tex
+	return tex
 
 
 static func get_hero_portrait_texture(scarf_id: String = "blue", skin_id: String = "skin_default") -> ImageTexture:
@@ -1279,75 +1291,151 @@ static func _make_flower_cluster_image() -> Image:
 	return img
 
 
-## Vẽ Sprite Pixel Art Linh Thú Đồng Hành (24x24):
-## - "fox": Tiểu Hồ Ly Bạch Tuyết 3 đuôi có chuông đỏ cổ trang & ấn đỏ trên trán (cực dễ thương!)
-## - "crane": Tiên Hạc Trắng vỗ cánh thanh thoát, chóp cánh đen, đỉnh đầu đỏ son & hào quang ngọc bích.
-static func _make_pet_frame(pet_type: String, step: int) -> ImageTexture:
-	var w := 26
-	var h := 26
+## Vẽ Sprite Pixel Art 4 Linh Thú Đồng Hành (34x34) với 3 CẤP TIẾN HÓA (Lv 1 -> Lv 2 -> Lv 3):
+## - "fox": Tiểu Hồ Ly -> Tam Vĩ Linh Hồ (3 đuôi) -> Cửu Vĩ Thiên Hồ (5 đuôi + Vòng hào quang vàng!)
+## - "crane": Tiên Hạc Trắng -> Bích Ngọc Linh Hạc (cánh ngọc bích) -> Cửu Thiên Thần Hạc (vương miện + hào quang!)
+## - "dragon": Tiểu Thanh Long (Gacha Sử Thi ★★) -> Bích Lôi Giao Long (sừng vàng) -> Thiên Long Băng Vương (vương miện + long châu!)
+## - "phoenix": Phượng Hoàng Lửa (Gacha Huyền Thoại ★★★) -> Xích Diệm Loan Phượng (3 đuôi lửa) -> Bất Tử Chu Tước (hào quang mặt trời!)
+static func _make_pet_frame(pet_type: String, step: int, evo_level: int = 1) -> ImageTexture:
+	var w: int = 34
+	var h: int = 34
 	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
 	img.fill(Color(0, 0, 0, 0))
-	var outline := Color(0.14, 0.09, 0.16)
+	var outline := Color(0.12, 0.08, 0.16)
+	var gold := Color(1.0, 0.84, 0.28)
 	var bob: int = 1 if step == 1 else (2 if step == 2 else 0)
+	var tail_dy: int = -2 if step == 0 else (2 if step == 2 else 0)
 
-	if pet_type == "crane":
-		# Tiên Hạc Cổ Trang vỗ cánh
-		var white := Color(0.98, 0.98, 1.0)
-		var shade := Color(0.78, 0.86, 0.94)
-		var wing_tip := Color(0.16, 0.18, 0.24)
-		var crown := Color(0.92, 0.18, 0.22)
-		var beak := Color(0.98, 0.78, 0.24)
-		var wing_y: int = 6 if step == 0 else (11 if step == 1 else 15)
+	# Hào quang mặt trời phía sau khi đạt Tiến Hóa Cấp 3 (Tối Thượng)!
+	if evo_level >= 3:
+		var pd: Dictionary = SaveManager.PET_CATALOG.get(pet_type, SaveManager.PET_CATALOG["fox"])
+		var pcol: Color = pd.get("color", gold)
+		_fill_circle(img, 17, 17, 13, Color(pcol.r, pcol.g, pcol.b, 0.25))
+		_fill_rect(img, 10, 3 + (bob / 2), 14, 2, gold)
 
-		# Đôi cánh vỗ theo nhịp 3 frame
-		_fill_rect(img, 3, wing_y, 9, 5, white)
-		_fill_rect(img, 2, wing_y + 2, 4, 3, wing_tip)
-		_fill_rect(img, 14, wing_y, 9, 5, white)
-		_fill_rect(img, 20, wing_y + 2, 4, 3, wing_tip)
-		# Thân hạc mảnh mai & đuôi đen
-		_fill_circle(img, 13, 14 + (bob / 2), 4, white)
-		_fill_rect(img, 8, 15, 5, 3, shade)
-		_fill_rect(img, 5, 16, 4, 3, wing_tip)
-		# Cổ vươn cao, đầu trắng + chỏm đỏ son + mỏ vàng
-		_fill_rect(img, 15, 7, 3, 7, white)
-		_fill_circle(img, 17, 6, 3, white)
-		_fill_rect(img, 16, 3, 3, 2, crown)
-		_fill_rect(img, 20, 6, 4, 2, beak)
-		img.set_pixel(18, 6, outline)
-	else:
-		# Tiểu Hồ Ly Bạch Tuyết (Chibi Hồ Ly bay lơ lửng với đuôi bông lớn & chuông đỏ)
-		var fur_w := Color(0.99, 0.97, 0.95)
-		var fur_s := Color(0.86, 0.80, 0.84)
-		var ear_in := Color(1.0, 0.62, 0.68)
-		var red_acc := Color(0.92, 0.18, 0.22)
-		var gold := Color(0.98, 0.82, 0.26)
+	match pet_type:
+		"dragon":
+			# TIỂU THANH LONG (Gacha Sử Thi ★★): Rồng phương Đông xanh ngọc uốn lượn bay quanh vai!
+			var dr_d := Color(0.08, 0.42, 0.72)
+			var dr_m := Color(0.24, 0.74, 0.98)
+			var dr_h := Color(0.68, 0.96, 1.0)
+			var belly := Color(0.92, 0.96, 1.0)
+			# Thân rồng uốn lượn chữ S
+			_fill_circle(img, 8, 22 + tail_dy, 4, dr_d)
+			_fill_circle(img, 6, 19 + tail_dy, 3, dr_h) # Chóp đuôi lửa băng
+			_fill_circle(img, 12, 24 - (tail_dy / 2), 4, dr_m)
+			_fill_circle(img, 16, 20 + (bob / 2), 5, dr_m)
+			_fill_rect(img, 14, 22 + (bob / 2), 5, 3, belly)
+			# Bờm rồng & vây lưng phát sáng (Cấp 2+ sáng hơn & có râu dài)
+			_fill_rect(img, 13, 14 + (bob / 2), 4, 3, dr_h)
+			# Đầu rồng chibi uy nghi
+			_fill_circle(img, 22, 14 + (bob / 2), 6, dr_m)
+			_fill_rect(img, 24, 15 + (bob / 2), 6, 4, dr_m) # Mõm rồng
+			_fill_rect(img, 26, 17 + (bob / 2), 4, 2, belly)
+			# Sừng rồng hoàng kim (Cấp 2+ mọc sừng lớn tỏa sáng!)
+			var horn_h: int = 4 if evo_level == 1 else (6 if evo_level == 2 else 7)
+			_fill_rect(img, 18, 9 - horn_h + (bob / 2), 2, horn_h, gold)
+			_fill_rect(img, 23, 9 - horn_h + (bob / 2), 2, horn_h, gold)
+			# Râu rồng bay phấp phới
+			_fill_rect(img, 28, 17 + (tail_dy / 2), 4, 1, dr_h)
+			if evo_level >= 2:
+				_fill_rect(img, 27, 19 - (tail_dy / 2), 5, 1, gold)
+			# Long Châu sáng lơ lửng trước móng vuốt ở Cấp 3!
+			if evo_level >= 3:
+				_fill_circle(img, 28, 24 + (bob / 2), 3, Color(0.55, 0.96, 1.0))
+				img.set_pixel(28, 23 + (bob / 2), Color.WHITE)
+			# Mắt rồng sáng rực
+			_fill_rect(img, 22, 13 + (bob / 2), 2, 2, Color(1.0, 0.92, 0.25))
 
-		# Chiếc đuôi bông khổng lồ vẫy phía sau (chóp đuôi phớt đỏ hồng)
-		var tail_dy: int = -1 if step == 0 else (1 if step == 2 else 0)
-		_fill_circle(img, 7, 15 + tail_dy, 5, fur_w)
-		_fill_circle(img, 5, 13 + tail_dy, 3, red_acc)
-		_fill_circle(img, 7, 16 + tail_dy, 3, fur_s)
+		"phoenix":
+			# PHƯỢNG HOÀNG LỬA (Gacha Huyền Thoại ★★★): Chim Phượng rực lửa vỗ cánh vàng cam!
+			var red_d := Color(0.76, 0.14, 0.12)
+			var flame_m := Color(1.0, 0.44, 0.14)
+			var flame_h := Color(1.0, 0.82, 0.24)
+			var wing_y: int = 8 if step == 0 else (14 if step == 1 else 19)
+			# Đuôi lửa Phượng Hoàng dài bồng bềnh (Cấp 2+: 3 dải đuôi rực cháy!)
+			_fill_rect(img, 3, 22 + tail_dy, 10, 3, flame_m)
+			_fill_rect(img, 2, 23 + tail_dy, 6, 2, flame_h)
+			if evo_level >= 2:
+				_fill_rect(img, 4, 26 - tail_dy, 9, 2, red_d)
+				_fill_rect(img, 5, 18 + tail_dy, 8, 2, flame_h)
+			if evo_level >= 3:
+				_fill_circle(img, 5, 22 + tail_dy, 3, Color(1.0, 0.95, 0.65))
+			# Đôi cánh Phượng Hoàng rực lửa vỗ mạnh
+			_fill_rect(img, 5, wing_y, 11, 6, flame_m)
+			_fill_rect(img, 3, wing_y + 1, 6, 4, flame_h)
+			_fill_rect(img, 18, wing_y, 11, 6, flame_m)
+			_fill_rect(img, 25, wing_y + 1, 6, 4, flame_h)
+			# Thân & cổ Phượng Hoàng
+			_fill_circle(img, 17, 18 + (bob / 2), 5, red_d)
+			_fill_circle(img, 17, 17 + (bob / 2), 4, flame_m)
+			_fill_rect(img, 18, 10 + (bob / 2), 4, 7, flame_m)
+			_fill_circle(img, 21, 9 + (bob / 2), 4, flame_h)
+			# Mào lửa 3 nhánh trên đầu & mỏ vàng
+			_fill_rect(img, 17, 4 + (bob / 2), 2, 4, flame_m)
+			_fill_rect(img, 20, 3 + (bob / 2), 2, 4, gold)
+			_fill_rect(img, 24, 9 + (bob / 2), 4, 2, gold)
+			img.set_pixel(22, 8 + (bob / 2), outline)
 
-		# Thân nhỏ nhắn & 4 chân thu gọn lơ lửng
-		_fill_circle(img, 13, 16 + (bob / 2), 4, fur_w)
-		_fill_rect(img, 11, 18 + (bob / 2), 6, 2, fur_s)
-		# Dải ruy băng đỏ & chuông vàng cổ
-		_fill_rect(img, 12, 13 + (bob / 2), 6, 2, red_acc)
-		_fill_rect(img, 15, 14 + (bob / 2), 2, 2, gold)
+		"crane":
+			# TIÊN HẠC TRẮNG -> BÍCH NGỌC LINH HẠC -> CỬU THIÊN THẦN HẠC!
+			var white := Color(0.98, 0.99, 1.0)
+			var jade := Color(0.32, 0.94, 0.84)
+			var wing_tip := Color(0.16, 0.18, 0.24) if evo_level == 1 else jade
+			var crown := Color(0.94, 0.18, 0.22)
+			var wing_y: int = 8 if step == 0 else (14 if step == 1 else 19)
+			# Đôi cánh vỗ thanh thoát (Cấp 2+ cánh ngọc bích phát sáng!)
+			_fill_rect(img, 4, wing_y, 11, 6, white)
+			_fill_rect(img, 3, wing_y + 2, 5, 3, wing_tip)
+			_fill_rect(img, 19, wing_y, 11, 6, white)
+			_fill_rect(img, 26, wing_y + 2, 5, 3, wing_tip)
+			if evo_level >= 2:
+				_fill_rect(img, 4, 21 + tail_dy, 8, 2, jade)
+				_fill_rect(img, 6, 24 - tail_dy, 7, 2, gold)
+			# Thân hạc & cổ vươn cao
+			_fill_circle(img, 17, 18 + (bob / 2), 5, white)
+			_fill_rect(img, 11, 19 + (bob / 2), 6, 3, Color(0.78, 0.88, 0.96))
+			_fill_rect(img, 19, 10 + (bob / 2), 3, 8, white)
+			_fill_circle(img, 21, 9 + (bob / 2), 4, white)
+			_fill_rect(img, 20, 5 + (bob / 2), 3, 2, crown)
+			if evo_level >= 3:
+				_fill_rect(img, 19, 3 + (bob / 2), 5, 2, gold)
+			_fill_rect(img, 25, 9 + (bob / 2), 4, 2, gold)
+			img.set_pixel(22, 9 + (bob / 2), outline)
 
-		# Đầu tròn cáo chibi + 2 tai nhọn lớn
-		_fill_circle(img, 16, 10 + (bob / 2), 5, fur_w)
-		# Tai nhọn
-		_fill_rect(img, 12, 3 + (bob / 2), 3, 4, fur_w)
-		_fill_rect(img, 13, 4 + (bob / 2), 2, 3, ear_in)
-		_fill_rect(img, 18, 3 + (bob / 2), 3, 4, fur_w)
-		_fill_rect(img, 18, 4 + (bob / 2), 2, 3, ear_in)
-		# Ấn đỏ cổ trang trên trán & cặp mắt long lanh
-		img.set_pixel(16, 7 + (bob / 2), red_acc)
-		_fill_rect(img, 15, 10 + (bob / 2), 2, 2, outline)
-		_fill_rect(img, 19, 10 + (bob / 2), 2, 2, outline)
-		img.set_pixel(15, 10 + (bob / 2), Color.WHITE)
-		img.set_pixel(19, 10 + (bob / 2), Color.WHITE)
+		_: # "fox" — TIỂU HỒ LY -> TAM VĨ LINH HỒ (3 ĐUÔI) -> CỬU VĨ THIÊN HỒ (5 ĐUÔI)!
+			var fur_w := Color(0.99, 0.97, 0.96)
+			var fur_s := Color(0.86, 0.80, 0.86)
+			var ear_in := Color(1.0, 0.58, 0.68)
+			var red_acc := Color(0.92, 0.18, 0.24)
+			# Số đuôi tăng dần rõ rệt theo Cấp Tiến Hóa!
+			_fill_circle(img, 9, 19 + tail_dy, 5, fur_w)
+			_fill_circle(img, 6, 17 + tail_dy, 3, red_acc)
+			if evo_level >= 2:
+				_fill_circle(img, 10, 12 - tail_dy, 4, fur_w)
+				_fill_circle(img, 8, 10 - tail_dy, 2, red_acc)
+				_fill_circle(img, 10, 25 + tail_dy, 4, fur_w)
+				_fill_circle(img, 8, 26 + tail_dy, 2, red_acc)
+			if evo_level >= 3:
+				_fill_circle(img, 5, 13 + tail_dy, 4, fur_w)
+				_fill_circle(img, 5, 24 - tail_dy, 4, fur_w)
+			# Thân cáo nhỏ & ruy băng chuông vàng
+			_fill_circle(img, 17, 20 + (bob / 2), 5, fur_w)
+			_fill_rect(img, 14, 23 + (bob / 2), 7, 2, fur_s)
+			_fill_rect(img, 16, 17 + (bob / 2), 7, 2, red_acc)
+			_fill_rect(img, 19, 18 + (bob / 2), 2, 2, gold)
+			# Đầu tròn cáo chibi + 2 tai nhọn lớn
+			_fill_circle(img, 20, 13 + (bob / 2), 6, fur_w)
+			_fill_rect(img, 15, 5 + (bob / 2), 4, 5, fur_w)
+			_fill_rect(img, 16, 6 + (bob / 2), 2, 4, ear_in)
+			_fill_rect(img, 22, 5 + (bob / 2), 4, 5, fur_w)
+			_fill_rect(img, 23, 6 + (bob / 2), 2, 4, ear_in)
+			# Ấn cổ trang trên trán & cặp mắt long lanh
+			_fill_rect(img, 20, 9 + (bob / 2), 2, 2, gold if evo_level >= 3 else red_acc)
+			_fill_rect(img, 19, 13 + (bob / 2), 2, 2, outline)
+			_fill_rect(img, 23, 13 + (bob / 2), 2, 2, outline)
+			img.set_pixel(19, 13 + (bob / 2), Color.WHITE)
+			img.set_pixel(23, 13 + (bob / 2), Color.WHITE)
 
 	_apply_clean_outline(img, outline)
 	return ImageTexture.create_from_image(img)

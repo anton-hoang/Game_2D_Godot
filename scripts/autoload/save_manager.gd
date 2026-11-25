@@ -175,6 +175,49 @@ const SKIN_CATALOG: Dictionary = {
 
 const GACHA_COST_SINGLE := 40
 const GACHA_COST_MULTI := 180 # Quay 5 lần (giảm giá + chắc chắn ra ít nhất 1 Skin Hiếm có hiệu ứng!)
+const PET_GACHA_COST := 50    # Quay Gacha Linh Thú (Cơ hội nhận Tiểu Thanh Long ★★ & Phượng Hoàng Lửa ★★★!)
+
+## ============================================================================
+## KHO 4 LINH THÚ ĐỒNG HÀNH — CÓ TIẾN HÓA CẤP 1 -> 2 -> 3 & KỸ NĂNG CHỦ ĐỘNG [F / V]!
+## ============================================================================
+const PET_CATALOG: Dictionary = {
+	"fox": {
+		"name": "Tiểu Hồ Ly", "rarity": "Hiếm ★", "tier": "rare",
+		"color": Color(1.0, 0.56, 0.76), "default_owned": true,
+		"evo_names": ["Tiểu Hồ Ly", "Tam Vĩ Linh Hồ", "Cửu Vĩ Thiên Hồ"],
+		"skill_name": "Hồ Ly Hộ Thuẫn",
+		"skill_desc": "Tạo Khiên Hộ Thân 5s + Hồi HP & phóng 3 cầu hồ hỏa truy đuổi!",
+		"dmg_mult": [0.68, 1.00, 1.42],
+		"bolt_cd": [2.25, 1.80, 1.40],
+	},
+	"crane": {
+		"name": "Tiên Hạc", "rarity": "Hiếm ★", "tier": "rare",
+		"color": Color(0.38, 0.96, 0.88), "default_owned": true,
+		"evo_names": ["Tiên Hạc Trắng", "Bích Ngọc Linh Hạc", "Cửu Thiên Thần Hạc"],
+		"skill_name": "Tiên Vũ Hồi Xuân",
+		"skill_desc": "Hồi ngay +35% Sinh Lực, +35 Chân Khí & tung sóng gió đẩy lùi quái!",
+		"dmg_mult": [0.70, 1.02, 1.45],
+		"bolt_cd": [2.10, 1.65, 1.30],
+	},
+	"dragon": {
+		"name": "Tiểu Thanh Long", "rarity": "Sử Thi ★★", "tier": "epic",
+		"color": Color(0.30, 0.84, 1.0), "default_owned": false,
+		"evo_names": ["Tiểu Thanh Long", "Bích Lôi Giao Long", "Thiên Long Băng Vương"],
+		"skill_name": "Long Tức Băng Phong",
+		"skill_desc": "Phóng 5 tia Long Tức Băng Lam nổ lan, làm chậm quái & phá Khiên Giáp!",
+		"dmg_mult": [0.88, 1.30, 1.82],
+		"bolt_cd": [1.90, 1.50, 1.15],
+	},
+	"phoenix": {
+		"name": "Phượng Hoàng Lửa", "rarity": "Huyền Thoại ★★★", "tier": "legendary",
+		"color": Color(1.0, 0.54, 0.16), "default_owned": false,
+		"evo_names": ["Tiểu Hỏa Phượng", "Xích Diệm Loan Phượng", "Bất Tử Chu Tước"],
+		"skill_name": "Niết Bàn Hỏa Vũ",
+		"skill_desc": "Bùng nổ vòng lửa Phượng Hoàng 360° + Hồi 25% HP! [Nội tại: Hồi sinh 1 lần/màn!]",
+		"dmg_mult": [0.98, 1.45, 2.05],
+		"bolt_cd": [1.80, 1.40, 1.10],
+	},
+}
 
 ## 4 nhiệm vụ phụ dân làng trên Bảng Truy Nã (Bounty Board)
 const QUEST_DEFINITIONS: Dictionary = {
@@ -246,7 +289,11 @@ var unlocked_titles: Array = ["Lữ Khách Windferry"]
 var equipped_title: String = "Lữ Khách Windferry"
 var unlocked_scarves: Array = ["blue"]
 var equipped_scarf: String = "blue"
-var equipped_pet: String = "fox" # "fox" (Tiểu Hồ Ly) | "crane" (Tiên Hạc)
+var equipped_pet: String = "fox" # "fox" | "crane" | "dragon" | "phoenix"
+var owned_pets: Array = ["fox", "crane"]
+var pet_levels: Dictionary = {"fox": 1, "crane": 1, "dragon": 1, "phoenix": 1}
+var demon_souls: int = 3 # Hồn Yêu rơi từ Boss/Tank dùng để Tiến Hóa Linh Thú!
+var pet_gacha_pity: int = 0 # Bảo hiểm: Quay 4 lần chắc chắn nổ Rồng hoặc Phượng Hoàng!
 var owned_skins: Array = ["skin_default"]
 var equipped_skin: String = "skin_default"
 var gacha_pity: int = 0 # Bảo hiểm: Quay đủ 5 lần chắc chắn nổ Skin Hiếm trở lên!
@@ -280,6 +327,10 @@ func save_game() -> void:
 	cfg.set_value("cosmetics", "unlocked_scarves", unlocked_scarves)
 	cfg.set_value("cosmetics", "equipped_scarf", equipped_scarf)
 	cfg.set_value("cosmetics", "equipped_pet", equipped_pet)
+	cfg.set_value("cosmetics", "owned_pets", owned_pets)
+	cfg.set_value("cosmetics", "pet_levels", pet_levels)
+	cfg.set_value("cosmetics", "demon_souls", demon_souls)
+	cfg.set_value("cosmetics", "pet_gacha_pity", pet_gacha_pity)
 	cfg.set_value("cosmetics", "owned_skins", owned_skins)
 	cfg.set_value("cosmetics", "equipped_skin", equipped_skin)
 	cfg.set_value("cosmetics", "gacha_pity", gacha_pity)
@@ -311,6 +362,23 @@ func load_game() -> void:
 	unlocked_scarves = cfg.get_value("cosmetics", "unlocked_scarves", ["blue"])
 	equipped_scarf = str(cfg.get_value("cosmetics", "equipped_scarf", "blue"))
 	equipped_pet = str(cfg.get_value("cosmetics", "equipped_pet", "fox"))
+	var raw_pets: Array = cfg.get_value("cosmetics", "owned_pets", ["fox", "crane"])
+	owned_pets = []
+	for pid_v in raw_pets:
+		var pid: String = str(pid_v)
+		if PET_CATALOG.has(pid) and not owned_pets.has(pid):
+			owned_pets.append(pid)
+	for def_p: String in ["fox", "crane"]:
+		if not owned_pets.has(def_p):
+			owned_pets.append(def_p)
+	if not owned_pets.has(equipped_pet):
+		equipped_pet = "fox"
+	var saved_plv: Dictionary = cfg.get_value("cosmetics", "pet_levels", {})
+	for pk in pet_levels.keys():
+		if saved_plv.has(pk):
+			pet_levels[pk] = clampi(int(saved_plv[pk]), 1, 3)
+	demon_souls = maxi(0, int(cfg.get_value("cosmetics", "demon_souls", 3)))
+	pet_gacha_pity = int(cfg.get_value("cosmetics", "pet_gacha_pity", 0))
 	var raw_skins: Array = cfg.get_value("cosmetics", "owned_skins", ["skin_default"])
 	owned_skins = []
 	for sid_v in raw_skins:
@@ -492,10 +560,108 @@ func roll_skin_gacha(count: int = 1) -> Array[Dictionary]:
 
 
 func equip_pet(pet_id: String) -> void:
-	if pet_id == "fox" or pet_id == "crane":
+	if owned_pets.has(pet_id) and PET_CATALOG.has(pet_id):
 		equipped_pet = pet_id
 		save_game()
 		cosmetic_changed.emit()
+
+
+func add_demon_souls(amount: int) -> void:
+	demon_souls = maxi(0, demon_souls + amount)
+	save_game()
+
+
+func get_pet_level(pet_id: String) -> int:
+	return clampi(int(pet_levels.get(pet_id, 1)), 1, 3)
+
+
+func get_pet_display_name(pet_id: String) -> String:
+	var pd: Dictionary = PET_CATALOG.get(pet_id, PET_CATALOG["fox"])
+	var names: Array = pd.get("evo_names", ["Linh Thú"])
+	var lv_idx: int = clampi(get_pet_level(pet_id) - 1, 0, names.size() - 1)
+	return str(names[lv_idx])
+
+
+func get_pet_evolve_costs(pet_id: String) -> Dictionary:
+	var lv: int = get_pet_level(pet_id)
+	if lv >= 3:
+		return {"maxed": true, "gold": 0, "souls": 0}
+	return {"maxed": false, "gold": 80 if lv == 1 else 160, "souls": 3 if lv == 1 else 6}
+
+
+## Tiến hóa Linh Thú từ Cấp 1 -> Cấp 2 -> Cấp 3 bằng Vàng HOẶC Hồn Yêu rơi từ Boss!
+func evolve_pet(pet_id: String, use_souls: bool = false) -> bool:
+	if not owned_pets.has(pet_id) or not PET_CATALOG.has(pet_id):
+		return false
+	var cur_lv: int = get_pet_level(pet_id)
+	if cur_lv >= 3:
+		return false
+	var costs: Dictionary = get_pet_evolve_costs(pet_id)
+	if use_souls:
+		var sc: int = int(costs["souls"])
+		if demon_souls < sc:
+			return false
+		demon_souls -= sc
+	else:
+		var gc: int = int(costs["gold"])
+		if gold < gc:
+			return false
+		gold -= gc
+	pet_levels[pet_id] = cur_lv + 1
+	save_game()
+	cosmetic_changed.emit()
+	return true
+
+
+## Quay Gacha Linh Thú (50 Lượng/lượt): Cơ hội nhận Tiểu Thanh Long ★★, Phượng Hoàng Lửa ★★★ hoặc Hồn Yêu Tiến Hóa!
+func roll_pet_gacha() -> Dictionary:
+	if gold < PET_GACHA_COST:
+		return {}
+	gold -= PET_GACHA_COST
+	pet_gacha_pity += 1
+
+	var unowned_rare: Array[String] = []
+	for pid: String in ["dragon", "phoenix"]:
+		if not owned_pets.has(pid):
+			unowned_rare.append(pid)
+
+	var force_pet: bool = (pet_gacha_pity >= 4)
+	var r: float = randf()
+	var result: Dictionary = {}
+
+	if force_pet or r < 0.52:
+		var chosen: String = "dragon"
+		if force_pet and unowned_rare.size() > 0:
+			chosen = unowned_rare[randi() % unowned_rare.size()]
+		else:
+			chosen = "phoenix" if (r < 0.20) else "dragon"
+		pet_gacha_pity = 0
+		var pd: Dictionary = PET_CATALOG[chosen]
+		var is_new: bool = not owned_pets.has(chosen)
+		var bonus_souls: int = 0
+		if is_new:
+			owned_pets.append(chosen)
+			equipped_pet = chosen
+		else:
+			bonus_souls = 4 if chosen == "phoenix" else 3
+			demon_souls += bonus_souls
+		result = {
+			"kind": "pet", "id": chosen, "name": str(pd["name"]),
+			"rarity": str(pd["rarity"]), "color": pd["color"],
+			"is_new": is_new, "bonus_souls": bonus_souls,
+		}
+	else:
+		var gained_souls: int = 2 + (randi() % 3) # 2 - 4 Hồn Yêu
+		demon_souls += gained_souls
+		result = {
+			"kind": "souls", "id": "demon_souls", "name": "Hồn Yêu Tiến Hóa x%d" % gained_souls,
+			"rarity": "Nguyên Liệu Hiếm", "color": Color(0.76, 0.48, 1.0),
+			"is_new": false, "bonus_souls": gained_souls,
+		}
+
+	save_game()
+	cosmetic_changed.emit()
+	return result
 
 
 func equip_title(title_str: String) -> void:
@@ -644,6 +810,10 @@ func reset_save() -> void:
 	unlocked_scarves = ["blue"]
 	equipped_scarf = "blue"
 	equipped_pet = "fox"
+	owned_pets = ["fox", "crane"]
+	pet_levels = {"fox": 1, "crane": 1, "dragon": 1, "phoenix": 1}
+	demon_souls = 3
+	pet_gacha_pity = 0
 	owned_skins = ["skin_default"]
 	equipped_skin = "skin_default"
 	gacha_pity = 0
