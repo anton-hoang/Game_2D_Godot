@@ -133,8 +133,8 @@ func _build_visual_nodes() -> void:
 		anim_sprite.name = "AnimatedSprite3D"
 		add_child(anim_sprite)
 
-	anim_sprite.position = Vector3(0.0, 0.96, 0.0)
-	anim_sprite.pixel_size = 0.044
+	anim_sprite.position = Vector3(0.0, 1.02, 0.0)
+	anim_sprite.pixel_size = 0.043
 	anim_sprite.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
 	anim_sprite.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 	anim_sprite.shaded = true
@@ -146,8 +146,8 @@ func _build_visual_nodes() -> void:
 	# Tạo viền sáng Rim-Light an toàn 100% bằng Sprite3D hào quang nhẹ phía sau (tránh xung đột pipeline material_override trên D3D12)
 	var rim_halo := Sprite3D.new()
 	rim_halo.name = "RimLightHalo"
-	rim_halo.position = Vector3(0.0, 0.96, -0.02)
-	rim_halo.pixel_size = 0.0475
+	rim_halo.position = Vector3(0.0, 1.02, -0.02)
+	rim_halo.pixel_size = 0.0465
 	rim_halo.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
 	rim_halo.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 	rim_halo.shaded = false
