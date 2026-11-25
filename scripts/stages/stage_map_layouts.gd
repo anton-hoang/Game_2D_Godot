@@ -61,9 +61,11 @@ static func _build_autumn_forest(b: HD2DEnvironmentBuilder, root: Node3D) -> voi
 	b._add_box_mesh(root, Vector3(2.4, 0.42, 0.48), Vector3(-3.2, 0.21, -5.0), wood_mat)
 	b._add_box_mesh(root, Vector3(2.4, 0.42, 0.48), Vector3(2.2, 0.21, -5.0), wood_mat)
 
-	# 4 cột đèn gỗ treo ven đường mòn
+	# 4 cột đèn gỗ treo ven đường mòn + Cổng gỗ mái cong dẫn vào Rừng Thu
 	for lp: Vector3 in [Vector3(-12.0, 0.0, -2.5), Vector3(-4.0, 0.0, 4.5), Vector3(5.5, 0.0, -2.5), Vector3(11.0, 0.0, 1.5)]:
 		b._create_lantern_post(root, lp, Color(1.0, 0.72, 0.28), 2.4)
+	b.create_curved_wooden_gate(root, Vector3(-14.5, 0.0, 1.2), 82.0, "RỪNG THU QUAN")
+	b.create_red_lantern_string(root, Vector3(-9.5, 3.8, -5.2), Vector3(8.5, 3.8, -5.2), 6)
 
 	# Rừng cây lá thu vàng cam dày đặc tạo không khí chiều thu rực rỡ
 	var autumn_tex := PixelArtGenerator.get_prop_texture("tree_autumn")
@@ -118,10 +120,12 @@ static func _build_moonlit_bridge(b: HD2DEnvironmentBuilder, root: Node3D) -> vo
 	b._add_hazard(root, "water_hazard", Vector3(0.0, 0.0, 6.4), Vector3(42.0, 1.2, 3.6), 24)
 	b._add_hazard(root, "water_hazard", Vector3(0.0, 0.0, -6.6), Vector3(42.0, 1.2, 3.4), 24)
 
-	# 6 cột đèn xanh vàng dọc lan can cầu phản chiếu xuống mặt hồ
+	# 6 cột đèn xanh vàng dọc lan can cầu + Cổng gỗ mái cong cổ trang giữa cầu & dây đèn lồng đỏ
 	for lx: float in [-12.0, -4.0, 4.0, 12.0]:
 		b._create_lantern_post(root, Vector3(lx, 0.2, -3.8), Color(1.0, 0.74, 0.34), 2.9)
 		b._create_lantern_post(root, Vector3(lx, 0.2, 3.8), Color(0.58, 0.82, 1.0), 2.2)
+	b.create_curved_wooden_gate(root, Vector3(0.0, 0.25, -4.4), 0.0, "NGUYỆT KIỀU")
+	b.create_red_lantern_string(root, Vector3(-12.0, 4.4, -3.8), Vector3(12.0, 4.4, -3.8), 7)
 
 	var pine_tex := PixelArtGenerator.get_prop_texture("pine")
 	for px: float in [-22.0, -12.0, -6.0, 0.0, 6.0, 12.0, 22.0]:
@@ -170,6 +174,11 @@ static func _build_rainy_market(b: HD2DEnvironmentBuilder, root: Node3D) -> void
 		var roof := b._add_box_mesh(root, Vector3(5.0, 0.22, 2.6), Vector3(sx, 2.85, -7.1), amat)
 		roof.rotation_degrees.x = 14.0
 		b._create_lantern_post(root, Vector3(sx + 2.4, 0.0, -5.8), Color(1.0, 0.52, 0.22), 2.8)
+
+	# Cổng Chợ Đêm mái cong & 2 dây đèn lồng đỏ giăng chéo rực rỡ giữa quảng trường mưa!
+	b.create_curved_wooden_gate(root, Vector3(0.0, 0.0, -6.2), 0.0, "CHỢ ĐÊM PHONG VŨ")
+	b.create_red_lantern_string(root, Vector3(-14.5, 4.6, -5.5), Vector3(0.0, 5.0, -5.5), 5)
+	b.create_red_lantern_string(root, Vector3(0.0, 5.0, -5.5), Vector3(14.5, 4.6, -5.5), 5)
 
 	# Đài phun nước đá cổ ngay trung tâm quảng trường
 	b._add_box_mesh(root, Vector3(4.2, 0.7, 4.2), Vector3(0.0, 0.35, -1.2), brick_mat)

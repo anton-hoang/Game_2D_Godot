@@ -28,6 +28,7 @@ func _ready() -> void:
 	stage_manager.wave_banner_requested.connect(ui_controller.show_wave_banner)
 	stage_manager.npc_interacted.connect(ui_controller.show_npc_dialogue)
 	stage_manager.hub_portal_entered.connect(ui_controller.open_stage_select_from_hub)
+	stage_manager.boss_appeared.connect(_on_boss_appeared_cinematic)
 
 	# Lắng nghe sự kiện Thiên Tượng đổi ánh sáng ngẫu nhiên tự động
 	if stage_manager.environment_builder:
@@ -68,6 +69,21 @@ func _on_npc_service_requested(role: String) -> void:
 		else:
 			AudioManager.play_sfx("hurt", 0.9)
 			ui_controller.show_wave_banner("NGÂN LƯỢNG KHÔNG ĐỦ (CẦN 20 LƯỢNG)", "Hãy mở Rương báu trong 3 nhà gỗ hoặc chém vỡ thùng gỗ để tìm thêm!")
+
+
+func _on_boss_appeared_cinematic(boss_node: EnemyBase) -> void:
+	if boss_node == null or not is_instance_valid(boss_node):
+		return
+	# Làm chậm nhẹ chiến trường trong lúc camera lia điện ảnh vào Boss
+	Engine.time_scale = 0.25
+	ui_controller.play_boss_cinematic_overlay(
+		boss_node.stats.enemy_name.to_upper(),
+		"Ma Vương Hắc Ám • Tam Cảnh Chiến Thần — Huyết Nguyệt Giáng Lâm!",
+		2.2
+	)
+	if stage_manager.camera_rig:
+		await stage_manager.camera_rig.play_boss_intro(boss_node, 2.2)
+	Engine.time_scale = 1.0
 
 
 func _on_start_stage_requested(stage_id: int) -> void:

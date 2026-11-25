@@ -42,6 +42,8 @@ var anim_sprite: AnimatedSprite3D
 var slash_vfx: Sprite3D
 var player_light: OmniLight3D
 var camera_rig: CameraRig3D
+var _rim_shader_mat: ShaderMaterial
+var _contact_shadow: MeshInstance3D
 
 
 func _ready() -> void:
@@ -91,6 +93,30 @@ func _build_visual_nodes() -> void:
 	anim_sprite.sprite_frames = custom_sprite_frames if custom_sprite_frames else PixelArtGenerator.get_player_sprite_frames()
 	anim_sprite.play("idle")
 
+	# Gắn Shader Rim-Light viền sáng cổ trang lên nhân vật (tự động cập nhật theo từng frame)
+	var rim_shader := load("res://assets/shaders/sprite_rim_light.gdshader") as Shader
+	if rim_shader:
+		_rim_shader_mat = ShaderMaterial.new()
+		_rim_shader_mat.shader = rim_shader
+		_rim_shader_mat.set_shader_parameter("rim_color", Color(1.0, 0.80, 0.44))
+		_rim_shader_mat.set_shader_parameter("rim_strength", 1.25)
+		anim_sprite.material_override = _rim_shader_mat
+
+	# Bóng tròn mềm tiếp đất (Contact Shadow) giúp nhân vật đứng vững và rõ vị trí trong màn đêm
+	_contact_shadow = MeshInstance3D.new()
+	var sh_cyl := CylinderMesh.new()
+	sh_cyl.top_radius = 0.46
+	sh_cyl.bottom_radius = 0.46
+	sh_cyl.height = 0.02
+	_contact_shadow.mesh = sh_cyl
+	_contact_shadow.position = Vector3(0.0, 0.03, 0.0)
+	var sh_mat := StandardMaterial3D.new()
+	sh_mat.albedo_color = Color(0.02, 0.02, 0.04, 0.58)
+	sh_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	sh_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_contact_shadow.material_override = sh_mat
+	add_child(_contact_shadow)
+
 	slash_vfx = get_node_or_null("SlashVFX") as Sprite3D
 	if slash_vfx == null:
 		slash_vfx = Sprite3D.new()
@@ -117,6 +143,14 @@ func _build_visual_nodes() -> void:
 func _physics_process(delta: float) -> void:
 	if _is_dead:
 		return
+
+	# Đồng bộ texture & hướng lật cho Shader Rim-Light viền sáng nhân vật
+	if _rim_shader_mat and anim_sprite and anim_sprite.sprite_frames:
+		var cur_tex := anim_sprite.sprite_frames.get_frame_texture(anim_sprite.animation, anim_sprite.frame)
+		if cur_tex:
+			_rim_shader_mat.set_shader_parameter("albedo_tex", cur_tex)
+		_rim_shader_mat.set_shader_parameter("flip_h", anim_sprite.flip_h)
+		_rim_shader_mat.set_shader_parameter("modulate_color", anim_sprite.modulate)
 
 	# Hồi năng lượng tự nhiên theo thời gian
 	if current_energy < max_energy:

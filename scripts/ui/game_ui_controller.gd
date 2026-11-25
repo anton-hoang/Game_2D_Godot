@@ -31,6 +31,11 @@ var boss_box: PanelContainer
 var boss_name_label: Label
 var boss_hp_bar: ProgressBar
 var boss_hp_trail: ProgressBar
+var _letterbox_top: ColorRect
+var _letterbox_bottom: ColorRect
+var _boss_intro_card: Control
+var _boss_intro_name: Label
+var _boss_intro_sub: Label
 
 var main_menu_panel: Control
 var stage_select_panel: Control
@@ -57,6 +62,7 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_build_vignette_overlay()
 	_build_hud()
+	_build_cinematic_letterbox()
 	_build_main_menu()
 	_build_stage_select_menu()
 	_build_upgrade_menu()
@@ -406,6 +412,86 @@ func _build_hud() -> void:
 	boss_hp_bar = _create_classical_bar(Color(0.78, 0.10, 0.20), Color(0, 0, 0, 0), 22, false)
 	boss_hp_bar.set_anchors_preset(Control.PRESET_FULL_RECT)
 	boss_bar_holder.add_child(boss_hp_bar)
+
+
+## Dựng 2 dải đen điện ảnh (Letterbox) & Bảng Danh Hiệu Boss Cổ Trang khi Boss xuất hiện
+func _build_cinematic_letterbox() -> void:
+	_letterbox_top = ColorRect.new()
+	_letterbox_top.color = Color(0.02, 0.01, 0.02, 0.96)
+	_letterbox_top.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_letterbox_top.custom_minimum_size = Vector2(0, 88)
+	_letterbox_top.position.y = -92
+	_letterbox_top.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_letterbox_top)
+
+	_letterbox_bottom = ColorRect.new()
+	_letterbox_bottom.color = Color(0.02, 0.01, 0.02, 0.96)
+	_letterbox_bottom.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	_letterbox_bottom.custom_minimum_size = Vector2(0, 88)
+	_letterbox_bottom.offset_top = 0
+	_letterbox_bottom.offset_bottom = 88
+	_letterbox_bottom.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_letterbox_bottom)
+
+	var card := _create_classical_panel(Color(0.14, 0.04, 0.05, 0.94), Color(0.95, 0.74, 0.30, 1.0))
+	card.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	card.position = Vector2(-320, -185)
+	card.custom_minimum_size = Vector2(640, 86)
+	card.visible = false
+	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(card)
+	_boss_intro_card = card
+
+	var vb := VBoxContainer.new()
+	vb.alignment = BoxContainer.ALIGNMENT_CENTER
+	vb.add_theme_constant_override("separation", 4)
+	card.add_child(vb)
+
+	_boss_intro_name = Label.new()
+	_boss_intro_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_boss_intro_name.add_theme_font_size_override("font_size", 26)
+	_boss_intro_name.modulate = Color(1.0, 0.84, 0.36)
+	vb.add_child(_boss_intro_name)
+
+	_boss_intro_sub = Label.new()
+	_boss_intro_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_boss_intro_sub.add_theme_font_size_override("font_size", 14)
+	_boss_intro_sub.modulate = Color(1.0, 0.56, 0.56)
+	vb.add_child(_boss_intro_sub)
+
+
+## Kích hoạt Intro điện ảnh 3.4 giây: Ẩn HUD -> 2 dải đen Letterbox trượt vào -> Bảng danh hiệu Ma Vương -> Mở lại chiến đấu
+func play_boss_cinematic_overlay(boss_title: String, boss_subtitle: String, duration: float = 2.6) -> void:
+	if _letterbox_top == null or _letterbox_bottom == null:
+		return
+	if hud_root:
+		hud_root.visible = false
+	_boss_intro_name.text = "「 " + boss_title + " 」"
+	_boss_intro_sub.text = boss_subtitle
+	_boss_intro_card.visible = true
+	_boss_intro_card.modulate.a = 0.0
+
+	var tw_in := create_tween()
+	tw_in.set_parallel(true)
+	tw_in.tween_property(_letterbox_top, "position:y", 0.0, 0.45).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw_in.tween_property(_letterbox_bottom, "offset_top", -88.0, 0.45).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw_in.tween_property(_letterbox_bottom, "offset_bottom", 0.0, 0.45).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw_in.tween_property(_boss_intro_card, "modulate:a", 1.0, 0.55).set_delay(0.25)
+
+	await get_tree().create_timer(duration + 0.65, true, false, true).timeout
+	if not is_instance_valid(self):
+		return
+
+	var tw_out := create_tween()
+	tw_out.set_parallel(true)
+	tw_out.tween_property(_letterbox_top, "position:y", -92.0, 0.45)
+	tw_out.tween_property(_letterbox_bottom, "offset_top", 0.0, 0.45)
+	tw_out.tween_property(_letterbox_bottom, "offset_bottom", 88.0, 0.45)
+	tw_out.tween_property(_boss_intro_card, "modulate:a", 0.0, 0.35)
+	await tw_out.finished
+	_boss_intro_card.visible = false
+	if hud_root:
+		hud_root.visible = true
 
 
 func _build_main_menu() -> void:

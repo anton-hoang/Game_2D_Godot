@@ -29,6 +29,7 @@ var _hamlet_root: Node3D
 var _stage_map_root: Node3D
 var _lantern_lights: Array[OmniLight3D] = []
 var _lantern_base_energies: Array[float] = []
+var _hanging_lanterns: Array[Node3D] = []
 var _window_materials: Array[StandardMaterial3D] = []
 var current_time_of_day: String = "blue_night"
 var current_map_theme: String = "hamlet_hub"
@@ -110,13 +111,17 @@ func _set_colliders_disabled(root_node: Node, disabled: bool) -> void:
 
 
 func _process(delta: float) -> void:
-	# Hiệu ứng lửa đèn lồng lập lòe nhẹ rất sống động trong màn đêm HD-2D
+	# Hiệu ứng lửa đèn lồng lập lòe + đèn lồng đỏ treo dây đung đưa nhẹ trong gió
 	_flicker_time += delta * 5.2
 	for i in range(_lantern_lights.size()):
 		var l := _lantern_lights[i]
 		if is_instance_valid(l) and i < _lantern_base_energies.size():
 			var wave := sin(_flicker_time + float(i) * 1.7) * 0.16 + cos(_flicker_time * 1.9 + float(i)) * 0.09
 			l.light_energy = maxf(0.4, _lantern_base_energies[i] + wave)
+	for j in range(_hanging_lanterns.size()):
+		var hl := _hanging_lanterns[j]
+		if is_instance_valid(hl):
+			hl.rotation_degrees.z = sin(_flicker_time * 0.48 + float(j) * 0.9) * 6.5
 
 	# Tự động chuyển đổi ánh sáng (Hoàng hôn / Đêm xanh / Màn đêm / Mưa / Huyết nguyệt) hoàn toàn ngẫu nhiên!
 	if auto_random_lighting:
@@ -696,6 +701,14 @@ func _build_village_props() -> void:
 	_add_box_mesh(_hamlet_root, Vector3(4.5, 0.14, 0.10), Vector3(19.5, 0.95, -6.8), wood_mat)
 	_add_box_mesh(_hamlet_root, Vector3(4.5, 0.14, 0.10), Vector3(19.5, 0.50, -6.8), wood_mat)
 
+	# CỔNG GỖ MÁI CONG CỔ TRANG (Cổng Tam Quan) đầu lối vào Làng Windferry & chân cầu thang
+	create_curved_wooden_gate(_hamlet_root, Vector3(10.6, 0.0, -5.8), 0.0, "PHONG HÀNH CỔ TRẤN")
+	create_curved_wooden_gate(_hamlet_root, Vector3(-16.2, 0.0, 0.8), 18.0, "CẦU ÁNH TRĂNG")
+
+	# DÂY ĐÈN LỒNG ĐỎ TREO GIĂNG NGANG LỐI ĐI & GIỮA 2 NGÔI NHÀ GỖ
+	create_red_lantern_string(_hamlet_root, Vector3(-12.0, 6.2, -10.4), Vector3(2.2, 6.2, -10.2), 6)
+	create_red_lantern_string(_hamlet_root, Vector3(-5.0, 3.6, -0.8), Vector3(6.8, 3.6, 2.2), 5)
+
 	spawn_breakable_props()
 
 
@@ -1093,3 +1106,162 @@ func _spawn_breakables_at(root: Node3D, specs: Array) -> void:
 		br.prop_kind = str(sp[0])
 		br.position = sp[1]
 		root.add_child(br)
+
+
+## ============================================================================
+## KIẾN TRÚC CỔ TRANG: CỔNG GỖ MÁI CONG (TAM QUAN) & DÂY ĐÈN LỒNG ĐỎ TREO ĐUNG ĐƯA
+## ============================================================================
+
+## Dựng Cổng Gỗ Mái Cong Cổ Trang: 2 trụ sơn son đế đá, xà ngang hoành phi chữ vàng,
+## 2 tầng mái ngói xanh đen uốn cong đầu đao vểnh lên 2 bên & 2 đèn lồng đỏ treo dưới mái.
+func create_curved_wooden_gate(root: Node3D, pos: Vector3, rot_y_deg: float = 0.0, plaque_text: String = "WINDFERRY") -> void:
+	var gate := Node3D.new()
+	gate.position = pos
+	gate.rotation_degrees.y = rot_y_deg
+	root.add_child(gate)
+
+	var lacquer_red := StandardMaterial3D.new()
+	lacquer_red.albedo_color = Color(0.58, 0.11, 0.11)
+	lacquer_red.roughness = 0.52
+
+	var dark_wood := _make_textured_material(Color(0.24, 0.13, 0.08), Color(0.16, 0.08, 0.05), 0.78, "wood")
+	var roof_tile := _make_textured_material(Color(0.13, 0.17, 0.24), Color(0.08, 0.11, 0.16), 0.65, "brick")
+	var stone_base := _make_textured_material(Color(0.32, 0.32, 0.36), Color(0.20, 0.20, 0.24), 0.85, "cobble")
+	var gold_mat := StandardMaterial3D.new()
+	gold_mat.albedo_color = Color(0.96, 0.78, 0.26)
+	gold_mat.metallic = 0.72
+	gold_mat.roughness = 0.35
+
+	# 2 Đế đá chạm & 2 Cột gỗ trụ sơn son tròn lớn
+	for px: float in [-2.4, 2.4]:
+		_add_box_mesh(gate, Vector3(0.86, 0.58, 0.86), Vector3(px, 0.29, 0.0), stone_base)
+		var pillar := MeshInstance3D.new()
+		var cm := CylinderMesh.new()
+		cm.top_radius = 0.24
+		cm.bottom_radius = 0.28
+		cm.height = 4.6
+		pillar.mesh = cm
+		pillar.position = Vector3(px, 2.75, 0.0)
+		pillar.material_override = lacquer_red
+		gate.add_child(pillar)
+		# Vòng đai vàng trang trí đầu cột
+		_add_box_mesh(gate, Vector3(0.62, 0.18, 0.62), Vector3(px, 4.4, 0.0), gold_mat)
+
+	# Xà ngang 2 tầng & Tấm Hoành Phi sơn đen viền vàng chữ cổ trang
+	_add_box_mesh(gate, Vector3(5.8, 0.34, 0.42), Vector3(0.0, 4.05, 0.0), lacquer_red)
+	_add_box_mesh(gate, Vector3(6.4, 0.32, 0.46), Vector3(0.0, 4.78, 0.0), dark_wood)
+
+	var plaque_bg := StandardMaterial3D.new()
+	plaque_bg.albedo_color = Color(0.10, 0.06, 0.06)
+	_add_box_mesh(gate, Vector3(2.9, 0.86, 0.16), Vector3(0.0, 4.42, 0.26), gold_mat)
+	_add_box_mesh(gate, Vector3(2.7, 0.68, 0.20), Vector3(0.0, 4.42, 0.28), plaque_bg)
+
+	var p_lbl := Label3D.new()
+	p_lbl.position = Vector3(0.0, 4.42, 0.40)
+	p_lbl.pixel_size = 0.008
+	p_lbl.font_size = 32
+	p_lbl.outline_size = 8
+	p_lbl.modulate = Color(1.0, 0.86, 0.34)
+	p_lbl.text = plaque_text
+	gate.add_child(p_lbl)
+
+	# Tầng mái dưới + 2 đầu đao mái vểnh cong lên đặc trưng kiến trúc Á Đông
+	_add_box_mesh(gate, Vector3(6.8, 0.32, 1.85), Vector3(0.0, 5.15, 0.0), roof_tile)
+	var left_eave := _add_box_mesh(gate, Vector3(1.65, 0.24, 1.90), Vector3(-3.9, 5.42, 0.0), roof_tile)
+	left_eave.rotation_degrees.z = -24.0
+	var right_eave := _add_box_mesh(gate, Vector3(1.65, 0.24, 1.90), Vector3(3.9, 5.42, 0.0), roof_tile)
+	right_eave.rotation_degrees.z = 24.0
+
+	# Tầng mái trên (chóp nóc cổ trang + 2 đầu kìm vàng)
+	var upper_roof := MeshInstance3D.new()
+	var pr := PrismMesh.new()
+	pr.size = Vector3(5.6, 1.25, 1.70)
+	upper_roof.mesh = pr
+	upper_roof.position = Vector3(0.0, 5.95, 0.0)
+	upper_roof.material_override = roof_tile
+	gate.add_child(upper_roof)
+	_add_box_mesh(gate, Vector3(5.2, 0.16, 0.22), Vector3(0.0, 6.55, 0.0), gold_mat)
+	for ux: float in [-2.75, 2.75]:
+		var tip := _add_box_mesh(gate, Vector3(0.65, 0.32, 0.28), Vector3(ux, 6.72, 0.0), gold_mat)
+		tip.rotation_degrees.z = -30.0 if ux < 0.0 else 30.0
+
+	# 2 Đèn lồng đỏ treo đung đưa dưới 2 bên mái cổng
+	for lx: float in [-1.85, 1.85]:
+		_spawn_single_red_lantern(gate, Vector3(lx, 3.85, 0.22), true)
+
+
+## Dựng Dây Đèn Lồng Đỏ cổ trang giăng võng giữa 2 điểm (có dây thừng + chuỗi đèn lồng đung đưa + ánh sáng ấm)
+func create_red_lantern_string(root: Node3D, start_pos: Vector3, end_pos: Vector3, lantern_count: int = 5) -> void:
+	var rope_mat := StandardMaterial3D.new()
+	rope_mat.albedo_color = Color(0.22, 0.14, 0.10)
+
+	var prev_p := start_pos
+	var steps := lantern_count + 1
+	for i in range(1, steps + 1):
+		var t := float(i) / float(steps)
+		var sag := sin(t * PI) * 1.15
+		var cur_p := start_pos.lerp(end_pos, t) - Vector3(0.0, sag, 0.0)
+
+		# Đoạn dây nối giữa 2 nút võng
+		var seg_vec := cur_p - prev_p
+		var seg_len := seg_vec.length()
+		if seg_len > 0.05:
+			var rope := MeshInstance3D.new()
+			var bm := BoxMesh.new()
+			bm.size = Vector3(0.05, 0.05, seg_len)
+			rope.mesh = bm
+			rope.material_override = rope_mat
+			root.add_child(rope)
+			rope.position = (prev_p + cur_p) * 0.5
+			rope.look_at(cur_p, Vector3.UP)
+
+		if i <= lantern_count:
+			# Đặt ánh sáng thật cho các đèn xen kẽ để lung linh mà vẫn giữ 60 FPS cực mượt
+			_spawn_single_red_lantern(root, cur_p, (i % 2 == 1))
+		prev_p = cur_p
+
+
+func _spawn_single_red_lantern(parent: Node3D, pos: Vector3, emit_light: bool) -> void:
+	var pivot := Node3D.new()
+	pivot.position = pos
+	parent.add_child(pivot)
+
+	var cap_mat := StandardMaterial3D.new()
+	cap_mat.albedo_color = Color(0.95, 0.76, 0.24)
+	cap_mat.metallic = 0.65
+
+	var red_glow := StandardMaterial3D.new()
+	red_glow.albedo_color = Color(1.0, 0.24, 0.16)
+	red_glow.emission_enabled = true
+	red_glow.emission = Color(1.0, 0.26, 0.14)
+	red_glow.emission_energy_multiplier = 3.8
+	_window_materials.append(red_glow)
+
+	# Dây treo ngắn
+	_add_box_mesh(pivot, Vector3(0.04, 0.30, 0.04), Vector3(0.0, -0.15, 0.0), cap_mat)
+	# Nắp vàng trên & dưới
+	_add_box_mesh(pivot, Vector3(0.28, 0.08, 0.28), Vector3(0.0, -0.32, 0.0), cap_mat)
+	_add_box_mesh(pivot, Vector3(0.24, 0.08, 0.24), Vector3(0.0, -0.82, 0.0), cap_mat)
+	# Thân lồng đèn giấy đỏ hình cầu dẹt
+	var body := MeshInstance3D.new()
+	var sm := SphereMesh.new()
+	sm.radius = 0.28
+	sm.height = 0.50
+	body.mesh = sm
+	body.position = Vector3(0.0, -0.57, 0.0)
+	body.material_override = red_glow
+	pivot.add_child(body)
+	# Tua rua đỏ vàng rủ xuống dưới đèn lồng
+	_add_box_mesh(pivot, Vector3(0.06, 0.34, 0.06), Vector3(0.0, -1.02, 0.0), red_glow)
+
+	if emit_light:
+		var light := OmniLight3D.new()
+		light.position = Vector3(0.0, -0.60, 0.0)
+		light.light_color = Color(1.0, 0.42, 0.20)
+		light.light_energy = 2.4
+		light.omni_range = 7.5
+		pivot.add_child(light)
+		_lantern_lights.append(light)
+		_lantern_base_energies.append(2.4)
+
+	_hanging_lanterns.append(pivot)

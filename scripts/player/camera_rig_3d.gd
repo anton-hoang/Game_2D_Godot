@@ -17,6 +17,10 @@ var target: Node3D
 var camera: Camera3D
 var _shake_intensity: float = 0.0
 var _shake_time: float = 0.0
+var _cinematic_active: bool = false
+var _cinematic_focus: Vector3 = Vector3.ZERO
+var _default_offset: Vector3 = Vector3.ZERO
+var _default_fov: float = 28.0
 
 
 func _ready() -> void:
@@ -29,6 +33,8 @@ func _ready() -> void:
 		camera.name = "Camera3D"
 		add_child(camera)
 
+	_default_offset = follow_offset
+	_default_fov = camera_fov
 	camera.fov = camera_fov
 	camera.near = 0.2
 	camera.far = 150.0
@@ -48,7 +54,9 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
-	if target and is_instance_valid(target):
+	if _cinematic_active:
+		global_position = global_position.lerp(_cinematic_focus, clampf(4.5 * delta, 0.0, 1.0))
+	elif target and is_instance_valid(target):
 		var desired := target.global_position
 		desired.x = clampf(desired.x, limit_x.x, limit_x.y)
 		desired.z = clampf(desired.z, limit_z.x, limit_z.y)
@@ -65,6 +73,32 @@ func _physics_process(delta: float) -> void:
 		camera.position = follow_offset + offset
 	else:
 		camera.position = camera.position.lerp(follow_offset, clampf(15.0 * delta, 0.0, 1.0))
+
+
+## Intro điện ảnh khi Boss giáng lâm: Camera lia mượt & zoom cận cảnh vào Boss, rung nhẹ rồi trả về Player
+func play_boss_intro(boss_node: Node3D, hold_duration: float = 2.6) -> void:
+	if boss_node == null or not is_instance_valid(boss_node) or camera == null:
+		return
+	_cinematic_active = true
+	_cinematic_focus = boss_node.global_position + Vector3(0.0, 0.7, 0.0)
+
+	var tw := create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(self, "follow_offset", Vector3(0.0, 6.2, 10.2), 0.75).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.tween_property(camera, "fov", 21.0, 0.75).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	await tw.finished
+
+	shake(0.24, 0.42)
+	await get_tree().create_timer(hold_duration, true, false, true).timeout
+	if not is_instance_valid(self):
+		return
+
+	var tw_back := create_tween()
+	tw_back.set_parallel(true)
+	tw_back.tween_property(self, "follow_offset", _default_offset, 0.65).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+	tw_back.tween_property(camera, "fov", _default_fov, 0.65).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+	await tw_back.finished
+	_cinematic_active = false
 
 
 ## Gọi hàm này khi đánh trúng quái hoặc nhận sát thương để rung camera
