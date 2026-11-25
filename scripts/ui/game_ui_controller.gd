@@ -59,16 +59,29 @@ var _relic_hud_label: Label
 var _quest_list_box: VBoxContainer
 var _scarf_buttons_box: HBoxContainer
 var _pet_buttons_box: HBoxContainer
-var _inv_weapons_box: VBoxContainer
-var _inv_items_box: VBoxContainer
+var _inv_grid: GridContainer
+var _inv_detail_icon: TextureRect
+var _inv_detail_title: Label
+var _inv_detail_desc: Label
+var _inv_detail_btn: Button
+var _inv_selected: Dictionary = {}
+
 var _shop_gold_lbl: Label
-var _shop_weapons_box: VBoxContainer
-var _shop_items_box: VBoxContainer
+var _shop_grid: GridContainer
+var _shop_detail_icon: TextureRect
+var _shop_detail_title: Label
+var _shop_detail_desc: Label
+var _shop_detail_btn: Button
+var _shop_selected: Dictionary = {}
+
 var _gacha_gold_lbl: Label
-var _gacha_result_box: HBoxContainer
-var _gacha_wardrobe_box: VBoxContainer
+var _gacha_wheel: GachaWheelControl
+var _gacha_result_lbl: Label
+var _gacha_wardrobe_grid: GridContainer
 var _gacha_btn_x1: Button
 var _gacha_btn_x5: Button
+var _pending_gacha_results: Array[Dictionary] = []
+var _hp_badge_lbl: Label
 
 var _stage_buttons_box: VBoxContainer
 var _upgrade_info_label: Label
@@ -342,131 +355,191 @@ func _build_hud() -> void:
 	add_child(hud_root)
 
 	# =========================================================================
-	# GÓC TRÊN TRÁI: BẢNG TRẠNG THÁI CỔ TRANG (Chân dung + Sinh Lực + Chân Khí)
+	# GÓC TRÊN TRÁI: KHUNG THANH MÁU CỔ TRANG CAO CẤP (Giống hệt ảnh mẫu!)
+	# Chân dung bo tròn viền vàng đồng hoa văn + Huy hiệu Sinh Lực tròn + Thanh Máu / Chân Khí sắc nét
 	# =========================================================================
-	var status_frame := _create_classical_panel(Color(0.11, 0.08, 0.07, 0.90), Color(0.84, 0.66, 0.30, 0.96))
-	status_frame.position = Vector2(18, 14)
-	status_frame.custom_minimum_size = Vector2(396, 106)
-	hud_root.add_child(status_frame)
+	var status_wrap := Control.new()
+	status_wrap.position = Vector2(18, 12)
+	status_wrap.custom_minimum_size = Vector2(420, 114)
+	status_wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hud_root.add_child(status_wrap)
 
-	var hbox := HBoxContainer.new()
-	hbox.add_theme_constant_override("separation", 12)
-	status_frame.add_child(hbox)
+	# Khung chữ nhật nền gỗ đen viền vàng cổ trang phía sau 2 thanh máu/nội lực
+	var bars_panel := _create_classical_panel(Color(0.14, 0.08, 0.06, 0.94), Color(0.88, 0.68, 0.28, 1.0))
+	bars_panel.position = Vector2(56, 12)
+	bars_panel.custom_minimum_size = Vector2(346, 86)
+	status_wrap.add_child(bars_panel)
 
-	# Khung chân dung Lữ Khách có viền sơn son thếp vàng
-	var portrait_frame := _create_classical_panel(Color(0.18, 0.07, 0.07, 0.96), Color(0.92, 0.74, 0.34, 1.0))
-	portrait_frame.custom_minimum_size = Vector2(76, 76)
-	hbox.add_child(portrait_frame)
+	var bars_col := VBoxContainer.new()
+	bars_col.add_theme_constant_override("separation", 5)
+	bars_panel.add_child(bars_col)
+
+	var name_row := HBoxContainer.new()
+	bars_col.add_child(name_row)
+
+	var spacer := Control.new()
+	spacer.custom_minimum_size = Vector2(34, 1)
+	name_row.add_child(spacer)
+
+	var hero_title := Label.new()
+	hero_title.text = SaveManager.equipped_title.to_upper()
+	hero_title.add_theme_font_size_override("font_size", 15)
+	hero_title.modulate = Color(1.0, 0.88, 0.50)
+	name_row.add_child(hero_title)
+	_hero_title_label = hero_title
+
+	# Thanh Sinh Lực (HP) có viền vàng & vệt máu trễ mượt
+	var hp_row := HBoxContainer.new()
+	bars_col.add_child(hp_row)
+	var hp_sp := Control.new()
+	hp_sp.custom_minimum_size = Vector2(32, 1)
+	hp_row.add_child(hp_sp)
+
+	var hp_holder := Control.new()
+	hp_holder.custom_minimum_size = Vector2(284, 21)
+	hp_row.add_child(hp_holder)
+
+	hp_trail_bar = _create_classical_bar(Color(0.96, 0.76, 0.24), Color(0.10, 0.04, 0.05, 0.95), 21, true)
+	hp_trail_bar.set_anchors_preset(Control.PRESET_FULL_RECT)
+	hp_holder.add_child(hp_trail_bar)
+
+	hp_bar = _create_classical_bar(Color(0.80, 0.16, 0.18), Color(0, 0, 0, 0), 21, false)
+	hp_bar.set_anchors_preset(Control.PRESET_FULL_RECT)
+	hp_holder.add_child(hp_bar)
+	hp_label = _create_overlay_label(hp_bar, "SINH LỰC: 120 / 120")
+
+	# Thanh Chân Khí (MP) màu ngọc bích sáng
+	var mp_row := HBoxContainer.new()
+	bars_col.add_child(mp_row)
+	var mp_sp := Control.new()
+	mp_sp.custom_minimum_size = Vector2(32, 1)
+	mp_row.add_child(mp_sp)
+
+	energy_bar = _create_classical_bar(Color(0.12, 0.64, 0.68), Color(0.05, 0.09, 0.10, 0.95), 18, true)
+	energy_bar.custom_minimum_size = Vector2(284, 18)
+	mp_row.add_child(energy_bar)
+	energy_label = _create_overlay_label(energy_bar, "CHÂN KHÍ: 100 / 100")
+
+	# Khung chân dung TRÒN viền vàng đồng chạm khắc đặt nổi chồng lên cạnh trái thanh máu (giống hệt ảnh!)
+	var portrait_circle := PanelContainer.new()
+	portrait_circle.position = Vector2(0, 4)
+	portrait_circle.custom_minimum_size = Vector2(92, 92)
+	var p_sb := StyleBoxFlat.new()
+	p_sb.bg_color = Color(0.18, 0.07, 0.06, 0.98)
+	p_sb.border_width_left = 4
+	p_sb.border_width_top = 4
+	p_sb.border_width_right = 4
+	p_sb.border_width_bottom = 4
+	p_sb.border_color = Color(0.95, 0.76, 0.30)
+	p_sb.corner_radius_top_left = 46
+	p_sb.corner_radius_top_right = 46
+	p_sb.corner_radius_bottom_left = 46
+	p_sb.corner_radius_bottom_right = 46
+	p_sb.shadow_color = Color(0, 0, 0, 0.6)
+	p_sb.shadow_size = 6
+	p_sb.content_margin_left = 10
+	p_sb.content_margin_right = 10
+	p_sb.content_margin_top = 10
+	p_sb.content_margin_bottom = 10
+	portrait_circle.add_theme_stylebox_override("panel", p_sb)
+	status_wrap.add_child(portrait_circle)
 
 	var hero_tex := TextureRect.new()
 	hero_tex.texture = PixelArtGenerator.get_hero_portrait_texture(SaveManager.equipped_scarf, SaveManager.equipped_skin)
 	hero_tex.custom_minimum_size = Vector2(64, 64)
 	hero_tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	hero_tex.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	portrait_frame.add_child(hero_tex)
+	portrait_circle.add_child(hero_tex)
 	_hero_portrait_rect = hero_tex
 
-	var bars_col := VBoxContainer.new()
-	bars_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bars_col.add_theme_constant_override("separation", 6)
-	hbox.add_child(bars_col)
+	# Phù hiệu chỉ số nhỏ tròn viền vàng ở đáy vòng chân dung (như số "120" trong ảnh mẫu)
+	var badge := PanelContainer.new()
+	badge.position = Vector2(24, 82)
+	badge.custom_minimum_size = Vector2(44, 22)
+	var b_sb := StyleBoxFlat.new()
+	b_sb.bg_color = Color(0.24, 0.12, 0.07, 0.98)
+	b_sb.border_width_left = 2
+	b_sb.border_width_top = 2
+	b_sb.border_width_right = 2
+	b_sb.border_width_bottom = 2
+	b_sb.border_color = Color(0.94, 0.76, 0.30)
+	b_sb.corner_radius_top_left = 10
+	b_sb.corner_radius_top_right = 10
+	b_sb.corner_radius_bottom_left = 10
+	b_sb.corner_radius_bottom_right = 10
+	badge.add_theme_stylebox_override("panel", b_sb)
+	status_wrap.add_child(badge)
 
-	var name_row := HBoxContainer.new()
-	bars_col.add_child(name_row)
-
-	# Ấn triện son đỏ cổ trang góc tên nhân vật
-	var seal := _create_red_seal("KIẾM")
-	name_row.add_child(seal)
-
-	var hero_title := Label.new()
-	hero_title.text = "  " + SaveManager.equipped_title.to_upper()
-	hero_title.add_theme_font_size_override("font_size", 14)
-	hero_title.modulate = Color(0.98, 0.86, 0.50)
-	name_row.add_child(hero_title)
-	_hero_title_label = hero_title
-
-	# Thanh Sinh Lực (HP) 2 lớp: vệt vàng trễ phía sau + thanh son đỏ phía trước
-	var hp_holder := Control.new()
-	hp_holder.custom_minimum_size = Vector2(276, 22)
-	bars_col.add_child(hp_holder)
-
-	hp_trail_bar = _create_classical_bar(Color(0.95, 0.76, 0.24), Color(0.08, 0.05, 0.05, 0.92), 22, true)
-	hp_trail_bar.set_anchors_preset(Control.PRESET_FULL_RECT)
-	hp_holder.add_child(hp_trail_bar)
-
-	hp_bar = _create_classical_bar(Color(0.76, 0.14, 0.16), Color(0, 0, 0, 0), 22, false)
-	hp_bar.set_anchors_preset(Control.PRESET_FULL_RECT)
-	hp_holder.add_child(hp_bar)
-	hp_label = _create_overlay_label(hp_bar, "SINH LỰC: 120 / 120")
-
-	# Thanh Chân Khí (MP / Kỹ năng K) màu ngọc bích cổ trang
-	energy_bar = _create_classical_bar(Color(0.14, 0.62, 0.66), Color(0.05, 0.09, 0.10, 0.92), 18, true)
-	energy_bar.custom_minimum_size = Vector2(276, 18)
-	bars_col.add_child(energy_bar)
-	energy_label = _create_overlay_label(energy_bar, "CHÂN KHÍ (K): 100 / 100")
+	_hp_badge_lbl = Label.new()
+	_hp_badge_lbl.text = "120"
+	_hp_badge_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_hp_badge_lbl.add_theme_font_size_override("font_size", 11)
+	_hp_badge_lbl.modulate = Color(1.0, 0.90, 0.52)
+	badge.add_child(_hp_badge_lbl)
 
 	# Dòng gợi ý thao tác ngắn gọn, Vũ Khí đang cầm & Bùa Cổ Ngữ bên dưới bảng máu
 	var controls_hint := Label.new()
-	controls_hint.position = Vector2(22, 124)
-	controls_hint.text = "WASD: Di chuyển • [I] Rương Đồ • [E] Tương tác • [J] Công • [K] Tuyệt kỹ • [L] Khinh Công • [Shift/Chuột phải] Đỡ Phản Kích"
+	controls_hint.position = Vector2(22, 118)
+	controls_hint.text = "WASD: Di chuyển • [I] Rương Đồ 7x7 • [E] Tương tác • [J] Công • [K] Tuyệt kỹ • [L] Khinh Công • [Shift/Chuột phải] Đỡ"
 	controls_hint.add_theme_font_size_override("font_size", 12)
-	controls_hint.modulate = Color(0.92, 0.86, 0.72, 0.88)
+	controls_hint.modulate = Color(0.96, 0.90, 0.74, 0.90)
 	hud_root.add_child(controls_hint)
 
 	_weapon_hud_label = Label.new()
-	_weapon_hud_label.position = Vector2(22, 143)
+	_weapon_hud_label.position = Vector2(22, 137)
 	_weapon_hud_label.add_theme_font_size_override("font_size", 13)
 	hud_root.add_child(_weapon_hud_label)
 	_refresh_hero_cosmetic_hud()
 
 	_relic_hud_label = Label.new()
-	_relic_hud_label.position = Vector2(22, 163)
+	_relic_hud_label.position = Vector2(22, 156)
 	_relic_hud_label.text = ""
 	_relic_hud_label.add_theme_font_size_override("font_size", 13)
 	_relic_hud_label.modulate = Color(0.55, 0.96, 1.0)
 	hud_root.add_child(_relic_hud_label)
 
 	# =========================================================================
-	# GÓC TRÊN PHẢI: THẺ NGỌC CHIẾN TÍCH & THIÊN TƯỢNG (Cổ trang)
+	# GÓC TRÊN PHẢI: CUỘN GIẤY GIÓ CỔ MÀU KEM VÀNG NÂU (Giống hệt góc phải ảnh mẫu!)
 	# =========================================================================
-	var top_right_panel := _create_classical_panel(Color(0.11, 0.08, 0.07, 0.90), Color(0.84, 0.66, 0.30, 0.96))
+	var top_right_panel := _create_classical_panel(Color(0.91, 0.82, 0.64, 0.94), Color(0.62, 0.42, 0.18, 1.0))
 	top_right_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	top_right_panel.position = Vector2(-290, 14)
-	top_right_panel.custom_minimum_size = Vector2(272, 134)
+	top_right_panel.position = Vector2(-286, 14)
+	top_right_panel.custom_minimum_size = Vector2(268, 136)
 	hud_root.add_child(top_right_panel)
 
 	var tr_vbox := VBoxContainer.new()
 	tr_vbox.add_theme_constant_override("separation", 4)
 	top_right_panel.add_child(tr_vbox)
 
+	var ink_brown := Color(0.24, 0.13, 0.06)
 	wave_label = Label.new()
 	wave_label.text = "❖ Chiến Đợt: 1 / 3"
-	wave_label.add_theme_font_size_override("font_size", 15)
-	wave_label.modulate = Color(1.0, 0.85, 0.40)
+	wave_label.add_theme_font_size_override("font_size", 14)
+	wave_label.modulate = Color(0.52, 0.12, 0.10)
 	tr_vbox.add_child(wave_label)
 
 	gold_label = Label.new()
 	gold_label.text = "❖ Ngân Lượng: 0 Lượng"
 	gold_label.add_theme_font_size_override("font_size", 14)
-	gold_label.modulate = Color(1.0, 0.92, 0.50)
+	gold_label.modulate = ink_brown
 	tr_vbox.add_child(gold_label)
 
 	score_label = Label.new()
 	score_label.text = "❖ Chiến Công: 0"
 	score_label.add_theme_font_size_override("font_size", 14)
-	score_label.modulate = Color(0.95, 0.90, 0.82)
+	score_label.modulate = ink_brown
 	tr_vbox.add_child(score_label)
 
 	time_label = Label.new()
 	time_label.text = "❖ Thời Khắc: 00:00"
 	time_label.add_theme_font_size_override("font_size", 13)
-	time_label.modulate = Color(0.76, 0.88, 0.94)
+	time_label.modulate = ink_brown
 	tr_vbox.add_child(time_label)
 
 	weather_label = Label.new()
 	weather_label.text = "❖ Thiên Tượng: Màn Đêm Tĩnh Mịch"
 	weather_label.add_theme_font_size_override("font_size", 13)
-	weather_label.modulate = Color(0.95, 0.78, 0.52)
+	weather_label.modulate = Color(0.38, 0.18, 0.08)
 	tr_vbox.add_child(weather_label)
 
 	# =========================================================================
@@ -1189,45 +1262,85 @@ func _refresh_quest_board() -> void:
 
 
 ## ============================================================================
-## RƯƠNG ĐỒ / TÚI ĐỒ CỔ TRANG (PHÍM I / B): ĐỔI 4 LOẠI VŨ KHÍ & DÙNG ĐAN DƯỢC
+## RƯƠNG ĐỒ CỔ TRANG DẠNG LƯỚI Ô VUÔNG 7x7 (49 Ô): HIỂN THỊ HÌNH ẢNH VẬT PHẨM TRONG TỪNG Ô
 ## ============================================================================
 func _build_inventory_panel() -> void:
-	inventory_panel = _create_center_modal(840, 560)
+	inventory_panel = _create_center_modal(900, 610)
 	var vbox := _get_modal_vbox(inventory_panel)
 
 	var title := Label.new()
-	title.text = "【 RƯƠNG ĐỒ CỔ TRANG — KHO BINH KHÍ & TÚI ĐAN DƯỢC 】"
+	title.text = "【 RƯƠNG ĐỒ CỔ TRANG — TÚI Ô VUÔNG 7×7 (BINH KHÍ & ĐAN DƯỢC) 】"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 21)
-	title.modulate = Color(1.0, 0.86, 0.38)
+	title.add_theme_font_size_override("font_size", 20)
+	title.modulate = Color(1.0, 0.86, 0.36)
 	vbox.add_child(title)
 
 	var split := HBoxContainer.new()
-	split.add_theme_constant_override("separation", 16)
+	split.add_theme_constant_override("separation", 18)
 	split.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	vbox.add_child(split)
 
-	# Cột trái: Kho Vũ Khí sở hữu (Kiếm, Đao, Cung Tên, Gậy Phép)
-	var left_scroll := ScrollContainer.new()
-	left_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	left_scroll.custom_minimum_size = Vector2(460, 410)
-	split.add_child(left_scroll)
+	# Bên trái: Lưới ô vuông 7x7 cổ trang (49 ô vuông hiển thị hình ảnh Vũ Khí & Đan Dược)
+	var grid_panel := _create_classical_panel(Color(0.09, 0.05, 0.05, 0.96), Color(0.86, 0.66, 0.28, 0.95))
+	split.add_child(grid_panel)
 
-	_inv_weapons_box = VBoxContainer.new()
-	_inv_weapons_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_inv_weapons_box.add_theme_constant_override("separation", 8)
-	left_scroll.add_child(_inv_weapons_box)
+	_inv_grid = GridContainer.new()
+	_inv_grid.columns = 7
+	_inv_grid.add_theme_constant_override("h_separation", 6)
+	_inv_grid.add_theme_constant_override("v_separation", 6)
+	grid_panel.add_child(_inv_grid)
 
-	# Cột phải: Vật phẩm tiêu hao (Đan Dược)
-	var right_scroll := ScrollContainer.new()
-	right_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	right_scroll.custom_minimum_size = Vector2(310, 410)
-	split.add_child(right_scroll)
+	# Bên phải: Bảng xem chi tiết vật phẩm đang chọn trong ô vuông + Nút Trang Bị / Sử Dụng
+	var detail_panel := _create_classical_panel(Color(0.14, 0.08, 0.06, 0.96), Color(0.90, 0.72, 0.30, 1.0))
+	detail_panel.custom_minimum_size = Vector2(340, 440)
+	detail_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	split.add_child(detail_panel)
 
-	_inv_items_box = VBoxContainer.new()
-	_inv_items_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_inv_items_box.add_theme_constant_override("separation", 8)
-	right_scroll.add_child(_inv_items_box)
+	var dv := VBoxContainer.new()
+	dv.alignment = BoxContainer.ALIGNMENT_CENTER
+	dv.add_theme_constant_override("separation", 12)
+	detail_panel.add_child(dv)
+
+	var icon_box := CenterContainer.new()
+	dv.add_child(icon_box)
+	var icon_bg := _create_classical_panel(Color(0.08, 0.05, 0.05, 0.95), Color(0.95, 0.78, 0.32, 1.0))
+	icon_bg.custom_minimum_size = Vector2(104, 104)
+	icon_box.add_child(icon_bg)
+
+	_inv_detail_icon = TextureRect.new()
+	_inv_detail_icon.custom_minimum_size = Vector2(78, 78)
+	_inv_detail_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_inv_detail_icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	icon_bg.add_child(_inv_detail_icon)
+
+	_inv_detail_title = Label.new()
+	_inv_detail_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_inv_detail_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_inv_detail_title.add_theme_font_size_override("font_size", 17)
+	_inv_detail_title.modulate = Color(1.0, 0.88, 0.42)
+	dv.add_child(_inv_detail_title)
+
+	_inv_detail_desc = Label.new()
+	_inv_detail_desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_inv_detail_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_inv_detail_desc.add_theme_font_size_override("font_size", 13)
+	_inv_detail_desc.modulate = Color(0.95, 0.90, 0.80)
+	_inv_detail_desc.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	dv.add_child(_inv_detail_desc)
+
+	_inv_detail_btn = _create_button("TRANG BỊ / SỬ DỤNG", func() -> void:
+		if _inv_selected.is_empty():
+			return
+		var kind: String = str(_inv_selected.get("kind", ""))
+		var id_key: String = str(_inv_selected.get("id", ""))
+		if kind == "weapon":
+			SaveManager.equip_weapon(id_key)
+			AudioManager.play_sfx("slash", 1.15)
+		elif kind == "item":
+			use_bag_item_requested.emit(id_key)
+		_refresh_inventory_ui()
+	)
+	dv.add_child(_inv_detail_btn)
 
 	vbox.add_child(_create_button("ĐÓNG RƯƠNG ĐỒ (PHÍM I / ESC)", func() -> void:
 		if not main_menu_panel.visible:
@@ -1239,109 +1352,102 @@ func _build_inventory_panel() -> void:
 
 
 func _refresh_inventory_ui() -> void:
-	if _inv_weapons_box == null or _inv_items_box == null:
+	if _inv_grid == null:
 		return
-	for c in _inv_weapons_box.get_children():
-		c.queue_free()
-	for c in _inv_items_box.get_children():
+	for c in _inv_grid.get_children():
 		c.queue_free()
 
-	var whdr := Label.new()
-	whdr.text = "❖ BINH KHÍ TRONG RƯƠNG (%d / %d)" % [SaveManager.owned_weapons.size(), SaveManager.WEAPON_CATALOG.size()]
-	whdr.add_theme_font_size_override("font_size", 15)
-	whdr.modulate = Color(1.0, 0.86, 0.42)
-	_inv_weapons_box.add_child(whdr)
-
-	var type_map := {"sword": "KIẾM", "saber": "ĐẠI ĐAO", "bow": "CUNG TÊN", "staff": "GẬY PHÉP"}
+	# Gom tất cả Vũ khí sở hữu + Đan Dược đang có vào 49 ô (lưới 7x7)
+	var entries: Array[Dictionary] = []
 	for wid in SaveManager.owned_weapons:
 		var w_key: String = str(wid)
-		if not SaveManager.WEAPON_CATALOG.has(w_key):
-			continue
-		var wd: Dictionary = SaveManager.WEAPON_CATALOG[w_key]
-		var is_eq: bool = (SaveManager.equipped_weapon == w_key)
-		var card := _create_classical_panel(Color(0.16, 0.10, 0.08, 0.94), wd["color"] if is_eq else Color(0.72, 0.56, 0.28, 0.75))
-		_inv_weapons_box.add_child(card)
-
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 10)
-		card.add_child(row)
-
-		var info := VBoxContainer.new()
-		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_child(info)
-
-		var nlbl := Label.new()
-		nlbl.text = "[%s • %s] %s (+%.0f Công)" % [str(type_map.get(str(wd["type"]), "KIẾM")), str(wd["rarity"]), str(wd["name"]), float(wd["dmg"])]
-		nlbl.add_theme_font_size_override("font_size", 14)
-		nlbl.modulate = wd["color"]
-		info.add_child(nlbl)
-
-		var dlbl := Label.new()
-		dlbl.text = str(wd["desc"])
-		dlbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		dlbl.add_theme_font_size_override("font_size", 11)
-		dlbl.modulate = Color(0.92, 0.88, 0.78)
-		info.add_child(dlbl)
-
-		var eq_btn := _create_button("ĐANG CẦM" if is_eq else "TRANG BỊ", func() -> void:
-			SaveManager.equip_weapon(w_key)
-			AudioManager.play_sfx("slash", 1.1)
-			_refresh_inventory_ui()
-		)
-		eq_btn.custom_minimum_size = Vector2(105, 38)
-		eq_btn.disabled = is_eq
-		row.add_child(eq_btn)
-
-	var ihdr := Label.new()
-	ihdr.text = "❖ TÚI ĐAN DƯỢC & VẬT PHẨM"
-	ihdr.add_theme_font_size_override("font_size", 15)
-	ihdr.modulate = Color(0.55, 0.96, 0.72)
-	_inv_items_box.add_child(ihdr)
-
+		if SaveManager.WEAPON_CATALOG.has(w_key):
+			var wd: Dictionary = SaveManager.WEAPON_CATALOG[w_key]
+			entries.append({
+				"kind": "weapon", "id": w_key, "name": str(wd["name"]),
+				"rarity": str(wd["rarity"]), "color": wd["color"],
+				"tex": PixelArtGenerator.get_weapon_icon_texture(w_key),
+				"badge": "★" if (SaveManager.equipped_weapon == w_key) else "",
+				"desc": "Loại: %s • +%d Công lực\n%s" % [str(wd["type"]).to_upper(), int(wd["dmg"]), str(wd["desc"])],
+				"equipped": (SaveManager.equipped_weapon == w_key),
+			})
 	for iid in SaveManager.ITEM_CATALOG.keys():
 		var i_key: String = str(iid)
-		var idata: Dictionary = SaveManager.ITEM_CATALOG[i_key]
 		var qty: int = int(SaveManager.bag_items.get(i_key, 0))
-		var icard := _create_classical_panel(Color(0.14, 0.10, 0.09, 0.92), Color(0.68, 0.56, 0.30, 0.8))
-		_inv_items_box.add_child(icard)
+		if qty > 0:
+			var idata: Dictionary = SaveManager.ITEM_CATALOG[i_key]
+			entries.append({
+				"kind": "item", "id": i_key, "name": str(idata["name"]),
+				"rarity": "Đan Dược", "color": Color(0.42, 0.94, 0.62),
+				"tex": PixelArtGenerator.get_bag_item_icon_texture(i_key),
+				"badge": "x%d" % qty,
+				"desc": "Số lượng: %d\n%s" % [qty, str(idata["desc"])],
+				"equipped": false,
+			})
 
-		var iv := VBoxContainer.new()
-		iv.add_theme_constant_override("separation", 4)
-		icard.add_child(iv)
+	if _inv_selected.is_empty() and entries.size() > 0:
+		_inv_selected = entries[0]
 
-		var iname := Label.new()
-		iname.text = "%s  (x%d)" % [str(idata["name"]), qty]
-		iname.add_theme_font_size_override("font_size", 14)
-		iname.modulate = Color(1.0, 0.90, 0.52)
-		iv.add_child(iname)
+	# Vẽ đủ 49 ô vuông 7x7 (ô có đồ hiển thị hình ảnh 44x44 + viền màu hiếm + số lượng, ô trống có nền tối cổ trang)
+	for idx in range(49):
+		if idx < entries.size():
+			var ent: Dictionary = entries[idx]
+			var is_sel: bool = (str(_inv_selected.get("id", "")) == str(ent["id"]))
+			var slot := _create_grid_slot_button(ent["tex"], str(ent["badge"]), ent["color"], is_sel, func() -> void:
+				_inv_selected = ent
+				AudioManager.play_sfx("pickup", 1.2)
+				_refresh_inventory_ui()
+			)
+			_inv_grid.add_child(slot)
+		else:
+			_inv_grid.add_child(_create_empty_grid_slot())
 
-		var idesc := Label.new()
-		idesc.text = str(idata["desc"])
-		idesc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		idesc.add_theme_font_size_override("font_size", 12)
-		idesc.modulate = Color(0.90, 0.86, 0.76)
-		iv.add_child(idesc)
+	_update_inventory_detail_panel(entries)
 
-		var use_btn := _create_button("SỬ DỤNG NGAY", func() -> void:
-			use_bag_item_requested.emit(i_key)
-			_refresh_inventory_ui()
-		)
-		use_btn.disabled = qty <= 0
-		iv.add_child(use_btn)
+
+func _update_inventory_detail_panel(entries: Array[Dictionary]) -> void:
+	# Đồng bộ lại entry đang chọn (phòng trường hợp vừa dùng hết đan dược)
+	var found: Dictionary = {}
+	for e in entries:
+		if str(e["id"]) == str(_inv_selected.get("id", "")):
+			found = e
+			break
+	if found.is_empty() and entries.size() > 0:
+		found = entries[0]
+	_inv_selected = found
+
+	if found.is_empty():
+		_inv_detail_icon.texture = null
+		_inv_detail_title.text = "Rương đồ trống"
+		_inv_detail_desc.text = "Hãy đánh quái hoặc ghé Cửa Hàng Thương Nhân để thu thập Binh Khí & Đan Dược!"
+		_inv_detail_btn.disabled = true
+		return
+
+	_inv_detail_icon.texture = found["tex"]
+	_inv_detail_title.text = "[%s]\n%s" % [str(found["rarity"]), str(found["name"])]
+	_inv_detail_title.modulate = found["color"]
+	_inv_detail_desc.text = str(found["desc"])
+	if str(found["kind"]) == "weapon":
+		var is_eq: bool = bool(found["equipped"])
+		_inv_detail_btn.text = "★ ĐANG TRANG BỊ" if is_eq else "❖ TRANG BỊ BINH KHÍ NÀY"
+		_inv_detail_btn.disabled = is_eq
+	else:
+		_inv_detail_btn.text = "❖ SỬ DỤNG ĐAN DƯỢC NGAY"
+		_inv_detail_btn.disabled = false
 
 
 ## ============================================================================
-## CỬA HÀNG THƯƠNG NHÂN AURELIUS: MUA VŨ KHÍ (ĐAO, KIẾM, CUNG, GẬY) & ĐAN DƯỢC
+## CỬA HÀNG THƯƠNG NHÂN AURELIUS DẠNG LƯỚI Ô VUÔNG (ĐỒNG BỘ VỚI RƯƠNG ĐỒ 7x7!)
 ## ============================================================================
 func _build_shop_panel() -> void:
-	shop_panel = _create_center_modal(860, 580)
+	shop_panel = _create_center_modal(900, 610)
 	var vbox := _get_modal_vbox(shop_panel)
 
 	var title := Label.new()
-	title.text = "【 CỬA HÀNG BINH KHÍ PHỔ & DƯỢC ĐIẾM AURELIUS 】"
+	title.text = "【 BINH KHÍ PHỔ & DƯỢC ĐIẾM AURELIUS — CHỌN Ô ĐỂ MUA 】"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 21)
-	title.modulate = Color(1.0, 0.86, 0.38)
+	title.add_theme_font_size_override("font_size", 20)
+	title.modulate = Color(1.0, 0.86, 0.36)
 	vbox.add_child(title)
 
 	_shop_gold_lbl = Label.new()
@@ -1351,29 +1457,71 @@ func _build_shop_panel() -> void:
 	vbox.add_child(_shop_gold_lbl)
 
 	var split := HBoxContainer.new()
-	split.add_theme_constant_override("separation", 16)
+	split.add_theme_constant_override("separation", 18)
 	split.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	vbox.add_child(split)
 
-	var w_scroll := ScrollContainer.new()
-	w_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	w_scroll.custom_minimum_size = Vector2(490, 400)
-	split.add_child(w_scroll)
+	var grid_panel := _create_classical_panel(Color(0.09, 0.05, 0.05, 0.96), Color(0.86, 0.66, 0.28, 0.95))
+	split.add_child(grid_panel)
 
-	_shop_weapons_box = VBoxContainer.new()
-	_shop_weapons_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_shop_weapons_box.add_theme_constant_override("separation", 8)
-	w_scroll.add_child(_shop_weapons_box)
+	_shop_grid = GridContainer.new()
+	_shop_grid.columns = 5
+	_shop_grid.add_theme_constant_override("h_separation", 8)
+	_shop_grid.add_theme_constant_override("v_separation", 8)
+	grid_panel.add_child(_shop_grid)
 
-	var i_scroll := ScrollContainer.new()
-	i_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	i_scroll.custom_minimum_size = Vector2(300, 400)
-	split.add_child(i_scroll)
+	# Cột chi tiết món hàng đang chọn bên phải + Nút Mua
+	var detail_panel := _create_classical_panel(Color(0.14, 0.08, 0.06, 0.96), Color(0.90, 0.72, 0.30, 1.0))
+	detail_panel.custom_minimum_size = Vector2(360, 410)
+	detail_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	split.add_child(detail_panel)
 
-	_shop_items_box = VBoxContainer.new()
-	_shop_items_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_shop_items_box.add_theme_constant_override("separation", 8)
-	i_scroll.add_child(_shop_items_box)
+	var dv := VBoxContainer.new()
+	dv.alignment = BoxContainer.ALIGNMENT_CENTER
+	dv.add_theme_constant_override("separation", 12)
+	detail_panel.add_child(dv)
+
+	var icon_box := CenterContainer.new()
+	dv.add_child(icon_box)
+	var icon_bg := _create_classical_panel(Color(0.08, 0.05, 0.05, 0.95), Color(0.95, 0.78, 0.32, 1.0))
+	icon_bg.custom_minimum_size = Vector2(104, 104)
+	icon_box.add_child(icon_bg)
+
+	_shop_detail_icon = TextureRect.new()
+	_shop_detail_icon.custom_minimum_size = Vector2(78, 78)
+	_shop_detail_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_shop_detail_icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	icon_bg.add_child(_shop_detail_icon)
+
+	_shop_detail_title = Label.new()
+	_shop_detail_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_shop_detail_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_shop_detail_title.add_theme_font_size_override("font_size", 17)
+	dv.add_child(_shop_detail_title)
+
+	_shop_detail_desc = Label.new()
+	_shop_detail_desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_shop_detail_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_shop_detail_desc.add_theme_font_size_override("font_size", 13)
+	_shop_detail_desc.modulate = Color(0.95, 0.90, 0.80)
+	_shop_detail_desc.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	dv.add_child(_shop_detail_desc)
+
+	_shop_detail_btn = _create_button("MUA VẬT PHẨM", func() -> void:
+		if _shop_selected.is_empty():
+			return
+		var kind: String = str(_shop_selected.get("kind", ""))
+		var id_key: String = str(_shop_selected.get("id", ""))
+		if kind == "weapon":
+			if SaveManager.buy_weapon(id_key):
+				AudioManager.play_sfx("victory", 1.15)
+				show_wave_banner("ĐÃ MUA THẦN BINH!", "Đã đưa vào Rương Đồ 7x7 & trang bị ngay!")
+		elif kind == "item":
+			if SaveManager.buy_bag_item(id_key):
+				AudioManager.play_sfx("pickup", 1.15)
+		_refresh_shop_ui()
+	)
+	dv.add_child(_shop_detail_btn)
 
 	vbox.add_child(_create_button("RỜI CỬA HÀNG", func() -> void:
 		if not main_menu_panel.visible:
@@ -1385,104 +1533,89 @@ func _build_shop_panel() -> void:
 
 
 func _refresh_shop_ui() -> void:
-	if _shop_weapons_box == null or _shop_items_box == null:
+	if _shop_grid == null:
 		return
 	if _shop_gold_lbl:
 		_shop_gold_lbl.text = "❖ NGÂN LƯỢNG HIỆN CÓ: %d LƯỢNG" % SaveManager.gold
 
-	for c in _shop_weapons_box.get_children():
-		c.queue_free()
-	for c in _shop_items_box.get_children():
+	for c in _shop_grid.get_children():
 		c.queue_free()
 
-	var type_map := {"sword": "KIẾM", "saber": "ĐẠI ĐAO", "bow": "CUNG TÊN", "staff": "GẬY PHÉP"}
+	var catalog_items: Array[Dictionary] = []
 	for wid in SaveManager.WEAPON_CATALOG.keys():
 		var w_key: String = str(wid)
 		var wd: Dictionary = SaveManager.WEAPON_CATALOG[w_key]
 		if int(wd["price"]) <= 0:
 			continue
 		var owned: bool = SaveManager.owned_weapons.has(w_key)
-		var price: int = int(wd["price"])
-
-		var card := _create_classical_panel(Color(0.15, 0.10, 0.08, 0.94), wd["color"])
-		_shop_weapons_box.add_child(card)
-
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 10)
-		card.add_child(row)
-
-		var info := VBoxContainer.new()
-		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_child(info)
-
-		var nlbl := Label.new()
-		nlbl.text = "[%s • %s] %s (+%.0f Công)" % [str(type_map.get(str(wd["type"]), "KIẾM")), str(wd["rarity"]), str(wd["name"]), float(wd["dmg"])]
-		nlbl.add_theme_font_size_override("font_size", 14)
-		nlbl.modulate = wd["color"]
-		info.add_child(nlbl)
-
-		var dlbl := Label.new()
-		dlbl.text = str(wd["desc"])
-		dlbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		dlbl.add_theme_font_size_override("font_size", 11)
-		dlbl.modulate = Color(0.92, 0.88, 0.78)
-		info.add_child(dlbl)
-
-		var b_txt := "ĐÃ SỞ HỮU" if owned else ("MUA (%d Lượng)" % price)
-		var buy_btn := _create_button(b_txt, func() -> void:
-			if SaveManager.buy_weapon(w_key):
-				AudioManager.play_sfx("victory", 1.15)
-				_refresh_shop_ui()
-				show_wave_banner("ĐÃ SỞ HỮU BINH KHÍ MỚI!", "Đã trang bị ngay: " + str(wd["name"]))
-		)
-		buy_btn.custom_minimum_size = Vector2(132, 40)
-		buy_btn.disabled = owned or SaveManager.gold < price
-		row.add_child(buy_btn)
-
+		catalog_items.append({
+			"kind": "weapon", "id": w_key, "name": str(wd["name"]),
+			"rarity": str(wd["rarity"]), "color": wd["color"],
+			"price": int(wd["price"]), "owned": owned,
+			"tex": PixelArtGenerator.get_weapon_icon_texture(w_key),
+			"badge": "✓" if owned else ("%d" % int(wd["price"])),
+			"desc": "Loại: %s • +%d Công lực\nGiá: %d Lượng\n%s" % [str(wd["type"]).to_upper(), int(wd["dmg"]), int(wd["price"]), str(wd["desc"])],
+		})
 	for iid in SaveManager.ITEM_CATALOG.keys():
 		var i_key: String = str(iid)
 		var idata: Dictionary = SaveManager.ITEM_CATALOG[i_key]
-		var price: int = int(idata["price"])
 		var qty: int = int(SaveManager.bag_items.get(i_key, 0))
+		catalog_items.append({
+			"kind": "item", "id": i_key, "name": str(idata["name"]),
+			"rarity": "Đan Dược (Có x%d)" % qty, "color": Color(0.45, 0.95, 0.65),
+			"price": int(idata["price"]), "owned": false,
+			"tex": PixelArtGenerator.get_bag_item_icon_texture(i_key),
+			"badge": "%d" % int(idata["price"]),
+			"desc": "Giá: %d Lượng (Đang có x%d trong rương)\n%s" % [int(idata["price"]), qty, str(idata["desc"])],
+		})
 
-		var icard := _create_classical_panel(Color(0.14, 0.10, 0.09, 0.94), Color(0.75, 0.60, 0.30))
-		_shop_items_box.add_child(icard)
+	if _shop_selected.is_empty() and catalog_items.size() > 0:
+		_shop_selected = catalog_items[0]
 
-		var iv := VBoxContainer.new()
-		iv.add_theme_constant_override("separation", 4)
-		icard.add_child(iv)
-
-		var iname := Label.new()
-		iname.text = "%s (Trong rương: x%d)" % [str(idata["name"]), qty]
-		iname.add_theme_font_size_override("font_size", 14)
-		iname.modulate = Color(1.0, 0.90, 0.50)
-		iv.add_child(iname)
-
-		var idesc := Label.new()
-		idesc.text = str(idata["desc"])
-		idesc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		idesc.add_theme_font_size_override("font_size", 12)
-		idesc.modulate = Color(0.90, 0.86, 0.76)
-		iv.add_child(idesc)
-
-		var ibtn := _create_button("MUA (%d Lượng)" % price, func() -> void:
-			if SaveManager.buy_bag_item(i_key):
-				AudioManager.play_sfx("pickup", 1.15)
+	# Lưới 5x5 (25 ô vuông bày hàng cổ trang)
+	for idx in range(25):
+		if idx < catalog_items.size():
+			var ent: Dictionary = catalog_items[idx]
+			var is_sel: bool = (str(_shop_selected.get("id", "")) == str(ent["id"]))
+			var slot := _create_grid_slot_button(ent["tex"], str(ent["badge"]), ent["color"], is_sel, func() -> void:
+				_shop_selected = ent
+				AudioManager.play_sfx("pickup", 1.2)
 				_refresh_shop_ui()
-		)
-		ibtn.disabled = SaveManager.gold < price
-		iv.add_child(ibtn)
+			, 66)
+			_shop_grid.add_child(slot)
+		else:
+			_shop_grid.add_child(_create_empty_grid_slot(66))
+
+	# Cập nhật bảng chi tiết món đang chọn
+	var cur_sel: Dictionary = {}
+	for ci in catalog_items:
+		if str(ci["id"]) == str(_shop_selected.get("id", "")):
+			cur_sel = ci
+			break
+	if cur_sel.is_empty() and catalog_items.size() > 0:
+		cur_sel = catalog_items[0]
+	_shop_selected = cur_sel
+
+	if not cur_sel.is_empty():
+		_shop_detail_icon.texture = cur_sel["tex"]
+		_shop_detail_title.text = "[%s]\n%s" % [str(cur_sel["rarity"]), str(cur_sel["name"])]
+		_shop_detail_title.modulate = cur_sel["color"]
+		_shop_detail_desc.text = str(cur_sel["desc"])
+		var price: int = int(cur_sel["price"])
+		var owned: bool = bool(cur_sel["owned"])
+		_shop_detail_btn.text = "✓ ĐÃ SỞ HỮU TRONG RƯƠNG" if owned else ("❖ MUA NGAY (%d LƯỢNG)" % price)
+		_shop_detail_btn.disabled = owned or SaveManager.gold < price
 
 
 ## ============================================================================
-## TỤ BẢO CÁC — SHOP GACHA TRANG PHỤC (10 SKIN: 5 THƯỜNG + 5 HIẾM CÓ HIỆU ỨNG 3D)
+## TỤ BẢO CÁC — VÒNG QUAY GACHA 10 TRANG PHỤC CÓ HIỆU ỨNG QUAY THẬT!
 ## ============================================================================
 func _build_gacha_panel() -> void:
-	gacha_panel = _create_center_modal(920, 620)
+	gacha_panel = _create_center_modal(960, 630)
 	var vbox := _get_modal_vbox(gacha_panel)
 
 	var title := Label.new()
-	title.text = "【 TỤ BẢO CÁC — SHOP GACHA Y PHỤC (10 BỘ TRANG PHỤC CỔ TRANG) 】"
+	title.text = "【 TỤ BẢO CÁC — VÒNG QUAY GACHA 10 TRANG PHỤC CỔ TRANG 】"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 20)
 	title.modulate = Color(1.0, 0.86, 0.36)
@@ -1494,52 +1627,83 @@ func _build_gacha_panel() -> void:
 	_gacha_gold_lbl.modulate = Color(1.0, 0.92, 0.50)
 	vbox.add_child(_gacha_gold_lbl)
 
-	# Khu vực nút Quay Gacha x1 & Quay Gacha x5 (chắc chắn nổ Skin Hiếm có VFX!)
-	var roll_row := HBoxContainer.new()
-	roll_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	roll_row.add_theme_constant_override("separation", 18)
-	vbox.add_child(roll_row)
+	var split := HBoxContainer.new()
+	split.add_theme_constant_override("separation", 20)
+	split.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	vbox.add_child(split)
+
+	# CỘT TRÁI: Vòng Quay 10 Ô Trang Phục (có hiệu ứng xoay giảm tốc + kim chỉ vàng) + 2 Nút Quay x1 / x5
+	var wheel_col := VBoxContainer.new()
+	wheel_col.alignment = BoxContainer.ALIGNMENT_CENTER
+	wheel_col.add_theme_constant_override("separation", 10)
+	split.add_child(wheel_col)
+
+	var wheel_center := CenterContainer.new()
+	wheel_col.add_child(wheel_center)
+
+	_gacha_wheel = GachaWheelControl.new()
+	_gacha_wheel.custom_minimum_size = Vector2(360, 360)
+	_gacha_wheel.spin_finished.connect(_on_gacha_wheel_finished)
+	wheel_center.add_child(_gacha_wheel)
+
+	var btn_row := HBoxContainer.new()
+	btn_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	btn_row.add_theme_constant_override("separation", 10)
+	wheel_col.add_child(btn_row)
 
 	_gacha_btn_x1 = _create_button("❖ QUAY 1 LẦN (%d Lượng)" % SaveManager.GACHA_COST_SINGLE, func() -> void:
 		_perform_gacha_roll(1)
 	)
-	_gacha_btn_x1.custom_minimum_size = Vector2(270, 44)
-	roll_row.add_child(_gacha_btn_x1)
+	_gacha_btn_x1.custom_minimum_size = Vector2(185, 42)
+	btn_row.add_child(_gacha_btn_x1)
 
-	_gacha_btn_x5 = _create_button("★ QUAY 5 LẦN (%d Lượng — BAO NỔ SKIN HIẾM!)" % SaveManager.GACHA_COST_MULTI, func() -> void:
+	_gacha_btn_x5 = _create_button("★ QUAY x5 (%d — BAO HIẾM!)" % SaveManager.GACHA_COST_MULTI, func() -> void:
 		_perform_gacha_roll(5)
 	)
-	_gacha_btn_x5.custom_minimum_size = Vector2(400, 44)
-	roll_row.add_child(_gacha_btn_x5)
+	_gacha_btn_x5.custom_minimum_size = Vector2(215, 42)
+	btn_row.add_child(_gacha_btn_x5)
 
-	# Khu vực trưng bày kết quả quay Gacha vừa rút
-	var res_frame := _create_classical_panel(Color(0.09, 0.06, 0.06, 0.94), Color(0.84, 0.66, 0.30, 0.9))
-	res_frame.custom_minimum_size = Vector2(860, 138)
-	vbox.add_child(res_frame)
+	# CỘT PHẢI: Thông báo kết quả quay + Tủ 10 Trang Phục dạng lưới ô vuông 5x2 (bấm vào ô để MẶC NGAY!)
+	var right_col := VBoxContainer.new()
+	right_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	right_col.add_theme_constant_override("separation", 10)
+	split.add_child(right_col)
 
-	_gacha_result_box = HBoxContainer.new()
-	_gacha_result_box.alignment = BoxContainer.ALIGNMENT_CENTER
-	_gacha_result_box.add_theme_constant_override("separation", 12)
-	res_frame.add_child(_gacha_result_box)
+	var res_panel := _create_classical_panel(Color(0.10, 0.06, 0.06, 0.95), Color(0.88, 0.68, 0.30, 0.95))
+	res_panel.custom_minimum_size = Vector2(460, 118)
+	right_col.add_child(res_panel)
 
-	var hint_lbl := Label.new()
-	hint_lbl.text = "Hãy bấm Quay 1 Lần hoặc Quay 5 Lần để rút ngẫu nhiên 10 bộ Trang Phục!\n• 5 Skin Thường: Mặc tự nhiên   • 5 Skin Hiếm/Sử Thi/Huyền Thoại: Có Vòng Hào Quang & Hạt 3D quanh thân!"
-	hint_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint_lbl.modulate = Color(0.92, 0.86, 0.72)
-	_gacha_result_box.add_child(hint_lbl)
+	_gacha_result_lbl = Label.new()
+	_gacha_result_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_gacha_result_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_gacha_result_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_gacha_result_lbl.add_theme_font_size_override("font_size", 14)
+	_gacha_result_lbl.modulate = Color(0.96, 0.90, 0.74)
+	_gacha_result_lbl.text = "Bấm QUAY để xoay Vòng Quay 10 Trang Phục!\n• 5 Skin Thường: Mặc tự nhiên\n• 5 Skin Hiếm / Sử Thi / Huyền Thoại: Có Hào Quang & Hạt 3D!"
+	res_panel.add_child(_gacha_result_lbl)
 
-	# Tủ Trang Phục 10 Skin (xem bộ sưu tập & bấm MẶC NGAY)
-	var ward_scroll := ScrollContainer.new()
-	ward_scroll.custom_minimum_size = Vector2(860, 260)
-	ward_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	vbox.add_child(ward_scroll)
+	var w_hdr := Label.new()
+	w_hdr.text = "❖ TỦ 10 TRANG PHỤC (Bấm ô đã mở khóa để MẶC NGAY)"
+	w_hdr.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	w_hdr.add_theme_font_size_override("font_size", 14)
+	w_hdr.modulate = Color(1.0, 0.86, 0.42)
+	right_col.add_child(w_hdr)
 
-	_gacha_wardrobe_box = VBoxContainer.new()
-	_gacha_wardrobe_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_gacha_wardrobe_box.add_theme_constant_override("separation", 6)
-	ward_scroll.add_child(_gacha_wardrobe_box)
+	var ward_panel := _create_classical_panel(Color(0.09, 0.05, 0.05, 0.95), Color(0.82, 0.64, 0.28, 0.9))
+	right_col.add_child(ward_panel)
+
+	var ward_center := CenterContainer.new()
+	ward_panel.add_child(ward_center)
+
+	_gacha_wardrobe_grid = GridContainer.new()
+	_gacha_wardrobe_grid.columns = 5
+	_gacha_wardrobe_grid.add_theme_constant_override("h_separation", 8)
+	_gacha_wardrobe_grid.add_theme_constant_override("v_separation", 8)
+	ward_center.add_child(_gacha_wardrobe_grid)
 
 	vbox.add_child(_create_button("ĐÓNG TỤ BẢO CÁC", func() -> void:
+		if _gacha_wheel and _gacha_wheel.is_spinning:
+			return
 		if not main_menu_panel.visible:
 			_hide_all_panels()
 			get_tree().paused = false
@@ -1549,76 +1713,58 @@ func _build_gacha_panel() -> void:
 
 
 func _perform_gacha_roll(count: int) -> void:
+	if _gacha_wheel and _gacha_wheel.is_spinning:
+		return
 	var results := SaveManager.roll_skin_gacha(count)
 	if results.is_empty():
 		AudioManager.play_sfx("hurt", 0.9)
 		return
 
-	var got_vfx := false
+	_pending_gacha_results = results
+	# Nếu quay x5, cho vòng quay dừng đúng vào bộ Skin hiếm nhất vừa trúng!
+	var highlight_res: Dictionary = results[0]
 	for r in results:
 		if bool(r["has_vfx"]):
-			got_vfx = true
-	AudioManager.play_sfx("victory" if got_vfx else "pickup", 1.25 if got_vfx else 1.05)
+			highlight_res = r
 
-	# Hiển thị từng thẻ kết quả quay kèm ảnh chân dung của bộ Skin vừa trúng!
-	for c in _gacha_result_box.get_children():
-		c.queue_free()
-	for r in results:
-		var sid: String = str(r["id"])
-		var tcol: Color = r["tag_color"]
-		var card := _create_classical_panel(Color(0.16, 0.10, 0.09, 0.98), tcol)
-		card.custom_minimum_size = Vector2(154, 118)
-		_gacha_result_box.add_child(card)
+	if _gacha_btn_x1:
+		_gacha_btn_x1.disabled = true
+	if _gacha_btn_x5:
+		_gacha_btn_x5.disabled = true
+	if _gacha_result_lbl:
+		_gacha_result_lbl.text = "✨ VÒNG QUAY ĐANG XOAY... ĐANG RÚT TRANG PHỤC CỔ TRANG! ✨"
+		_gacha_result_lbl.modulate = Color(1.0, 0.88, 0.36)
 
-		var cv := VBoxContainer.new()
-		cv.alignment = BoxContainer.ALIGNMENT_CENTER
-		cv.add_theme_constant_override("separation", 2)
-		card.add_child(cv)
+	_gacha_wheel.start_spin_to(highlight_res)
 
-		var pic := TextureRect.new()
-		pic.texture = PixelArtGenerator.get_hero_portrait_texture(SaveManager.equipped_scarf, sid)
-		pic.custom_minimum_size = Vector2(46, 46)
-		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		cv.add_child(pic)
 
-		var nlbl := Label.new()
-		nlbl.text = str(r["name"])
-		nlbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		nlbl.add_theme_font_size_override("font_size", 11)
-		nlbl.modulate = tcol
-		cv.add_child(nlbl)
-
-		var sub_lbl := Label.new()
-		var status_txt := "MỚI!" if bool(r["is_new"]) else ("Trùng +%d Lượng" % int(r["refund"]))
-		sub_lbl.text = "%s • %s" % [str(r["rarity"]), status_txt]
-		sub_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		sub_lbl.add_theme_font_size_override("font_size", 10)
-		sub_lbl.modulate = Color(1.0, 0.92, 0.55) if bool(r["has_vfx"]) else Color(0.84, 0.84, 0.88)
-		cv.add_child(sub_lbl)
-
-		# Hoạt ảnh lóe mở thẻ cực đã mắt
-		card.scale = Vector2(0.75, 0.75)
-		var tw := card.create_tween()
-		tw.tween_property(card, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-
+func _on_gacha_wheel_finished(top_result: Dictionary) -> void:
+	var lines: Array[String] = []
+	for r in _pending_gacha_results:
+		var st := "MỚI!" if bool(r["is_new"]) else ("Trùng +%d Lượng" % int(r["refund"]))
+		var vfx_mark := " ✨VFX" if bool(r["has_vfx"]) else ""
+		lines.append("• [%s] %s%s (%s)" % [str(r["rarity"]), str(r["name"]), vfx_mark, st])
+	if _gacha_result_lbl:
+		_gacha_result_lbl.text = "CHÚC MỪNG TRÚNG THƯỞNG!\n" + "\n".join(lines)
+		_gacha_result_lbl.modulate = top_result.get("tag_color", Color(1.0, 0.90, 0.45))
 	_refresh_gacha_ui()
 
 
 func _refresh_gacha_ui() -> void:
 	if _gacha_gold_lbl:
 		var remain_pity: int = maxi(1, 5 - SaveManager.gacha_pity)
-		_gacha_gold_lbl.text = "❖ NGÂN LƯỢNG: %d LƯỢNG   •   ĐÃ SƯU TẬP: %d / %d SKIN   •   Còn %d lượt chắc chắn nổ Skin Hiếm có VFX!" % [
+		_gacha_gold_lbl.text = "❖ NGÂN LƯỢNG: %d LƯỢNG   •   SƯU TẬP: %d / %d SKIN   •   Còn %d lượt chắc chắn nổ Skin Hiếm có VFX!" % [
 			SaveManager.gold, SaveManager.owned_skins.size(), SaveManager.SKIN_CATALOG.size(), remain_pity
 		]
+	var spinning := _gacha_wheel != null and _gacha_wheel.is_spinning
 	if _gacha_btn_x1:
-		_gacha_btn_x1.disabled = SaveManager.gold < SaveManager.GACHA_COST_SINGLE
+		_gacha_btn_x1.disabled = spinning or SaveManager.gold < SaveManager.GACHA_COST_SINGLE
 	if _gacha_btn_x5:
-		_gacha_btn_x5.disabled = SaveManager.gold < SaveManager.GACHA_COST_MULTI
+		_gacha_btn_x5.disabled = spinning or SaveManager.gold < SaveManager.GACHA_COST_MULTI
 
-	if _gacha_wardrobe_box == null:
+	if _gacha_wardrobe_grid == null:
 		return
-	for c in _gacha_wardrobe_box.get_children():
+	for c in _gacha_wardrobe_grid.get_children():
 		c.queue_free()
 
 	for sid in SaveManager.SKIN_CATALOG.keys():
@@ -1626,51 +1772,97 @@ func _refresh_gacha_ui() -> void:
 		var sk: Dictionary = SaveManager.SKIN_CATALOG[s_key]
 		var owned: bool = SaveManager.owned_skins.has(s_key)
 		var equipped: bool = (SaveManager.equipped_skin == s_key)
-		var has_vfx: bool = bool(sk["has_vfx"])
-		var tcol: Color = sk["tag_color"]
-
-		var row_panel := _create_classical_panel(Color(0.15, 0.10, 0.08, 0.94), tcol if (equipped or has_vfx) else Color(0.55, 0.45, 0.30, 0.8))
-		_gacha_wardrobe_box.add_child(row_panel)
-
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 12)
-		row_panel.add_child(row)
-
-		var pic := TextureRect.new()
-		pic.texture = PixelArtGenerator.get_hero_portrait_texture(SaveManager.equipped_scarf, s_key)
-		pic.custom_minimum_size = Vector2(46, 46)
-		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		pic.modulate = Color.WHITE if owned else Color(0.35, 0.35, 0.40, 0.8)
-		row.add_child(pic)
-
-		var info := VBoxContainer.new()
-		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_child(info)
-
-		var nlbl := Label.new()
-		var vfx_badge := " ✨[CÓ HIỆU ỨNG 3D]" if has_vfx else " [Thường]"
-		nlbl.text = "[%s] %s%s" % [str(sk["rarity"]), str(sk["name"]), vfx_badge]
-		nlbl.add_theme_font_size_override("font_size", 14)
-		nlbl.modulate = tcol if owned else Color(0.65, 0.65, 0.70)
-		info.add_child(nlbl)
-
-		var dlbl := Label.new()
-		dlbl.text = str(sk["desc"])
-		dlbl.add_theme_font_size_override("font_size", 12)
-		dlbl.modulate = Color(0.92, 0.87, 0.76) if owned else Color(0.55, 0.55, 0.60)
-		info.add_child(dlbl)
-
-		var b_txt := "★ ĐANG MẶC" if equipped else ("MẶC NGAY" if owned else "🔒 CHƯA MỞ")
-		var btn := _create_button(b_txt, func() -> void:
+		var tex := PixelArtGenerator.get_hero_portrait_texture(SaveManager.equipped_scarf, s_key)
+		var badge_txt := "★" if equipped else ("✨" if (owned and bool(sk["has_vfx"])) else ("🔒" if not owned else ""))
+		var border_col: Color = sk["tag_color"] if owned else Color(0.35, 0.30, 0.28)
+		var slot := _create_grid_slot_button(tex, badge_txt, border_col, equipped, func() -> void:
 			if owned:
 				SaveManager.equip_skin(s_key)
 				AudioManager.play_sfx("pickup", 1.2)
+				if _gacha_result_lbl:
+					_gacha_result_lbl.text = "ĐÃ MẶC: [%s] %s\n%s" % [str(sk["rarity"]), str(sk["name"]), str(sk["desc"])]
+					_gacha_result_lbl.modulate = sk["tag_color"]
 				_refresh_gacha_ui()
-		)
-		btn.custom_minimum_size = Vector2(125, 38)
-		btn.disabled = (not owned) or equipped
-		row.add_child(btn)
+			else:
+				if _gacha_result_lbl:
+					_gacha_result_lbl.text = "CHƯA MỞ KHÓA: [%s] %s\n%s" % [str(sk["rarity"]), str(sk["name"]), str(sk["desc"])]
+					_gacha_result_lbl.modulate = Color(0.80, 0.76, 0.70)
+		, 76)
+		if not owned:
+			slot.modulate = Color(0.52, 0.50, 0.54)
+		_gacha_wardrobe_grid.add_child(slot)
+
+
+## Helper: Tạo 1 ô vuông hiển thị hình ảnh vật phẩm/vũ khí/skin (dùng cho Rương 7x7, Shop & Tủ 10 Skin)
+func _create_grid_slot_button(icon_tex: Texture2D, badge_text: String, border_col: Color, is_selected: bool, on_click: Callable, slot_px: int = 58) -> Button:
+	var btn := Button.new()
+	btn.custom_minimum_size = Vector2(slot_px, slot_px)
+	btn.pressed.connect(on_click)
+
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.24, 0.14, 0.10, 0.96) if is_selected else Color(0.14, 0.09, 0.08, 0.94)
+	var bw := 3 if is_selected else 2
+	sb.border_width_left = bw
+	sb.border_width_top = bw
+	sb.border_width_right = bw
+	sb.border_width_bottom = bw
+	sb.border_color = Color(1.0, 0.92, 0.40) if is_selected else border_col
+	sb.corner_radius_top_left = 4
+	sb.corner_radius_top_right = 4
+	sb.corner_radius_bottom_left = 4
+	sb.corner_radius_bottom_right = 4
+
+	var hov := sb.duplicate() as StyleBoxFlat
+	hov.bg_color = Color(0.32, 0.18, 0.12, 0.98)
+	hov.border_color = Color(1.0, 0.94, 0.55)
+	btn.add_theme_stylebox_override("normal", sb)
+	btn.add_theme_stylebox_override("hover", hov)
+	btn.add_theme_stylebox_override("pressed", hov)
+
+	var tex_rect := TextureRect.new()
+	tex_rect.texture = icon_tex
+	tex_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	tex_rect.offset_left = 6
+	tex_rect.offset_top = 6
+	tex_rect.offset_right = -6
+	tex_rect.offset_bottom = -6
+	tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	tex_rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	btn.add_child(tex_rect)
+
+	if badge_text != "":
+		var blbl := Label.new()
+		blbl.text = badge_text
+		blbl.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+		blbl.offset_left = -36
+		blbl.offset_top = -18
+		blbl.offset_right = -3
+		blbl.offset_bottom = -2
+		blbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		blbl.add_theme_font_size_override("font_size", 11)
+		blbl.modulate = Color(1.0, 0.92, 0.45)
+		blbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		btn.add_child(blbl)
+	return btn
+
+
+func _create_empty_grid_slot(slot_px: int = 58) -> PanelContainer:
+	var p := PanelContainer.new()
+	p.custom_minimum_size = Vector2(slot_px, slot_px)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.08, 0.05, 0.05, 0.72)
+	sb.border_width_left = 1
+	sb.border_width_top = 1
+	sb.border_width_right = 1
+	sb.border_width_bottom = 1
+	sb.border_color = Color(0.45, 0.34, 0.18, 0.55)
+	sb.corner_radius_top_left = 4
+	sb.corner_radius_top_right = 4
+	sb.corner_radius_bottom_left = 4
+	sb.corner_radius_bottom_right = 4
+	p.add_theme_stylebox_override("panel", sb)
+	return p
 
 
 func _start_stage(stage_id: int) -> void:
@@ -1736,6 +1928,8 @@ func _on_player_hp_changed(cur: float, mx: float) -> void:
 		hp_bar.value = cur
 	if hp_label:
 		hp_label.text = "SINH LỰC: %d / %d" % [int(ceil(cur)), int(mx)]
+	if _hp_badge_lbl:
+		_hp_badge_lbl.text = str(int(ceil(cur)))
 
 
 func _on_player_energy_changed(cur: float, mx: float) -> void:

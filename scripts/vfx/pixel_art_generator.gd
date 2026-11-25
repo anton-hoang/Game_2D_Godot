@@ -129,6 +129,24 @@ static func get_npc_portrait_texture(npc_role: String) -> ImageTexture:
 	return tex
 
 
+static func get_weapon_icon_texture(weapon_id: String) -> ImageTexture:
+	var key := "icon_weapon_" + weapon_id
+	if _cache.has(key):
+		return _cache[key]
+	var tex := ImageTexture.create_from_image(_make_weapon_icon_image(weapon_id))
+	_cache[key] = tex
+	return tex
+
+
+static func get_bag_item_icon_texture(item_id: String) -> ImageTexture:
+	var key := "icon_bag_" + item_id
+	if _cache.has(key):
+		return _cache[key]
+	var tex := ImageTexture.create_from_image(_make_bag_item_icon_image(item_id))
+	_cache[key] = tex
+	return tex
+
+
 static func get_prop_texture(prop_type: String) -> ImageTexture:
 	var key := "prop_hd_" + prop_type
 	if _cache.has(key):
@@ -998,6 +1016,96 @@ static func _make_npc_portrait_image(role: String) -> Image:
 			img.set_pixel(17, 21, Color.WHITE)
 			img.set_pixel(28, 21, Color.WHITE)
 			_fill_rect(img, 18, 26, 12, 3, Color(0.26, 0.18, 0.14))
+	return img
+
+
+## Vẽ Icon 32x32 sắc nét cho từng món Binh Khí (Kiếm, Đại Đao, Cung Tên, Gậy Phép) hiển thị trong ô lưới 7x7!
+static func _make_weapon_icon_image(weapon_id: String) -> Image:
+	var w := 32
+	var h := 32
+	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var wd: Dictionary = SaveManager.WEAPON_CATALOG.get(weapon_id, SaveManager.WEAPON_CATALOG["sword_basic"])
+	var w_type: String = str(wd.get("type", "sword"))
+	var accent: Color = wd.get("color", Color(0.8, 0.92, 1.0))
+	var outline := Color(0.10, 0.06, 0.10)
+	var gold := Color(0.98, 0.80, 0.28)
+	var wood := Color(0.46, 0.26, 0.12)
+
+	match w_type:
+		"sword":
+			# Thanh Kiếm chéo 45 độ phát sáng ánh ngọc / thép
+			for i in range(18):
+				_fill_rect(img, 9 + i, 22 - i, 3, 3, accent)
+				_fill_rect(img, 10 + i, 21 - i, 1, 2, Color.WHITE)
+			_fill_rect(img, 6, 20, 8, 3, gold)
+			_fill_rect(img, 9, 17, 3, 8, gold)
+			_fill_rect(img, 4, 24, 5, 4, wood)
+			_fill_rect(img, 3, 27, 3, 3, gold)
+		"saber":
+			# Đại Đao bản rộng cong sắc bén kèm tua rua đỏ
+			for i in range(16):
+				var curve: int = int(float(i * i) / 48.0)
+				_fill_rect(img, 10 + i, 21 - i + curve, 5, 4, accent)
+				_fill_rect(img, 12 + i, 20 - i + curve, 2, 2, Color.WHITE)
+			_fill_rect(img, 7, 21, 7, 3, gold)
+			_fill_rect(img, 4, 23, 5, 5, wood)
+			_fill_rect(img, 3, 26, 3, 4, Color(0.90, 0.18, 0.20))
+		"bow":
+			# Trường Cung cong giương sẵn mũi tên phát sáng
+			for i in range(18):
+				var bx: int = 8 + int(sin(float(i) / 17.0 * PI) * 8.0)
+				_fill_rect(img, bx, 6 + i, 3, 3, wood)
+			_fill_rect(img, 8, 7, 1, 18, Color(0.92, 0.88, 0.80))
+			# Mũi tên ngang rực sáng
+			_fill_rect(img, 8, 15, 19, 2, accent)
+			_fill_rect(img, 24, 13, 4, 6, Color.WHITE)
+			_fill_rect(img, 6, 13, 4, 6, Color(0.92, 0.24, 0.24))
+		"staff":
+			# Tiên Trượng / Gậy Phép cổ trang có vòng vàng & linh châu phát sáng
+			for i in range(20):
+				_fill_rect(img, 5 + i, 25 - i, 3, 2, wood)
+			_fill_circle(img, 23, 8, 6, gold)
+			_fill_circle(img, 23, 8, 4, accent)
+			_fill_circle(img, 22, 7, 2, Color.WHITE)
+
+	_apply_clean_outline(img, outline)
+	return img
+
+
+## Vẽ Icon 32x32 cho 3 loại Đan Dược (Hồi Xuân Đan ngọc lục, Tụ Khí Tán bình lam, Long Hổ Thần Đan cầu vàng)
+static func _make_bag_item_icon_image(item_id: String) -> Image:
+	var w := 32
+	var h := 32
+	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var outline := Color(0.10, 0.06, 0.10)
+	var gold := Color(0.96, 0.78, 0.26)
+
+	match item_id:
+		"hp_potion":
+			# Viên Hồi Xuân Đan ngọc lục phát sáng đặt trên đế gỗ cổ trang (giống ảnh mẫu!)
+			_fill_rect(img, 9, 23, 14, 4, Color(0.46, 0.24, 0.12))
+			_fill_rect(img, 11, 22, 10, 2, gold)
+			_fill_circle(img, 16, 14, 8, Color(0.18, 0.76, 0.36))
+			_fill_circle(img, 15, 13, 6, Color(0.42, 0.96, 0.56))
+			_fill_circle(img, 13, 11, 3, Color(0.88, 1.0, 0.92))
+		"mp_potion":
+			# Bình Tụ Khí Tán thủy tinh xanh lam lấp lánh (giống ảnh mẫu!)
+			_fill_rect(img, 13, 5, 6, 4, Color(0.68, 0.46, 0.22)) # Nút bần
+			_fill_rect(img, 12, 9, 8, 4, Color(0.75, 0.90, 1.0))
+			_fill_rect(img, 9, 13, 14, 14, Color(0.14, 0.52, 0.92))
+			_fill_rect(img, 11, 15, 10, 10, Color(0.32, 0.76, 1.0))
+			_fill_rect(img, 11, 15, 3, 6, Color(0.85, 0.96, 1.0))
+		_:
+			# Long Hổ Thần Đan: Quả cầu hoàng kim tỏa hào quang trên đài sen
+			_fill_rect(img, 8, 24, 16, 4, Color(0.54, 0.22, 0.12))
+			_fill_rect(img, 10, 22, 12, 3, gold)
+			_fill_circle(img, 16, 14, 8, Color(0.92, 0.62, 0.12))
+			_fill_circle(img, 16, 13, 6, Color(1.0, 0.86, 0.30))
+			_fill_circle(img, 14, 11, 3, Color(1.0, 0.98, 0.85))
+
+	_apply_clean_outline(img, outline)
 	return img
 
 
