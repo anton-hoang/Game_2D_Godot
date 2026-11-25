@@ -53,6 +53,7 @@ var _hero_title_label: Label
 var _relic_hud_label: Label
 var _quest_list_box: VBoxContainer
 var _scarf_buttons_box: HBoxContainer
+var _pet_buttons_box: HBoxContainer
 
 var _stage_buttons_box: VBoxContainer
 var _upgrade_info_label: Label
@@ -966,19 +967,31 @@ func _build_relic_selection_panel() -> void:
 ## BẢNG TRUY NÃ NHIỆM VỤ DÂN LÀNG & TỦ ĐỔI DANH HIỆU / MÀU KHĂN CHOÀNG
 ## ============================================================================
 func _build_quest_board_panel() -> void:
-	quest_board_panel = _create_center_modal(760, 540)
+	quest_board_panel = _create_center_modal(780, 610)
 	var vbox := _get_modal_vbox(quest_board_panel)
 
 	var title := Label.new()
-	title.text = "【 BẢNG TRUY NÃ LÀNG CỔ & TỦ KHĂN CHOÀNG 】"
+	title.text = "【 BẢNG TRUY NÃ • TỦ KHĂN CHOÀNG & LINH THÚ ĐỒNG HÀNH 】"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 22)
+	title.add_theme_font_size_override("font_size", 21)
 	title.modulate = Color(1.0, 0.86, 0.38)
 	vbox.add_child(title)
 
 	_quest_list_box = VBoxContainer.new()
-	_quest_list_box.add_theme_constant_override("separation", 8)
+	_quest_list_box.add_theme_constant_override("separation", 6)
 	vbox.add_child(_quest_list_box)
+
+	var pet_hdr := Label.new()
+	pet_hdr.text = "─── CHỌN BẠN ĐỒNG HÀNH LINH THÚ (Tự nhặt vàng • Bắn linh khí • Khiên cứu nguy) ───"
+	pet_hdr.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	pet_hdr.add_theme_font_size_override("font_size", 13)
+	pet_hdr.modulate = Color(0.55, 0.96, 0.90)
+	vbox.add_child(pet_hdr)
+
+	_pet_buttons_box = HBoxContainer.new()
+	_pet_buttons_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	_pet_buttons_box.add_theme_constant_override("separation", 12)
+	vbox.add_child(_pet_buttons_box)
 
 	var scarf_hdr := Label.new()
 	scarf_hdr.text = "─── MÀU KHĂN CHOÀNG ĐÃ MỞ KHÓA (Đổi trực tiếp trên Nhân Vật) ───"
@@ -1048,6 +1061,25 @@ func _refresh_quest_board() -> void:
 		claim_btn.custom_minimum_size = Vector2(150, 42)
 		claim_btn.disabled = claimed or not done
 		row.add_child(claim_btn)
+
+	# Hàng nút chọn Bạn Đồng Hành Linh Thú (Tiểu Hồ Ly Bạch Tuyết / Tiên Hạc Cổ Trang)
+	if _pet_buttons_box:
+		for pc in _pet_buttons_box.get_children():
+			pc.queue_free()
+		var pet_choices := [
+			{"id": "fox", "label": "🦊 Tiểu Hồ Ly Bạch Tuyết (Linh Cầu Hồng Ngọc)"},
+			{"id": "crane", "label": "🕊 Tiên Hạc Trắng (Linh Khí Ngọc Bích)"},
+		]
+		for pc_data in pet_choices:
+			var p_key: String = str(pc_data["id"])
+			var is_eq: bool = (SaveManager.equipped_pet == p_key)
+			var pbtn := _create_button(("★ " if is_eq else "") + str(pc_data["label"]), func() -> void:
+				SaveManager.equip_pet(p_key)
+				AudioManager.play_sfx("pickup", 1.2)
+				_refresh_quest_board()
+			)
+			pbtn.custom_minimum_size = Vector2(320, 36)
+			_pet_buttons_box.add_child(pbtn)
 
 	# Hàng nút chọn Màu Khăn Choàng đã mở khóa
 	for sc in _scarf_buttons_box.get_children():

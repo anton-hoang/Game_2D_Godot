@@ -12,6 +12,7 @@ var _sprite: Sprite3D
 
 
 func _ready() -> void:
+	add_to_group("pickups")
 	var col := CollisionShape3D.new()
 	var sphere := SphereShape3D.new()
 	sphere.radius = 0.75
@@ -56,14 +57,21 @@ func _physics_process(delta: float) -> void:
 func _on_body_entered(body: Node) -> void:
 	if body == null or not body.is_in_group("player"):
 		return
+	collect_by(body)
+
+
+## Cho phép cả Player lẫn Bạn Đồng Hành Linh Thú tự động nhặt vật phẩm này
+func collect_by(player_body: Node) -> void:
+	if is_queued_for_deletion():
+		return
 	AudioManager.play_sfx("pickup")
 	match pickup_type:
 		"hp":
-			if body.has_method("heal"):
-				body.heal(float(amount))
+			if player_body and player_body.has_method("heal"):
+				player_body.heal(float(amount))
 		"energy":
-			if body.has_method("add_energy"):
-				body.add_energy(float(amount))
+			if player_body and player_body.has_method("add_energy"):
+				player_body.add_energy(float(amount))
 			DamageNumber3D.spawn(get_parent(), global_position, amount, false, false, "+" + str(amount) + " MP")
 		"gold":
 			SaveManager.add_gold(amount)

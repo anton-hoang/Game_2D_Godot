@@ -15,6 +15,7 @@ signal hub_portal_entered
 
 var environment_builder: HD2DEnvironmentBuilder
 var player: PlayerController
+var companion_pet: SpiritCompanion3D
 var camera_rig: CameraRig3D
 var wave_portal: WavePortal3D
 var entities_root: Node3D
@@ -63,6 +64,15 @@ func _setup_scene_hierarchy() -> void:
 		player.name = "Player"
 		add_child(player)
 	player.position = Vector3(1.5, 0.2, 2.2)
+
+	# Bạn Đồng Hành Linh Thú (Tiểu Hồ Ly / Tiên Hạc) bay lượn bên vai cô bé Lữ Khách!
+	companion_pet = get_node_or_null("SpiritCompanion3D") as SpiritCompanion3D
+	if companion_pet == null:
+		companion_pet = SpiritCompanion3D.new()
+		companion_pet.name = "SpiritCompanion3D"
+		add_child(companion_pet)
+	companion_pet.owner_player = player
+	companion_pet.position = player.position + Vector3(-1.2, 1.6, -0.4)
 
 	camera_rig = get_node_or_null("CameraRig3D") as CameraRig3D
 	if camera_rig == null:
@@ -148,6 +158,8 @@ func enter_town_hub() -> void:
 	player._is_dead = false
 	player._apply_save_upgrades()
 	player.global_position = Vector3(1.5, 0.2, 2.2)
+	if companion_pet and is_instance_valid(companion_pet):
+		companion_pet.global_position = player.global_position + Vector3(-1.2, 1.6, -0.4)
 	player.hp_changed.emit(player.current_hp, player.max_hp)
 	player.energy_changed.emit(player.current_energy, player.max_energy)
 
@@ -181,6 +193,8 @@ func load_and_start_stage(stage_id: int) -> void:
 	player._apply_save_upgrades()
 	player.reset_stage_relics()
 	player.global_position = Vector3(1.5, 0.2, 2.2)
+	if companion_pet and is_instance_valid(companion_pet):
+		companion_pet.global_position = player.global_position + Vector3(-1.2, 1.6, -0.4)
 	player.hp_changed.emit(player.current_hp, player.max_hp)
 	player.energy_changed.emit(player.current_energy, player.max_energy)
 

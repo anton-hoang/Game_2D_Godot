@@ -55,6 +55,8 @@ var player_light: OmniLight3D
 var camera_rig: CameraRig3D
 var _rim_halo_sprite: Sprite3D
 var _contact_shadow: MeshInstance3D
+var _shield_dome: MeshInstance3D
+var _spirit_shield_timer: float = 0.0
 
 
 func _ready() -> void:
@@ -84,6 +86,14 @@ func reset_stage_relics() -> void:
 func add_relic(relic_id: String) -> void:
 	active_relics[relic_id] = int(active_relics.get(relic_id, 0)) + 1
 	AudioManager.play_sfx("victory", 1.2)
+
+
+## Kích hoạt Lá Chắn Hộ Thân từ Linh Thú đồng hành (chặn hoàn toàn sát thương trong thời gian hiệu lực)
+func activate_spirit_shield(duration_sec: float = 5.0) -> void:
+	_spirit_shield_timer = maxf(_spirit_shield_timer, duration_sec)
+	if _shield_dome:
+		_shield_dome.visible = true
+	AudioManager.play_sfx("gate", 1.25)
 
 
 ## Kích hoạt hiệu ứng Hấp Tinh Đại Pháp khi tiêu diệt quái vật
@@ -161,6 +171,24 @@ func _build_visual_nodes() -> void:
 	_contact_shadow.material_override = sh_mat
 	add_child(_contact_shadow)
 
+	# Quả cầu Lá Chắn Linh Khí 3D (hiện lên khi Tiểu Hồ Ly / Tiên Hạc cứu nguy lúc sắp hết máu)
+	_shield_dome = MeshInstance3D.new()
+	var sm := SphereMesh.new()
+	sm.radius = 1.15
+	sm.height = 2.3
+	_shield_dome.mesh = sm
+	_shield_dome.position = Vector3(0.0, 0.95, 0.0)
+	var s_mat := StandardMaterial3D.new()
+	s_mat.albedo_color = Color(0.42, 0.95, 0.88, 0.26)
+	s_mat.emission_enabled = true
+	s_mat.emission = Color(0.35, 0.92, 0.86)
+	s_mat.emission_energy_multiplier = 1.8
+	s_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	s_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	_shield_dome.material_override = s_mat
+	_shield_dome.visible = false
+	add_child(_shield_dome)
+
 	slash_vfx = get_node_or_null("SlashVFX") as Sprite3D
 	if slash_vfx == null:
 		slash_vfx = Sprite3D.new()
@@ -202,6 +230,12 @@ func _physics_process(delta: float) -> void:
 
 	if _invuln_timer > 0.0:
 		_invuln_timer -= delta
+	if _spirit_shield_timer > 0.0:
+		_spirit_shield_timer -= delta
+		if _shield_dome:
+			_shield_dome.rotation.y += delta * 2.2
+			if _spirit_shield_timer <= 0.0:
+				_shield_dome.visible = false
 	if _combo_reset_timer > 0.0:
 		_combo_reset_timer -= delta
 		if _combo_reset_timer <= 0.0:
@@ -440,6 +474,11 @@ func _spawn_fire_trail(level: int) -> void:
 ## Nhận sát thương từ quái hoặc đạn
 func take_damage(amount: float, knockback: Vector3 = Vector3.ZERO) -> void:
 	if _is_dead or _invuln_timer > 0.0:
+		return
+	if _spirit_shield_timer > 0.0:
+		AudioManager.play_sfx("pickup", 1.4)
+		DamageNumber3D.spawn(get_parent(), global_position + Vector3(0, 0.5, 0), 0, true, false, "KHIÊN CHẶN!")
+		_invuln_timer = 0.25
 		return
 	current_hp = maxf(0.0, current_hp - amount)
 	GameManager.damage_taken_in_stage += amount

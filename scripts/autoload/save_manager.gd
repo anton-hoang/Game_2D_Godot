@@ -80,6 +80,7 @@ var unlocked_titles: Array = ["Lữ Khách Windferry"]
 var equipped_title: String = "Lữ Khách Windferry"
 var unlocked_scarves: Array = ["blue"]
 var equipped_scarf: String = "blue"
+var equipped_pet: String = "fox" # "fox" (Tiểu Hồ Ly) | "crane" (Tiên Hạc)
 
 
 func _ready() -> void:
@@ -100,6 +101,7 @@ func save_game() -> void:
 	cfg.set_value("cosmetics", "equipped_title", equipped_title)
 	cfg.set_value("cosmetics", "unlocked_scarves", unlocked_scarves)
 	cfg.set_value("cosmetics", "equipped_scarf", equipped_scarf)
+	cfg.set_value("cosmetics", "equipped_pet", equipped_pet)
 	cfg.save(SAVE_PATH)
 	data_changed.emit()
 
@@ -124,6 +126,7 @@ func load_game() -> void:
 	equipped_title = str(cfg.get_value("cosmetics", "equipped_title", "Lữ Khách Windferry"))
 	unlocked_scarves = cfg.get_value("cosmetics", "unlocked_scarves", ["blue"])
 	equipped_scarf = str(cfg.get_value("cosmetics", "equipped_scarf", "blue"))
+	equipped_pet = str(cfg.get_value("cosmetics", "equipped_pet", "fox"))
 	data_changed.emit()
 
 
@@ -201,6 +204,13 @@ func claim_quest_reward(quest_id: String) -> bool:
 func equip_scarf(scarf_id: String) -> void:
 	if unlocked_scarves.has(scarf_id):
 		equipped_scarf = scarf_id
+		save_game()
+		cosmetic_changed.emit()
+
+
+func equip_pet(pet_id: String) -> void:
+	if pet_id == "fox" or pet_id == "crane":
+		equipped_pet = pet_id
 		save_game()
 		cosmetic_changed.emit()
 

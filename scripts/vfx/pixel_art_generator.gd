@@ -85,6 +85,23 @@ static func get_enemy_sprite_frames(archetype: String, tint: Color = Color.WHITE
 	return frames
 
 
+static func get_pet_sprite_frames(pet_type: String = "fox") -> SpriteFrames:
+	var key := "pet_frames_" + pet_type
+	if _cache.has(key):
+		return _cache[key]
+	var frames := SpriteFrames.new()
+	if frames.has_animation("default"):
+		frames.remove_animation("default")
+	_add_anim(frames, "float", 6.5, true, [
+		_make_pet_frame(pet_type, 0),
+		_make_pet_frame(pet_type, 1),
+		_make_pet_frame(pet_type, 2),
+		_make_pet_frame(pet_type, 1),
+	])
+	_cache[key] = frames
+	return frames
+
+
 static func get_hero_portrait_texture(scarf_id: String = "blue") -> ImageTexture:
 	var key := "hero_portrait_" + scarf_id
 	if _cache.has(key):
@@ -594,6 +611,80 @@ static func _make_flower_cluster_image() -> Image:
 	_fill_rect(img, 13, 5, 3, 3, Color(0.55, 0.82, 1.0))
 	_fill_rect(img, 18, 9, 3, 3, Color(0.98, 0.58, 0.68))
 	return img
+
+
+## Vẽ Sprite Pixel Art Linh Thú Đồng Hành (24x24):
+## - "fox": Tiểu Hồ Ly Bạch Tuyết 3 đuôi có chuông đỏ cổ trang & ấn đỏ trên trán (cực dễ thương!)
+## - "crane": Tiên Hạc Trắng vỗ cánh thanh thoát, chóp cánh đen, đỉnh đầu đỏ son & hào quang ngọc bích.
+static func _make_pet_frame(pet_type: String, step: int) -> ImageTexture:
+	var w := 26
+	var h := 26
+	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var outline := Color(0.14, 0.09, 0.16)
+	var bob: int = 1 if step == 1 else (2 if step == 2 else 0)
+
+	if pet_type == "crane":
+		# Tiên Hạc Cổ Trang vỗ cánh
+		var white := Color(0.98, 0.98, 1.0)
+		var shade := Color(0.78, 0.86, 0.94)
+		var wing_tip := Color(0.16, 0.18, 0.24)
+		var crown := Color(0.92, 0.18, 0.22)
+		var beak := Color(0.98, 0.78, 0.24)
+		var wing_y: int = 6 if step == 0 else (11 if step == 1 else 15)
+
+		# Đôi cánh vỗ theo nhịp 3 frame
+		_fill_rect(img, 3, wing_y, 9, 5, white)
+		_fill_rect(img, 2, wing_y + 2, 4, 3, wing_tip)
+		_fill_rect(img, 14, wing_y, 9, 5, white)
+		_fill_rect(img, 20, wing_y + 2, 4, 3, wing_tip)
+		# Thân hạc mảnh mai & đuôi đen
+		_fill_circle(img, 13, 14 + (bob / 2), 4, white)
+		_fill_rect(img, 8, 15, 5, 3, shade)
+		_fill_rect(img, 5, 16, 4, 3, wing_tip)
+		# Cổ vươn cao, đầu trắng + chỏm đỏ son + mỏ vàng
+		_fill_rect(img, 15, 7, 3, 7, white)
+		_fill_circle(img, 17, 6, 3, white)
+		_fill_rect(img, 16, 3, 3, 2, crown)
+		_fill_rect(img, 20, 6, 4, 2, beak)
+		img.set_pixel(18, 6, outline)
+	else:
+		# Tiểu Hồ Ly Bạch Tuyết (Chibi Hồ Ly bay lơ lửng với đuôi bông lớn & chuông đỏ)
+		var fur_w := Color(0.99, 0.97, 0.95)
+		var fur_s := Color(0.86, 0.80, 0.84)
+		var ear_in := Color(1.0, 0.62, 0.68)
+		var red_acc := Color(0.92, 0.18, 0.22)
+		var gold := Color(0.98, 0.82, 0.26)
+
+		# Chiếc đuôi bông khổng lồ vẫy phía sau (chóp đuôi phớt đỏ hồng)
+		var tail_dy: int = -1 if step == 0 else (1 if step == 2 else 0)
+		_fill_circle(img, 7, 15 + tail_dy, 5, fur_w)
+		_fill_circle(img, 5, 13 + tail_dy, 3, red_acc)
+		_fill_circle(img, 7, 16 + tail_dy, 3, fur_s)
+
+		# Thân nhỏ nhắn & 4 chân thu gọn lơ lửng
+		_fill_circle(img, 13, 16 + (bob / 2), 4, fur_w)
+		_fill_rect(img, 11, 18 + (bob / 2), 6, 2, fur_s)
+		# Dải ruy băng đỏ & chuông vàng cổ
+		_fill_rect(img, 12, 13 + (bob / 2), 6, 2, red_acc)
+		_fill_rect(img, 15, 14 + (bob / 2), 2, 2, gold)
+
+		# Đầu tròn cáo chibi + 2 tai nhọn lớn
+		_fill_circle(img, 16, 10 + (bob / 2), 5, fur_w)
+		# Tai nhọn
+		_fill_rect(img, 12, 3 + (bob / 2), 3, 4, fur_w)
+		_fill_rect(img, 13, 4 + (bob / 2), 2, 3, ear_in)
+		_fill_rect(img, 18, 3 + (bob / 2), 3, 4, fur_w)
+		_fill_rect(img, 18, 4 + (bob / 2), 2, 3, ear_in)
+		# Ấn đỏ cổ trang trên trán & cặp mắt long lanh
+		img.set_pixel(16, 7 + (bob / 2), red_acc)
+		_fill_rect(img, 15, 10 + (bob / 2), 2, 2, outline)
+		_fill_rect(img, 19, 10 + (bob / 2), 2, 2, outline)
+		img.set_pixel(15, 10 + (bob / 2), Color.WHITE)
+		img.set_pixel(19, 10 + (bob / 2), Color.WHITE)
+
+	_apply_clean_outline(img, outline)
+	return ImageTexture.create_from_image(img)
 
 
 ## Bươm bướm sáng bay quanh nhân vật & đèn đường giống trong ảnh Windferry
