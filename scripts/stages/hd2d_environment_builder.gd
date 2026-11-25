@@ -30,6 +30,7 @@ var _stage_map_root: Node3D
 var _lantern_lights: Array[OmniLight3D] = []
 var _lantern_base_energies: Array[float] = []
 var _hanging_lanterns: Array[Node3D] = []
+var _butterflies: Array[Node3D] = []
 var _window_materials: Array[StandardMaterial3D] = []
 var current_time_of_day: String = "blue_night"
 var current_map_theme: String = "hamlet_hub"
@@ -142,6 +143,14 @@ func _process(delta: float) -> void:
 		var hl := _hanging_lanterns[j]
 		if is_instance_valid(hl):
 			hl.rotation_degrees.z = sin(_flicker_time * 0.48 + float(j) * 0.9) * 6.5
+	# Đàn bướm nhỏ lượn quanh nhân vật & cột đèn giống ảnh Windferry
+	for k in range(_butterflies.size()):
+		var bf := _butterflies[k]
+		if is_instance_valid(bf):
+			var phase := _flicker_time * 0.65 + float(k) * 2.1
+			bf.position.y = 1.15 + sin(phase * 1.9) * 0.35
+			bf.position.x += cos(phase * 0.7) * delta * 0.55
+			bf.position.z += sin(phase * 0.8) * delta * 0.35
 
 	# Tự động chuyển đổi ánh sáng (Hoàng hôn / Đêm xanh / Màn đêm / Mưa / Huyết nguyệt) hoàn toàn ngẫu nhiên!
 	if auto_random_lighting:
@@ -443,19 +452,37 @@ func _build_terrain_and_walls() -> void:
 		water_mesh.material_override = smat
 	_hamlet_root.add_child(water_mesh)
 
-	# Cây cầu đá vòm có bậc cong & lan can trụ đá giống ảnh mẫu Windferry
+	# Cây cầu đá vòm cong bậc thang + thác nước trắng nhỏ chảy xuống hồ (giống hệt trung tâm trái ảnh Windferry!)
 	var bridge_root := Node3D.new()
 	bridge_root.name = "StoneBridge"
-	bridge_root.position = Vector3(-7.6, 0.0, 0.7)
+	bridge_root.position = Vector3(-6.2, 0.0, 1.4)
 	_hamlet_root.add_child(bridge_root)
-	_add_box_mesh(bridge_root, Vector3(5.6, 0.35, 3.4), Vector3(0.0, 0.16, 0.0), stone_wall_mat)
-	_add_box_mesh(bridge_root, Vector3(3.4, 0.58, 3.4), Vector3(0.0, 0.32, 0.0), stone_cobble_mat)
-	# Lan can 2 bên cầu có trụ đá đầu cầu
-	for bz: float in [-1.55, 1.55]:
-		_add_box_mesh(bridge_root, Vector3(5.6, 0.85, 0.32), Vector3(0.0, 0.58, bz), stone_wall_mat)
-		_add_box_mesh(bridge_root, Vector3(5.7, 0.16, 0.42), Vector3(0.0, 1.02, bz), stone_trim_mat)
-		for bx: float in [-2.6, 0.0, 2.6]:
-			_add_box_mesh(bridge_root, Vector3(0.45, 1.15, 0.48), Vector3(bx, 0.62, bz), stone_trim_mat)
+	# 5 bậc vòm cong dần lên đỉnh cầu ở giữa
+	var arch_xs: Array[float] = [-2.4, -1.2, 0.0, 1.2, 2.4]
+	var arch_ys: Array[float] = [0.22, 0.54, 0.78, 0.54, 0.22]
+	for ai in range(arch_xs.size()):
+		var ax: float = arch_xs[ai]
+		var ay: float = arch_ys[ai]
+		_add_box_mesh(bridge_root, Vector3(1.35, 0.36, 3.0), Vector3(ax, ay, 0.0), stone_cobble_mat)
+		# Thành lan can cầu uốn cong theo vòm
+		for bz: float in [-1.42, 1.42]:
+			_add_box_mesh(bridge_root, Vector3(1.35, 0.72, 0.28), Vector3(ax, ay + 0.42, bz), stone_wall_mat)
+	# Hai mố chân cầu đá xây chắc xuống mặt nước
+	_add_box_mesh(bridge_root, Vector3(1.6, 1.1, 3.3), Vector3(-2.6, 0.35, 0.0), stone_wall_mat)
+	_add_box_mesh(bridge_root, Vector3(1.6, 1.1, 3.3), Vector3(2.6, 0.35, 0.0), stone_wall_mat)
+
+	# Thác nước nhỏ bọt trắng chảy từ chân tường đá xuống sau cầu (chi tiết đặc trưng trong ảnh mẫu)
+	var fall_mat := StandardMaterial3D.new()
+	fall_mat.albedo_color = Color(0.76, 0.88, 1.0, 0.85)
+	fall_mat.emission_enabled = true
+	fall_mat.emission = Color(0.55, 0.75, 0.96)
+	fall_mat.emission_energy_multiplier = 0.85
+	fall_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_add_box_mesh(_hamlet_root, Vector3(2.6, 0.9, 0.25), Vector3(-5.8, 0.45, -2.2), fall_mat)
+	# Khúc gỗ nhỏ bắc mép hồ bên trái phản chiếu ánh đèn vàng
+	var log_mat := _make_textured_material(Color(0.30, 0.19, 0.12), Color(0.20, 0.12, 0.07), 0.88, "wood")
+	var jetty := _add_box_mesh(_hamlet_root, Vector3(2.2, 0.16, 1.1), Vector3(-11.2, 0.12, 3.2), log_mat)
+	jetty.rotation_degrees.y = -22.0
 
 	# Tường kè đá tầng 2 chạy dài phía sau với mũ đá nhô ra
 	_add_box_mesh(_hamlet_root, Vector3(58.0, 2.7, 1.6), Vector3(0.0, 1.35, -9.2), stone_wall_mat)
@@ -721,13 +748,18 @@ func _build_village_props() -> void:
 	_add_box_mesh(_hamlet_root, Vector3(4.5, 0.14, 0.10), Vector3(19.5, 0.95, -6.8), wood_mat)
 	_add_box_mesh(_hamlet_root, Vector3(4.5, 0.14, 0.10), Vector3(19.5, 0.50, -6.8), wood_mat)
 
-	# CỔNG GỖ MÁI CONG CỔ TRANG (Cổng Tam Quan) đầu lối vào Làng Windferry & chân cầu thang
-	create_curved_wooden_gate(_hamlet_root, Vector3(10.6, 0.0, -5.8), 0.0, "PHONG HÀNH CỔ TRẤN")
-	create_curved_wooden_gate(_hamlet_root, Vector3(-16.2, 0.0, 0.8), 18.0, "CẦU ÁNH TRĂNG")
+	# Giữ đúng bố cục thoáng đãng & tinh tế của Windferry Hamlet trong ảnh mẫu:
+	# - 2 cột đèn chính ven bờ suối trái & bên phải nhân vật + 1 dây cờ vải treo giữa nhà giữa & nhà phải (đã dựng ở _build_cottages)
+	# - Chỉ đặt 1 Cổng Tam Quan cổ trang ở rìa phải ngoài cùng để giữ nguyên vẻ thơ mộng mặt tiền 3 ngôi nhà trong ảnh!
+	create_curved_wooden_gate(_hamlet_root, Vector3(17.8, 0.0, 1.2), 78.0, "PHONG HÀNH TRẤN")
+	create_red_lantern_string(_hamlet_root, Vector3(14.5, 4.2, -4.5), Vector3(18.5, 4.2, 2.5), 4)
 
-	# DÂY ĐÈN LỒNG ĐỎ TREO GIĂNG NGANG LỐI ĐI & GIỮA 2 NGÔI NHÀ GỖ
-	create_red_lantern_string(_hamlet_root, Vector3(-12.0, 6.2, -10.4), Vector3(2.2, 6.2, -10.2), 6)
-	create_red_lantern_string(_hamlet_root, Vector3(-5.0, 3.6, -0.8), Vector3(6.8, 3.6, 2.2), 5)
+	# 4 cánh bướm sáng bay lượn gần nhân vật & đèn lồng phải (giống ảnh Windferry!)
+	var bf_tex := PixelArtGenerator.get_prop_texture("butterfly")
+	for bp: Vector3 in [Vector3(2.2, 1.1, 1.6), Vector3(4.0, 1.3, 1.9), Vector3(-2.4, 1.0, 2.1), Vector3(6.0, 1.2, 0.8)]:
+		var bf := _spawn_foliage_sprite_to(_hamlet_root, bf_tex, bp, 0.032, 0.0)
+		bf.shaded = false
+		_butterflies.append(bf)
 
 	spawn_breakable_props()
 
@@ -808,9 +840,14 @@ func _build_trees_and_foliage() -> void:
 	var grass_tex := PixelArtGenerator.get_prop_texture("grass_tuft")
 	var flower_tex := PixelArtGenerator.get_prop_texture("flower_cluster")
 
-	# Cây cổ thụ khổng lồ giữa làng & 2 bên hậu cảnh (giống ảnh Windferry)
-	var giant_tree := _spawn_foliage_sprite(tree_tex, Vector3(-4.8, 2.6, -15.8), 0.135, 5.2)
+	# Cây cổ thụ khổng lồ thân chữ Y sừng sững giữa 2 ngôi nhà (đúng hệt vị trí ảnh Windferry!)
+	var giant_tree := _spawn_foliage_sprite(tree_tex, Vector3(-4.5, 2.6, -15.2), 0.165, 6.2)
 	giant_tree.name = "GiantVillageTree"
+
+	# Dải cỏ rậm rạp tiền cảnh sát camera để hiệu ứng Tilt-Shift Near DOF làm mờ mềm mịn y hệt mép dưới ảnh mẫu!
+	var fg_grass_xs: Array[float] = [-16.0, -13.5, -11.0, -8.5, -6.0, -3.5, -1.0, 1.5, 4.0, 6.5, 9.0, 11.5, 14.0, 16.5]
+	for fgx in fg_grass_xs:
+		_spawn_foliage_sprite(bush_tex, Vector3(fgx, 0.0, 9.6 + randf_range(-0.6, 0.8)), 0.092, 0.95)
 
 	var tree_specs := [
 		[tree_tex, Vector3(-18.5, 2.6, -12.0), 0.095, 3.6],
@@ -944,29 +981,42 @@ func _add_box_mesh(parent: Node3D, size: Vector3, pos: Vector3, mat: Material) -
 
 
 func _make_textured_material(c1: Color, c2: Color, rough: float, pattern: String) -> StandardMaterial3D:
-	var img := Image.create(24, 24, false, Image.FORMAT_RGBA8)
-	var c3 := c1.lightened(0.10)
-	for y in range(24):
-		for x in range(24):
+	# Nâng cấp texture pixel art 32x32 sắc nét với nhiều biến thể sắc độ từng viên gạch/đá cuội/ngói giống ảnh Windferry
+	var img := Image.create(32, 32, false, Image.FORMAT_RGBA8)
+	var c_hi := c1.lightened(0.14)
+	var c_mid_d := c1.darkened(0.10)
+	var c_warm := Color(clampf(c1.r + 0.05, 0.0, 1.0), clampf(c1.g + 0.03, 0.0, 1.0), c1.b)
+	for y in range(32):
+		for x in range(32):
 			var col := c1
 			if pattern == "brick":
 				var row := y / 6
 				var offset := (row % 2) * 6
+				var brick_id := ((x + offset) / 12) + row * 7
+				var base_b := c_warm if (brick_id % 3 == 0) else (c_mid_d if (brick_id % 4 == 1) else c1)
 				if (y % 6 == 0) or ((x + offset) % 12 == 0):
 					col = c2
 				elif (y % 6 == 1) and ((x + offset) % 12 > 1):
-					col = c3
+					col = base_b.lightened(0.12)
+				else:
+					col = base_b
 			elif pattern == "cobble":
-				var hash_v := (x * 11 + y * 17) % 9
-				if (x % 6 == 0) or (y % 6 == 0):
+				var row := y / 5
+				var offset := (row % 2) * 3
+				var stone_id := ((x + offset) / 6) * 5 + row * 11
+				if (y % 5 == 0) or ((x + offset) % 6 == 0):
 					col = c2
-				elif hash_v == 0 or hash_v == 3:
-					col = c3
+				elif stone_id % 4 == 0:
+					col = c_hi
+				elif stone_id % 3 == 0:
+					col = c_mid_d
+				else:
+					col = c_warm
 			elif pattern == "wood":
-				col = c2 if (y % 4 == 0) else (c3 if ((x + y * 3) % 11 == 0) else c1)
+				col = c2 if (y % 4 == 0) else (c_hi if ((x + y * 3) % 11 == 0) else c1)
 			else:
-				var n := (x * 7 + y * 13 + x * y) % 7
-				col = c2 if n <= 1 else (c3 if n == 6 else c1)
+				var n := (x * 7 + y * 13 + x * y) % 9
+				col = c2 if n <= 2 else (c_hi if n >= 7 else c1)
 			img.set_pixel(x, y, col)
 
 	var tex := ImageTexture.create_from_image(img)
@@ -974,7 +1024,7 @@ func _make_textured_material(c1: Color, c2: Color, rough: float, pattern: String
 	mat.albedo_texture = tex
 	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 	mat.uv1_triplanar = true
-	mat.uv1_scale = Vector3(0.42, 0.42, 0.42)
+	mat.uv1_scale = Vector3(0.46, 0.46, 0.46)
 	mat.roughness = rough
 	return mat
 

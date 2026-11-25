@@ -6,9 +6,9 @@ extends Node3D
 ## - Rung nhẹ (screen shake) khi chém trúng quái hoặc bị thương.
 
 @export var target_path: NodePath
-@export var follow_offset: Vector3 = Vector3(0.0, 11.5, 17.5)
-@export var pitch_degrees: float = -33.0
-@export var camera_fov: float = 28.0
+@export var follow_offset: Vector3 = Vector3(0.0, 9.8, 19.2)
+@export var pitch_degrees: float = -24.5
+@export var camera_fov: float = 23.0
 @export var smooth_speed: float = 7.5
 @export var limit_x: Vector2 = Vector2(-15.5, 15.5)
 @export var limit_z: Vector2 = Vector2(-14.5, 8.5)
@@ -41,15 +41,16 @@ func _ready() -> void:
 	camera.position = follow_offset
 	camera.rotation_degrees = Vector3(pitch_degrees, 0.0, 0.0)
 
-	# Gắn Depth of Field (Tilt-Shift) trực tiếp vào CameraAttributesPractical
+	# Gắn Depth of Field (Tilt-Shift) chuẩn Diorama Windferry Hamlet:
+	# Làm mờ mềm mại dải cỏ tiền cảnh sát mép dưới & ngọn cây/núi hậu cảnh, giữ siêu nét khu vực nhân vật & 3 ngôi nhà!
 	var attrs := CameraAttributesPractical.new()
 	attrs.dof_blur_far_enabled = true
-	attrs.dof_blur_far_distance = 24.0
-	attrs.dof_blur_far_transition = 8.0
+	attrs.dof_blur_far_distance = 34.0
+	attrs.dof_blur_far_transition = 10.0
 	attrs.dof_blur_near_enabled = true
-	attrs.dof_blur_near_distance = 11.5
-	attrs.dof_blur_near_transition = 4.0
-	attrs.dof_blur_amount = 0.11
+	attrs.dof_blur_near_distance = 13.5
+	attrs.dof_blur_near_transition = 4.5
+	attrs.dof_blur_amount = 0.14
 	camera.attributes = attrs
 
 

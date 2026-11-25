@@ -60,7 +60,7 @@ func _setup_scene_hierarchy() -> void:
 			player = PlayerController.new()
 		player.name = "Player"
 		add_child(player)
-	player.position = Vector3(0.0, 0.2, 1.8)
+	player.position = Vector3(1.5, 0.2, 2.2)
 
 	camera_rig = get_node_or_null("CameraRig3D") as CameraRig3D
 	if camera_rig == null:
@@ -138,7 +138,7 @@ func enter_town_hub() -> void:
 
 	player._is_dead = false
 	player._apply_save_upgrades()
-	player.global_position = Vector3(-1.5, 0.2, 1.8)
+	player.global_position = Vector3(1.5, 0.2, 2.2)
 	player.hp_changed.emit(player.current_hp, player.max_hp)
 	player.energy_changed.emit(player.current_energy, player.max_energy)
 
@@ -170,7 +170,7 @@ func load_and_start_stage(stage_id: int) -> void:
 	# Đặt lại vị trí và nâng cấp của Player
 	player._is_dead = false
 	player._apply_save_upgrades()
-	player.global_position = Vector3(-1.5, 0.2, 1.8)
+	player.global_position = Vector3(1.5, 0.2, 2.2)
 	player.hp_changed.emit(player.current_hp, player.max_hp)
 	player.energy_changed.emit(player.current_energy, player.max_energy)
 
