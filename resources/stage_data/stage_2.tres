@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="StageData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/stage_data.gd" id="1_stage"]
+
+[resource]
+script = ExtResource("1_stage")
+stage_id = 2
+stage_name = "Màn 2: Đêm Xanh Bên Cầu Đá"
+stage_subtitle = "3 Đợt quái — Chiến thú lao nhanh xuất hiện"
+time_of_day = "blue_night"
+target_clear_time = 85.0
+waves = Array[Dictionary]([{
+"melee": 3,
+"ranged": 2
+}, {
+"charger": 2,
+"melee": 2
+}, {
+"charger": 2,
+"melee": 3,
+"ranged": 2
+}])

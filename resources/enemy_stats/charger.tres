@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="EnemyStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/enemy_stats.gd" id="1_stats"]
+
+[resource]
+script = ExtResource("1_stats")
+enemy_name = "Chiến Thú Cuồng Nộ"
+archetype = "charger"
+max_hp = 68.0
+move_speed = 3.8
+attack_damage = 18.0
+attack_range = 4.6
+attack_cooldown = 1.95
+detection_range = 18.0
+knockback_resistance = 0.25
+score_value = 160
+gold_drop = 13
+sprite_tint = Color(1, 1, 1, 1)
+sprite_scale = 1.08

@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="StageData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/stage_data.gd" id="1_stage"]
+
+[resource]
+script = ExtResource("1_stage")
+stage_id = 4
+stage_name = "Màn 4: Màn Đêm Sâu Thành Cổ"
+stage_subtitle = "4 Đợt quái — Đêm tối tĩnh mịch dưới ánh trăng & đèn lồng"
+time_of_day = "midnight"
+target_clear_time = 120.0
+waves = Array[Dictionary]([{
+"charger": 2,
+"melee": 4
+}, {
+"ranged": 3,
+"tank": 1
+}, {
+"melee": 3,
+"tank": 2
+}, {
+"charger": 2,
+"ranged": 2,
+"tank": 2
+}])
