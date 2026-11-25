@@ -241,7 +241,7 @@ func apply_time_of_day(mode: String, smooth: bool = true) -> void:
 	if rain_particles:
 		rain_particles.emitting = has_rain
 	if firefly_particles:
-		firefly_particles.amount = firefly_count
+		firefly_particles.amount_ratio = clampf(float(firefly_count) / 130.0, 0.25, 1.0)
 
 	if _weather_tween and _weather_tween.is_valid():
 		_weather_tween.kill()
@@ -871,10 +871,10 @@ func _spawn_foliage_sprite(tex: Texture2D, pos: Vector3, px_size: float, y_lift:
 
 
 func _build_atmosphere_particles() -> void:
-	# Hạt đom đóm vàng ấm bay lượn dày đặc trong màn đêm HD-2D
+	# Hạt đom đóm vàng ấm bay lượn (giữ cố định amount = 80 để không bao giờ cấp phát lại vertex buffer lúc runtime)
 	firefly_particles = GPUParticles3D.new()
 	firefly_particles.name = "Fireflies"
-	firefly_particles.amount = 110
+	firefly_particles.amount = 80
 	firefly_particles.lifetime = 5.2
 	firefly_particles.position = Vector3(0.0, 2.8, -2.0)
 
@@ -902,10 +902,10 @@ func _build_atmosphere_particles() -> void:
 	firefly_particles.draw_pass_1 = ff_quad
 	add_child(firefly_particles)
 
-	# Hạt mưa rơi chéo có độ bóng cho màn đêm mưa & nguyệt thực
+	# Hạt mưa rơi chéo (tối ưu số hạt 220 để luôn đạt 60 FPS cực nhẹ trên GPU tích hợp)
 	rain_particles = GPUParticles3D.new()
 	rain_particles.name = "RainParticles"
-	rain_particles.amount = 420
+	rain_particles.amount = 220
 	rain_particles.lifetime = 1.05
 	rain_particles.emitting = false
 	rain_particles.position = Vector3(0.0, 12.0, 0.0)
