@@ -1,6 +1,6 @@
 extends Node3D
-## MainGameController: Kết nối StageManager (thế giới 3D HD-2D) và GameUIController (HUD & Menu).
-## Mở đầu ở trạng thái cảnh làng Đêm Xanh (Blue Hour) phía sau Menu chính để người chơi thưởng thức đồ họa HD-2D ngay khi mở game.
+## MainGameController: Kết nối StageManager (thế giới 3D HD-2D) và GameUIController (HUD Cổ Trang & Menu).
+## Ánh sáng & Thiên tượng (Hoàng hôn, Đêm xanh, Màn đêm, Đêm mưa, Huyết nguyệt) tự động biến chuyển ngẫu nhiên mượt mà.
 
 var stage_manager: StageManager
 var ui_controller: GameUIController
@@ -23,11 +23,24 @@ func _ready() -> void:
 	ui_controller.start_stage_requested.connect(_on_start_stage_requested)
 	ui_controller.enter_town_hub_requested.connect(_on_enter_town_hub_requested)
 	ui_controller.npc_service_requested.connect(_on_npc_service_requested)
-	ui_controller.quick_lighting_requested.connect(_on_quick_lighting_requested)
 	ui_controller.toggle_dof_requested.connect(_on_toggle_dof_requested)
+
 	stage_manager.wave_banner_requested.connect(ui_controller.show_wave_banner)
 	stage_manager.npc_interacted.connect(ui_controller.show_npc_dialogue)
 	stage_manager.hub_portal_entered.connect(ui_controller.open_stage_select_from_hub)
+
+	# Lắng nghe sự kiện Thiên Tượng đổi ánh sáng ngẫu nhiên tự động
+	if stage_manager.environment_builder:
+		stage_manager.environment_builder.weather_lighting_changed.connect(_on_weather_lighting_changed)
+		var cur_mode := stage_manager.environment_builder.current_time_of_day
+		var cur_name := str(HD2DEnvironmentBuilder.WEATHER_NAMES.get(cur_mode, "Màn Đêm Tĩnh Mịch"))
+		ui_controller.update_weather_display(cur_name)
+
+
+func _on_weather_lighting_changed(_mode: String, display_name: String) -> void:
+	ui_controller.update_weather_display(display_name)
+	if not get_tree().paused:
+		ui_controller.show_wave_banner("THIÊN TƯỢNG BIẾN CHUYỂN", "Trời đất chuyển sang: " + display_name)
 
 
 func _on_enter_town_hub_requested() -> void:
@@ -43,7 +56,7 @@ func _on_npc_service_requested(role: String) -> void:
 		p.heal(p.max_hp)
 		p.add_energy(p.max_energy)
 		AudioManager.play_sfx("victory", 1.1)
-		ui_controller.show_wave_banner("ĐÃ NGHỈ NGƠI TẠI QUÁN TRỌ MIRA!", "Sinh lực và Năng lượng đã được hồi phục 100%")
+		ui_controller.show_wave_banner("NGHỈ NGƠI TẠI QUÁN TRỌ MIRA", "Sinh lực và Chân khí đã hồi phục viên mãn!")
 	elif role == "merchant":
 		if SaveManager.gold >= 20:
 			SaveManager.add_gold(-20)
@@ -51,10 +64,10 @@ func _on_npc_service_requested(role: String) -> void:
 			p.add_energy(p.max_energy)
 			GameManager.add_score(150)
 			AudioManager.play_sfx("pickup", 1.15)
-			ui_controller.show_wave_banner("MUA THUỐC TĂNG LỰC THÀNH CÔNG!", "Đã hồi đầy HP/MP & nhận +150 điểm thưởng")
+			ui_controller.show_wave_banner("ĐÃ MUA ĐAN DƯỢC TĂNG LỰC", "Hồi đầy Sinh Lực / Chân Khí & nhận +150 Chiến Công")
 		else:
 			AudioManager.play_sfx("hurt", 0.9)
-			ui_controller.show_wave_banner("KHÔNG ĐỦ VÀNG (CẦN 20 VÀNG)", "Hãy mở Rương báu trong 3 nhà gỗ hoặc chém vỡ thùng gỗ để kiếm thêm vàng!")
+			ui_controller.show_wave_banner("NGÂN LƯỢNG KHÔNG ĐỦ (CẦN 20 LƯỢNG)", "Hãy mở Rương báu trong 3 nhà gỗ hoặc chém vỡ thùng gỗ để tìm thêm!")
 
 
 func _on_start_stage_requested(stage_id: int) -> void:
@@ -62,23 +75,7 @@ func _on_start_stage_requested(stage_id: int) -> void:
 	ui_controller.bind_player(stage_manager.player)
 
 
-func _on_quick_lighting_requested(mode: String) -> void:
-	if stage_manager and stage_manager.environment_builder:
-		stage_manager.environment_builder.apply_time_of_day(mode)
-		var mode_names := {
-			"golden_hour": "HOÀNG HÔN (GOLDEN HOUR)",
-			"blue_night": "ĐÊM XANH CHẠNG VẠNG (BLUE NIGHT)",
-			"midnight": "MÀN ĐÊM SÂU (DEEP MIDNIGHT)",
-			"rainy_night": "ĐÊM MƯA BÃO (RAINY NIGHT)",
-			"crimson_eclipse": "ĐÊM NGUYỆT THỰC (CRIMSON ECLIPSE)",
-		}
-		ui_controller.show_wave_banner(
-			"THỜI ĐIỂM: " + str(mode_names.get(mode, mode.to_upper())),
-			"[1] Hoàng hôn | [2] Đêm xanh | [3] Màn Đêm Sâu | [R] Đêm mưa | [4] Nguyệt thực"
-		)
-
-
 func _on_toggle_dof_requested() -> void:
 	if stage_manager and stage_manager.camera_rig:
 		var enabled := stage_manager.camera_rig.toggle_dof()
-		ui_controller.show_wave_banner("TILT-SHIFT DOF: " + ("BẬT" if enabled else "TẮT"), "Hiệu ứng làm mờ tiền cảnh & hậu cảnh kiểu Octopath Traveler")
+		ui_controller.show_wave_banner("HIỆU ỨNG CHIỀU SÂU DOF: " + ("MỞ" if enabled else "TẮT"), "Hiệu ứng làm mờ cảnh xa gần HD-2D")

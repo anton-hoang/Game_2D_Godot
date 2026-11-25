@@ -68,14 +68,14 @@ func _build_visuals() -> void:
 	anim_sprite.sprite_frames = stats.custom_sprite_frames if stats.custom_sprite_frames else PixelArtGenerator.get_enemy_sprite_frames(stats.archetype, stats.sprite_tint)
 	anim_sprite.play("idle")
 
-	# Thanh máu nhỏ trên đầu cho quái thường (Boss có thanh máu lớn trên HUD)
+	# Thanh máu nhỏ kiểu cổ trang viền vàng đồng trên đầu quái thường
 	if stats.archetype != "boss":
 		hp_bar_3d = Sprite3D.new()
 		hp_bar_3d.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-		hp_bar_3d.pixel_size = 0.025
+		hp_bar_3d.pixel_size = 0.024
 		hp_bar_3d.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
-		hp_bar_3d.position = Vector3(0.0, 1.75 * stats.sprite_scale, 0.0)
-		_hp_bar_img = Image.create(32, 5, false, Image.FORMAT_RGBA8)
+		hp_bar_3d.position = Vector3(0.0, 1.80 * stats.sprite_scale, 0.0)
+		_hp_bar_img = Image.create(36, 7, false, Image.FORMAT_RGBA8)
 		_hp_bar_tex = ImageTexture.create_from_image(_hp_bar_img)
 		hp_bar_3d.texture = _hp_bar_tex
 		add_child(hp_bar_3d)
@@ -85,13 +85,18 @@ func _build_visuals() -> void:
 func _update_overhead_hp_bar() -> void:
 	if _hp_bar_img == null or _hp_bar_tex == null:
 		return
-	_hp_bar_img.fill(Color(0.08, 0.06, 0.10, 0.88))
+	# Viền vàng đồng cổ trang bên ngoài + nền tối bên trong
+	_hp_bar_img.fill(Color(0.84, 0.66, 0.28, 0.95))
+	for y in range(1, 6):
+		for x in range(1, 35):
+			_hp_bar_img.set_pixel(x, y, Color(0.08, 0.04, 0.05, 0.92))
 	var ratio := clampf(current_hp / maxf(1.0, max_hp), 0.0, 1.0)
-	var fill_w := int(round(30.0 * ratio))
-	var bar_col := Color(0.92, 0.25, 0.25) if stats.archetype != "tank" else Color(0.95, 0.55, 0.18)
-	for y in range(1, 4):
-		for x in range(1, 1 + fill_w):
-			_hp_bar_img.set_pixel(x, y, bar_col)
+	var fill_w := int(round(32.0 * ratio))
+	var bar_col := Color(0.82, 0.16, 0.18) if stats.archetype != "tank" else Color(0.92, 0.56, 0.16)
+	var bar_hi := bar_col.lightened(0.28)
+	for y in range(2, 5):
+		for x in range(2, 2 + fill_w):
+			_hp_bar_img.set_pixel(x, y, bar_hi if y == 2 else bar_col)
 	_hp_bar_tex.update(_hp_bar_img)
 
 

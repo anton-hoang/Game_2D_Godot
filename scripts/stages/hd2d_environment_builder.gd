@@ -8,6 +8,17 @@ extends Node3D
 ## - 5 chế độ ánh sáng: "golden_hour" (Hoàng hôn), "blue_night" (Đêm xanh), "midnight" (Màn Đêm Sâu),
 ##   "rainy_night" (Đêm mưa), "crimson_eclipse" (Nguyệt thực Boss).
 
+signal weather_lighting_changed(mode: String, display_name: String)
+
+const WEATHER_POOL: Array[String] = ["golden_hour", "blue_night", "midnight", "rainy_night", "crimson_eclipse"]
+const WEATHER_NAMES: Dictionary = {
+	"golden_hour": "Hoàng Hôn Rực Nắng",
+	"blue_night": "Chạng Vạng Đêm Xanh",
+	"midnight": "Màn Đêm Tĩnh Mịch",
+	"rainy_night": "Đêm Mưa Gió Bão",
+	"crimson_eclipse": "Huyết Nguyệt Thực",
+}
+
 var world_env: WorldEnvironment
 var sun_light: DirectionalLight3D
 var rain_particles: GPUParticles3D
@@ -19,9 +30,12 @@ var _stage_map_root: Node3D
 var _lantern_lights: Array[OmniLight3D] = []
 var _lantern_base_energies: Array[float] = []
 var _window_materials: Array[StandardMaterial3D] = []
-var current_time_of_day: String = "midnight"
+var current_time_of_day: String = "blue_night"
 var current_map_theme: String = "hamlet_hub"
 var _flicker_time: float = 0.0
+var _auto_weather_timer: float = 28.0
+var _weather_tween: Tween
+var auto_random_lighting: bool = true
 
 
 func _ready() -> void:
@@ -43,7 +57,25 @@ func _ready() -> void:
 	add_child(_stage_map_root)
 
 	build_map_for_theme("hamlet_hub")
-	apply_time_of_day(current_time_of_day)
+	# Chọn ngẫu nhiên một thời điểm ánh sáng ngay khi vào game
+	apply_random_time_of_day(false)
+	_reset_auto_weather_timer()
+
+
+func _reset_auto_weather_timer() -> void:
+	# Tự động đổi thời điểm ánh sáng ngẫu nhiên sau mỗi 24 đến 38 giây
+	_auto_weather_timer = randf_range(24.0, 38.0)
+
+
+## Chọn ngẫu nhiên một thời điểm mới khác với thời điểm hiện tại
+func apply_random_time_of_day(smooth: bool = true) -> String:
+	var candidates: Array[String] = []
+	for m in WEATHER_POOL:
+		if m != current_time_of_day:
+			candidates.append(m)
+	var chosen := candidates[randi() % candidates.size()] if candidates.size() > 0 else "midnight"
+	apply_time_of_day(chosen, smooth)
+	return chosen
 
 
 ## Chuyển đổi hoàn toàn kiến trúc bản đồ theo từng màn chơi:
@@ -83,100 +115,137 @@ func _process(delta: float) -> void:
 	for i in range(_lantern_lights.size()):
 		var l := _lantern_lights[i]
 		if is_instance_valid(l) and i < _lantern_base_energies.size():
-			var wave := sin(_flicker_time + float(i) * 1.7) * 0.14 + cos(_flicker_time * 1.9 + float(i)) * 0.08
+			var wave := sin(_flicker_time + float(i) * 1.7) * 0.16 + cos(_flicker_time * 1.9 + float(i)) * 0.09
 			l.light_energy = maxf(0.4, _lantern_base_energies[i] + wave)
 
+	# Tự động chuyển đổi ánh sáng (Hoàng hôn / Đêm xanh / Màn đêm / Mưa / Huyết nguyệt) hoàn toàn ngẫu nhiên!
+	if auto_random_lighting:
+		_auto_weather_timer -= delta
+		if _auto_weather_timer <= 0.0:
+			apply_random_time_of_day(true)
+			_reset_auto_weather_timer()
 
-## Thay đổi thời điểm ánh sáng của màn chơi:
-## "golden_hour", "blue_night", "midnight" (Màn Đêm Sâu), "rainy_night", "crimson_eclipse"
-func apply_time_of_day(mode: String) -> void:
+
+## Thay đổi thời điểm ánh sáng (hỗ trợ chuyển màu điện ảnh mượt 3.5 giây bằng Tween):
+## "golden_hour", "blue_night", "midnight", "rainy_night", "crimson_eclipse"
+func apply_time_of_day(mode: String, smooth: bool = true) -> void:
 	current_time_of_day = mode
 	if world_env == null or world_env.environment == null or sun_light == null:
 		return
 	var env := world_env.environment
 
+	var target_sun_col := Color(0.52, 0.65, 0.94)
+	var target_sun_energy := 0.68
+	var target_sun_rot := Vector3(-40.0, 28.0, 0.0)
+	var target_bg := Color(0.06, 0.10, 0.19)
+	var target_amb_col := Color(0.18, 0.25, 0.40)
+	var target_amb_energy := 0.52
+	var target_fog_col := Color(0.18, 0.23, 0.36)
+	var target_fog_density := 0.017
+	var target_bloom := 0.36
+	var target_lantern := 2.8
+	var is_night := true
+	var moon_col := Color(0.90, 0.95, 1.0)
+	var has_rain := false
+	var firefly_count := 95
+
 	match mode:
 		"golden_hour":
-			sun_light.light_color = Color(1.0, 0.72, 0.40)
-			sun_light.light_energy = 1.45
-			sun_light.rotation_degrees = Vector3(-26.0, -35.0, 0.0)
-			env.background_color = Color(0.28, 0.18, 0.24)
-			env.ambient_light_color = Color(0.50, 0.34, 0.28)
-			env.ambient_light_energy = 0.72
-			env.fog_light_color = Color(0.62, 0.38, 0.30)
-			env.fog_density = 0.013
-			env.glow_bloom = 0.25
-			_set_lantern_power(1.6)
-			_set_night_sky_visible(false, Color(1.0, 0.92, 0.75))
-			if rain_particles:
-				rain_particles.emitting = false
-			if firefly_particles:
-				firefly_particles.amount = 45
-
+			target_sun_col = Color(1.0, 0.70, 0.36)
+			target_sun_energy = 1.60
+			target_sun_rot = Vector3(-24.0, -38.0, 0.0)
+			target_bg = Color(0.32, 0.19, 0.24)
+			target_amb_col = Color(0.56, 0.36, 0.28)
+			target_amb_energy = 0.78
+			target_fog_col = Color(0.68, 0.42, 0.30)
+			target_fog_density = 0.013
+			target_bloom = 0.30
+			target_lantern = 1.65
+			is_night = false
+			moon_col = Color(1.0, 0.90, 0.70)
+			has_rain = false
+			firefly_count = 45
 		"midnight":
-			# MÀN ĐÊM SÂU (Deep Midnight): Trời đen xanh thẳm, trăng sáng bạc, sao lấp lánh,
-			# đèn lồng và cửa sổ nhà gỗ tỏa sáng rực rỡ ấm áp tương phản mạnh!
-			sun_light.light_color = Color(0.38, 0.50, 0.88)
-			sun_light.light_energy = 0.42
-			sun_light.rotation_degrees = Vector3(-46.0, 22.0, 0.0)
-			env.background_color = Color(0.02, 0.03, 0.08)
-			env.ambient_light_color = Color(0.09, 0.13, 0.25)
-			env.ambient_light_energy = 0.34
-			env.fog_light_color = Color(0.07, 0.10, 0.20)
-			env.fog_density = 0.021
-			env.glow_bloom = 0.42
-			_set_lantern_power(3.5)
-			_set_night_sky_visible(true, Color(0.86, 0.92, 1.0))
-			if rain_particles:
-				rain_particles.emitting = false
-			if firefly_particles:
-				firefly_particles.amount = 110
-
+			target_sun_col = Color(0.36, 0.48, 0.90)
+			target_sun_energy = 0.44
+			target_sun_rot = Vector3(-48.0, 20.0, 0.0)
+			target_bg = Color(0.02, 0.03, 0.08)
+			target_amb_col = Color(0.09, 0.14, 0.27)
+			target_amb_energy = 0.36
+			target_fog_col = Color(0.07, 0.11, 0.22)
+			target_fog_density = 0.021
+			target_bloom = 0.46
+			target_lantern = 3.65
+			is_night = true
+			moon_col = Color(0.90, 0.96, 1.0)
+			has_rain = false
+			firefly_count = 130
 		"rainy_night":
-			sun_light.light_color = Color(0.42, 0.56, 0.82)
-			sun_light.light_energy = 0.48
-			sun_light.rotation_degrees = Vector3(-42.0, 25.0, 0.0)
-			env.background_color = Color(0.04, 0.07, 0.13)
-			env.ambient_light_color = Color(0.14, 0.20, 0.32)
-			env.ambient_light_energy = 0.40
-			env.fog_light_color = Color(0.14, 0.20, 0.32)
-			env.fog_density = 0.025
-			env.glow_bloom = 0.36
-			_set_lantern_power(3.0)
-			_set_night_sky_visible(true, Color(0.65, 0.78, 0.95))
-			if rain_particles:
-				rain_particles.emitting = true
-
+			target_sun_col = Color(0.42, 0.58, 0.86)
+			target_sun_energy = 0.50
+			target_sun_rot = Vector3(-42.0, 26.0, 0.0)
+			target_bg = Color(0.04, 0.07, 0.14)
+			target_amb_col = Color(0.14, 0.21, 0.34)
+			target_amb_energy = 0.42
+			target_fog_col = Color(0.14, 0.21, 0.34)
+			target_fog_density = 0.026
+			target_bloom = 0.40
+			target_lantern = 3.2
+			is_night = true
+			moon_col = Color(0.68, 0.82, 0.98)
+			has_rain = true
+			firefly_count = 60
 		"crimson_eclipse":
-			# Đêm Nguyệt Thực Đỏ cho màn Boss
-			sun_light.light_color = Color(0.95, 0.28, 0.38)
-			sun_light.light_energy = 0.65
-			sun_light.rotation_degrees = Vector3(-40.0, 15.0, 0.0)
-			env.background_color = Color(0.08, 0.02, 0.06)
-			env.ambient_light_color = Color(0.24, 0.08, 0.14)
-			env.ambient_light_energy = 0.42
-			env.fog_light_color = Color(0.28, 0.08, 0.15)
-			env.fog_density = 0.022
-			env.glow_bloom = 0.44
-			_set_lantern_power(3.2)
-			_set_night_sky_visible(true, Color(1.0, 0.22, 0.28))
-			if rain_particles:
-				rain_particles.emitting = true
+			target_sun_col = Color(0.98, 0.26, 0.36)
+			target_sun_energy = 0.72
+			target_sun_rot = Vector3(-38.0, 14.0, 0.0)
+			target_bg = Color(0.10, 0.02, 0.06)
+			target_amb_col = Color(0.28, 0.08, 0.14)
+			target_amb_energy = 0.46
+			target_fog_col = Color(0.32, 0.08, 0.15)
+			target_fog_density = 0.022
+			target_bloom = 0.48
+			target_lantern = 3.4
+			is_night = true
+			moon_col = Color(1.0, 0.20, 0.26)
+			has_rain = true
+			firefly_count = 110
 
-		_: # "blue_night" (Đêm xanh chạng vạng giống ảnh mẫu Windferry Hamlet)
-			sun_light.light_color = Color(0.52, 0.65, 0.94)
-			sun_light.light_energy = 0.65
-			sun_light.rotation_degrees = Vector3(-40.0, 28.0, 0.0)
-			env.background_color = Color(0.07, 0.10, 0.18)
-			env.ambient_light_color = Color(0.18, 0.24, 0.38)
-			env.ambient_light_energy = 0.50
-			env.fog_light_color = Color(0.18, 0.22, 0.35)
-			env.fog_density = 0.017
-			env.glow_bloom = 0.32
-			_set_lantern_power(2.7)
-			_set_night_sky_visible(true, Color(0.88, 0.93, 1.0))
-			if rain_particles:
-				rain_particles.emitting = false
+	_set_night_sky_visible(is_night, moon_col)
+	_set_lantern_power(target_lantern)
+	if rain_particles:
+		rain_particles.emitting = has_rain
+	if firefly_particles:
+		firefly_particles.amount = firefly_count
+
+	if _weather_tween and _weather_tween.is_valid():
+		_weather_tween.kill()
+
+	if smooth and is_inside_tree():
+		_weather_tween = create_tween()
+		_weather_tween.set_parallel(true)
+		var dur := 3.2
+		_weather_tween.tween_property(sun_light, "light_color", target_sun_col, dur)
+		_weather_tween.tween_property(sun_light, "light_energy", target_sun_energy, dur)
+		_weather_tween.tween_property(sun_light, "rotation_degrees", target_sun_rot, dur)
+		_weather_tween.tween_property(env, "background_color", target_bg, dur)
+		_weather_tween.tween_property(env, "ambient_light_color", target_amb_col, dur)
+		_weather_tween.tween_property(env, "ambient_light_energy", target_amb_energy, dur)
+		_weather_tween.tween_property(env, "fog_light_color", target_fog_col, dur)
+		_weather_tween.tween_property(env, "fog_density", target_fog_density, dur)
+		_weather_tween.tween_property(env, "glow_bloom", target_bloom, dur)
+	else:
+		sun_light.light_color = target_sun_col
+		sun_light.light_energy = target_sun_energy
+		sun_light.rotation_degrees = target_sun_rot
+		env.background_color = target_bg
+		env.ambient_light_color = target_amb_col
+		env.ambient_light_energy = target_amb_energy
+		env.fog_light_color = target_fog_col
+		env.fog_density = target_fog_density
+		env.glow_bloom = target_bloom
+
+	weather_lighting_changed.emit(mode, str(WEATHER_NAMES.get(mode, mode)))
 
 
 func _set_night_sky_visible(is_night: bool, moon_tint: Color) -> void:
@@ -211,31 +280,30 @@ func _build_lighting_and_postfx() -> void:
 	env.ambient_light_color = Color(0.12, 0.16, 0.28)
 	env.ambient_light_energy = 0.42
 	env.tonemap_mode = Environment.TONE_MAPPER_ACES
-	env.tonemap_exposure = 1.08
+	env.tonemap_exposure = 1.12
 
-	# Hậu kỳ HD-2D: Glow / Bloom ấm áp cho ánh đèn lồng & cửa sổ
+	# Hậu kỳ HD-2D điện ảnh: Glow / Bloom ấm rực rỡ cho đèn lồng, cửa sổ & vũ khí
 	env.glow_enabled = true
-	env.glow_intensity = 1.25
-	env.glow_strength = 1.12
-	env.glow_bloom = 0.38
+	env.glow_intensity = 1.35
+	env.glow_strength = 1.18
+	env.glow_bloom = 0.42
 	env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT
-	env.glow_hdr_threshold = 0.80
+	env.glow_hdr_threshold = 0.72
 
-	# Hậu kỳ Fog chiều sâu
+	# Hậu kỳ Fog chiều sâu huyền ảo
 	env.fog_enabled = true
 	env.fog_light_color = Color(0.10, 0.14, 0.24)
 	env.fog_density = 0.020
-	env.fog_aerial_perspective = 0.40
+	env.fog_aerial_perspective = 0.48
 
-	# Hậu kỳ SSAO tạo chiều sâu các khe đá & mái nhà
+	# Hậu kỳ SSAO & Chỉnh màu điện ảnh đậm chất kiếm hiệp / cổ trang HD-2D
 	env.ssao_enabled = true
-	env.ssao_radius = 1.35
-	env.ssao_intensity = 1.55
+	env.ssao_radius = 1.45
+	env.ssao_intensity = 1.65
 
-	# Chỉnh màu sắc điện ảnh
 	env.adjustment_enabled = true
-	env.adjustment_contrast = 1.12
-	env.adjustment_saturation = 1.18
+	env.adjustment_contrast = 1.14
+	env.adjustment_saturation = 1.24
 
 	world_env.environment = env
 	add_child(world_env)

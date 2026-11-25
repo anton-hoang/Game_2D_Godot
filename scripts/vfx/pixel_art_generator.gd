@@ -84,6 +84,14 @@ static func get_enemy_sprite_frames(archetype: String, tint: Color = Color.WHITE
 	return frames
 
 
+static func get_hero_portrait_texture() -> ImageTexture:
+	if _cache.has("hero_portrait"):
+		return _cache["hero_portrait"]
+	var tex := ImageTexture.create_from_image(_make_hero_portrait_image())
+	_cache["hero_portrait"] = tex
+	return tex
+
+
 static func get_npc_sprite_texture(npc_role: String) -> ImageTexture:
 	var key := "npc_sprite_" + npc_role
 	if _cache.has(key):
@@ -589,6 +597,41 @@ static func _make_flower_cluster_image() -> Image:
 	_fill_rect(img, 6, 7, 3, 3, Color(0.98, 0.84, 0.36))
 	_fill_rect(img, 13, 5, 3, 3, Color(0.55, 0.82, 1.0))
 	_fill_rect(img, 18, 9, 3, 3, Color(0.98, 0.58, 0.68))
+	return img
+
+
+## Chân dung Lữ Khách 48x48 gắn trên khung Thanh Máu Cổ Trang
+static func _make_hero_portrait_image() -> Image:
+	var w := 48
+	var h := 48
+	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0.16, 0.11, 0.14))
+	# Khung viền cổ trang vàng đồng 2 lớp
+	_fill_rect(img, 0, 0, w, 2, Color(0.88, 0.70, 0.32))
+	_fill_rect(img, 0, h - 2, w, 2, Color(0.88, 0.70, 0.32))
+	_fill_rect(img, 0, 0, 2, h, Color(0.88, 0.70, 0.32))
+	_fill_rect(img, w - 2, 0, 2, h, Color(0.88, 0.70, 0.32))
+	_fill_rect(img, 3, 3, w - 6, 1, Color(0.55, 0.16, 0.16))
+	_fill_rect(img, 3, h - 4, w - 6, 1, Color(0.55, 0.16, 0.16))
+
+	# Vai áo lữ khách & khăn choàng lam
+	_fill_rect(img, 8, 34, 32, 12, Color(0.76, 0.48, 0.16))
+	_fill_rect(img, 10, 29, 28, 7, Color(0.18, 0.56, 0.78))
+	_fill_rect(img, 14, 29, 16, 2, Color(0.45, 0.80, 0.96))
+	# Mái tóc nâu đỏ nhiều tầng
+	_fill_circle(img, 24, 18, 13, Color(0.44, 0.14, 0.11))
+	_fill_circle(img, 24, 16, 11, Color(0.66, 0.24, 0.16))
+	_fill_rect(img, 17, 7, 14, 3, Color(0.86, 0.42, 0.26))
+	# Khuôn mặt sáng, đôi mắt có hồn & má hồng
+	_fill_rect(img, 14, 15, 20, 14, Color(0.97, 0.83, 0.71))
+	_fill_rect(img, 12, 14, 4, 13, Color(0.54, 0.19, 0.14))
+	_fill_rect(img, 32, 14, 4, 13, Color(0.44, 0.14, 0.11))
+	_fill_rect(img, 17, 19, 3, 4, Color(0.10, 0.08, 0.14))
+	_fill_rect(img, 28, 19, 3, 4, Color(0.10, 0.08, 0.14))
+	img.set_pixel(17, 19, Color.WHITE)
+	img.set_pixel(28, 19, Color.WHITE)
+	_fill_rect(img, 15, 24, 3, 2, Color(0.95, 0.60, 0.58))
+	_fill_rect(img, 30, 24, 3, 2, Color(0.95, 0.60, 0.58))
 	return img
 
 

@@ -143,8 +143,8 @@ func enter_town_hub() -> void:
 	player.energy_changed.emit(player.current_energy, player.max_energy)
 
 	environment_builder.build_map_for_theme("hamlet_hub")
-	environment_builder.apply_time_of_day("midnight")
-	AudioManager.play_stage_ambience("midnight")
+	var chosen_hub_weather := environment_builder.apply_random_time_of_day(true)
+	AudioManager.play_stage_ambience(chosen_hub_weather)
 
 	wave_portal.set_portal_active(true, SaveManager.unlocked_stage, false)
 	wave_portal._label_3d.text = "CỔNG CHIẾN ĐẤU (MÀN " + str(SaveManager.unlocked_stage) + ")\n(Bước vào để chọn màn đánh quái)"
@@ -174,10 +174,10 @@ func load_and_start_stage(stage_id: int) -> void:
 	player.hp_changed.emit(player.current_hp, player.max_hp)
 	player.energy_changed.emit(player.current_energy, player.max_energy)
 
-	# Dựng kiến trúc Map riêng của từng màn chơi + Áp dụng ánh sáng thời điểm
+	# Dựng kiến trúc Map riêng của từng màn chơi + Chọn ngẫu nhiên thời điểm ánh sáng tự động!
 	environment_builder.build_map_for_theme(current_stage_data.map_theme)
-	environment_builder.apply_time_of_day(current_stage_data.time_of_day)
-	AudioManager.play_stage_ambience(current_stage_data.time_of_day)
+	var chosen_weather := environment_builder.apply_random_time_of_day(true)
+	AudioManager.play_stage_ambience(chosen_weather)
 
 	wave_portal.set_portal_active(false)
 	GameManager.start_stage(stage_id, current_stage_data.waves.size())
