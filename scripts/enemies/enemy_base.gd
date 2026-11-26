@@ -130,14 +130,14 @@ func _build_visuals() -> void:
 	csh.material_override = sh_mat
 	add_child(csh)
 
-	# Thanh máu nhỏ kiểu cổ trang viền vàng đồng trên đầu quái thường
+	# Thanh máu vát nghiêng phong cách Anime ARPG bóng kính trên đầu quái thường
 	if stats.archetype != "boss":
 		hp_bar_3d = Sprite3D.new()
 		hp_bar_3d.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-		hp_bar_3d.pixel_size = 0.024
+		hp_bar_3d.pixel_size = 0.022
 		hp_bar_3d.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
-		hp_bar_3d.position = Vector3(0.0, 1.80 * stats.sprite_scale, 0.0)
-		_hp_bar_img = Image.create(36, 7, false, Image.FORMAT_RGBA8)
+		hp_bar_3d.position = Vector3(0.0, 1.82 * stats.sprite_scale, 0.0)
+		_hp_bar_img = Image.create(46, 9, false, Image.FORMAT_RGBA8)
 		_hp_bar_tex = ImageTexture.create_from_image(_hp_bar_img)
 		hp_bar_3d.texture = _hp_bar_tex
 		add_child(hp_bar_3d)
@@ -171,18 +171,43 @@ func _update_shield_display() -> void:
 func _update_overhead_hp_bar() -> void:
 	if _hp_bar_img == null or _hp_bar_tex == null:
 		return
-	# Viền vàng đồng cổ trang bên ngoài + nền tối bên trong
-	_hp_bar_img.fill(Color(0.84, 0.66, 0.28, 0.95))
-	for y in range(1, 6):
-		for x in range(1, 35):
-			_hp_bar_img.set_pixel(x, y, Color(0.08, 0.04, 0.05, 0.92))
-	var ratio := clampf(current_hp / maxf(1.0, max_hp), 0.0, 1.0)
-	var fill_w := int(round(32.0 * ratio))
-	var bar_col := Color(0.82, 0.16, 0.18) if stats.archetype != "tank" else Color(0.92, 0.56, 0.16)
-	var bar_hi := bar_col.lightened(0.28)
-	for y in range(2, 5):
-		for x in range(2, 2 + fill_w):
-			_hp_bar_img.set_pixel(x, y, bar_hi if y == 2 else bar_col)
+	# Thanh máu quái vát chéo phong cách Anime ARPG (Skewed Parallelogram + Gradient + Specular)
+	_hp_bar_img.fill(Color(0.0, 0.0, 0.0, 0.0))
+	var ratio: float = clampf(current_hp / maxf(1.0, max_hp), 0.0, 1.0)
+	var inner_max_w: int = 38
+	var fill_w: int = int(round(float(inner_max_w) * ratio))
+	var c_left: Color = Color(0.84, 0.10, 0.28) if stats.archetype != "tank" else Color(0.88, 0.44, 0.08)
+	var c_right: Color = Color(1.0, 0.42, 0.58) if stats.archetype != "tank" else Color(1.0, 0.86, 0.28)
+	var rim_gold: Color = Color(0.98, 0.84, 0.46, 0.96)
+	var dark_edge: Color = Color(0.05, 0.04, 0.10, 0.95)
+	var bg_glass: Color = Color(0.07, 0.05, 0.14, 0.88)
+
+	for y in range(9):
+		var sk: int = int((8 - y) / 2)
+		var x_start: int = sk
+		var x_end: int = sk + 41
+		for x in range(x_start, x_end + 1):
+			if y == 0 or y == 8:
+				_hp_bar_img.set_pixel(x, y, rim_gold if (x > x_start and x < x_end) else dark_edge)
+			elif x == x_start or x == x_end:
+				_hp_bar_img.set_pixel(x, y, dark_edge)
+			elif x == x_start + 1 or x == x_end - 1:
+				_hp_bar_img.set_pixel(x, y, rim_gold if (y == 1 or y == 7) else bg_glass)
+			else:
+				var rel_x: int = x - (x_start + 2)
+				if rel_x >= 0 and rel_x < fill_w:
+					var t_col: float = float(rel_x) / float(maxi(1, inner_max_w - 1))
+					var base_c: Color = c_left.lerp(c_right, t_col)
+					if rel_x == fill_w - 1 and ratio < 0.99:
+						_hp_bar_img.set_pixel(x, y, Color(1.0, 0.98, 0.88, 0.98))
+					elif y <= 2:
+						_hp_bar_img.set_pixel(x, y, base_c.lightened(0.32))
+					elif y >= 6:
+						_hp_bar_img.set_pixel(x, y, base_c.darkened(0.14))
+					else:
+						_hp_bar_img.set_pixel(x, y, base_c)
+				else:
+					_hp_bar_img.set_pixel(x, y, bg_glass)
 	_hp_bar_tex.update(_hp_bar_img)
 
 
