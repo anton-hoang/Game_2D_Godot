@@ -14,6 +14,7 @@ var action_label: String = "Mở Lò Rèn Nâng Cấp"
 
 var _player_in_range: bool = false
 var _prompt_label: Label3D
+var _quest_mark: Label3D
 var _sprite: Sprite3D
 var _time: float = 0.0
 
@@ -37,26 +38,38 @@ func _ready() -> void:
 	_sprite.position = Vector3(0.0, 0.92, 0.0)
 	add_child(_sprite)
 
-	# Nhãn tên NPC luôn hiện mờ phía trên
+	# Nhãn tên NPC sắc nét kiểu Tiên Hiệp Anime
 	var name_lbl := Label3D.new()
 	WuxiaFontTheme.style_label_3d(name_lbl)
 	name_lbl.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	name_lbl.pixel_size = 0.0085
-	name_lbl.font_size = 28
-	name_lbl.outline_size = 8
-	name_lbl.position = Vector3(0.0, 2.05, 0.0)
-	name_lbl.modulate = Color(1.0, 0.88, 0.45)
+	name_lbl.pixel_size = 0.0080
+	name_lbl.font_size = 24
+	name_lbl.outline_size = 7
+	name_lbl.position = Vector3(0.0, 2.02, 0.0)
+	name_lbl.modulate = Color(1.0, 0.92, 0.56)
 	name_lbl.text = npc_name
 	add_child(name_lbl)
+
+	# Dấu chấm than vàng "!" nổi bật phía trên đầu NPC (giống Cô Nương trong ảnh mẫu!)
+	_quest_mark = Label3D.new()
+	WuxiaFontTheme.style_label_3d(_quest_mark)
+	_quest_mark.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_quest_mark.pixel_size = 0.010
+	_quest_mark.font_size = 38
+	_quest_mark.outline_size = 10
+	_quest_mark.position = Vector3(0.0, 2.48, 0.0)
+	_quest_mark.modulate = Color(1.0, 0.86, 0.24)
+	_quest_mark.text = "!"
+	add_child(_quest_mark)
 
 	# Biển báo tương tác chỉ hiện khi người chơi bước tới gần
 	_prompt_label = Label3D.new()
 	WuxiaFontTheme.style_label_3d(_prompt_label)
 	_prompt_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_prompt_label.pixel_size = 0.009
-	_prompt_label.font_size = 30
-	_prompt_label.outline_size = 9
-	_prompt_label.position = Vector3(0.0, 2.45, 0.0)
+	_prompt_label.pixel_size = 0.0085
+	_prompt_label.font_size = 26
+	_prompt_label.outline_size = 8
+	_prompt_label.position = Vector3(0.0, 2.48, 0.0)
 	_prompt_label.modulate = Color(0.50, 0.96, 1.0)
 	_prompt_label.text = "[E] Nói chuyện"
 	_prompt_label.visible = false
@@ -70,8 +83,11 @@ func _physics_process(delta: float) -> void:
 	_time += delta * 2.8
 	if _sprite:
 		_sprite.position.y = 0.92 + sin(_time) * 0.03
+	if _quest_mark:
+		_quest_mark.visible = not _player_in_range
+		_quest_mark.position.y = 2.48 + sin(_time * 1.4) * 0.10
 	if _player_in_range and _prompt_label:
-		_prompt_label.position.y = 2.45 + sin(_time * 1.6) * 0.08
+		_prompt_label.position.y = 2.48 + sin(_time * 1.6) * 0.08
 		if Input.is_action_just_pressed("interact") and not get_tree().paused:
 			AudioManager.play_sfx("pickup", 0.85)
 			interacted.emit({

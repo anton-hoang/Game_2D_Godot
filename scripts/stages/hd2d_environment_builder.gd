@@ -63,8 +63,8 @@ func _ready() -> void:
 	add_child(_stage_map_root)
 
 	build_map_for_theme("hamlet_hub")
-	# Chọn ngẫu nhiên một thời điểm ánh sáng ngay khi vào game
-	apply_random_time_of_day(false)
+	# Khởi đầu Làng Windferry trong ánh sáng Đêm Hoa Anh Đào tím dịu thơ mộng chuẩn ảnh mẫu!
+	apply_time_of_day("blue_night", false)
 	_reset_auto_weather_timer()
 
 
@@ -172,92 +172,92 @@ func apply_time_of_day(mode: String, smooth: bool = true) -> void:
 		return
 	var env := world_env.environment
 
-	var target_sun_col := Color(0.62, 0.74, 0.98)
-	var target_sun_energy := 0.78
-	var target_sun_rot := Vector3(-38.0, 28.0, 0.0)
-	var target_bg := Color(0.08, 0.13, 0.25)
-	var target_sky_top := Color(0.06, 0.10, 0.24)
-	var target_sky_hor := Color(0.24, 0.30, 0.48)
-	var target_amb_col := Color(0.24, 0.31, 0.48)
-	var target_amb_energy := 0.62
-	var target_fog_col := Color(0.22, 0.28, 0.44)
-	var target_fog_density := 0.014
-	var target_bloom := 0.44
-	var target_lantern := 2.7
+	var target_sun_col := Color(0.86, 0.86, 1.0)
+	var target_sun_energy := 1.15
+	var target_sun_rot := Vector3(-36.0, 26.0, 0.0)
+	var target_bg := Color(0.12, 0.14, 0.30)
+	var target_sky_top := Color(0.11, 0.14, 0.32)
+	var target_sky_hor := Color(0.42, 0.36, 0.62)
+	var target_amb_col := Color(0.56, 0.52, 0.78)
+	var target_amb_energy := 0.94
+	var target_fog_col := Color(0.36, 0.32, 0.56)
+	var target_fog_density := 0.011
+	var target_bloom := 0.14
+	var target_lantern := 2.45
 	var is_night := true
-	var moon_col := Color(0.95, 0.96, 1.0)
+	var moon_col := Color(0.96, 0.96, 1.0)
 	var has_rain := false
-	var firefly_count := 80
+	var firefly_count := 75
 
 	match mode:
 		"golden_hour":
-			target_sun_col = Color(1.0, 0.76, 0.46)
-			target_sun_energy = 1.52
-			target_sun_rot = Vector3(-24.0, -38.0, 0.0)
-			target_bg = Color(0.42, 0.25, 0.32)
-			target_sky_top = Color(0.24, 0.18, 0.38)
-			target_sky_hor = Color(0.96, 0.58, 0.46)
-			target_amb_col = Color(0.66, 0.46, 0.42)
-			target_amb_energy = 0.86
-			target_fog_col = Color(0.78, 0.52, 0.44)
-			target_fog_density = 0.011
-			target_bloom = 0.38
-			target_lantern = 1.75
+			target_sun_col = Color(1.0, 0.84, 0.60)
+			target_sun_energy = 1.48
+			target_sun_rot = Vector3(-26.0, -34.0, 0.0)
+			target_bg = Color(0.46, 0.30, 0.42)
+			target_sky_top = Color(0.28, 0.22, 0.46)
+			target_sky_hor = Color(0.98, 0.66, 0.56)
+			target_amb_col = Color(0.76, 0.60, 0.62)
+			target_amb_energy = 1.02
+			target_fog_col = Color(0.82, 0.60, 0.58)
+			target_fog_density = 0.009
+			target_bloom = 0.14
+			target_lantern = 1.85
 			is_night = false
-			moon_col = Color(1.0, 0.92, 0.76)
+			moon_col = Color(1.0, 0.94, 0.80)
 			has_rain = false
 			firefly_count = 45
 		"midnight":
-			target_sun_col = Color(0.48, 0.60, 0.96)
-			target_sun_energy = 0.56
-			target_sun_rot = Vector3(-46.0, 20.0, 0.0)
-			target_bg = Color(0.04, 0.06, 0.14)
-			target_sky_top = Color(0.03, 0.05, 0.14)
-			target_sky_hor = Color(0.16, 0.22, 0.38)
-			target_amb_col = Color(0.16, 0.22, 0.38)
-			target_amb_energy = 0.48
-			target_fog_col = Color(0.13, 0.18, 0.32)
-			target_fog_density = 0.017
-			target_bloom = 0.48
-			target_lantern = 3.45
+			target_sun_col = Color(0.72, 0.78, 1.0)
+			target_sun_energy = 0.92
+			target_sun_rot = Vector3(-44.0, 22.0, 0.0)
+			target_bg = Color(0.08, 0.11, 0.24)
+			target_sky_top = Color(0.07, 0.10, 0.24)
+			target_sky_hor = Color(0.28, 0.28, 0.52)
+			target_amb_col = Color(0.44, 0.44, 0.68)
+			target_amb_energy = 0.84
+			target_fog_col = Color(0.26, 0.28, 0.48)
+			target_fog_density = 0.013
+			target_bloom = 0.16
+			target_lantern = 2.85
 			is_night = true
-			moon_col = Color(0.94, 0.97, 1.0)
+			moon_col = Color(0.95, 0.98, 1.0)
 			has_rain = false
-			firefly_count = 115
+			firefly_count = 105
 		"rainy_night":
-			target_sun_col = Color(0.52, 0.68, 0.92)
-			target_sun_energy = 0.58
-			target_sun_rot = Vector3(-42.0, 26.0, 0.0)
-			target_bg = Color(0.06, 0.10, 0.19)
-			target_sky_top = Color(0.05, 0.09, 0.18)
-			target_sky_hor = Color(0.20, 0.28, 0.42)
-			target_amb_col = Color(0.20, 0.28, 0.42)
-			target_amb_energy = 0.52
-			target_fog_col = Color(0.18, 0.26, 0.40)
-			target_fog_density = 0.021
-			target_bloom = 0.44
-			target_lantern = 3.1
+			target_sun_col = Color(0.72, 0.84, 1.0)
+			target_sun_energy = 0.90
+			target_sun_rot = Vector3(-40.0, 26.0, 0.0)
+			target_bg = Color(0.10, 0.16, 0.28)
+			target_sky_top = Color(0.09, 0.15, 0.28)
+			target_sky_hor = Color(0.30, 0.38, 0.54)
+			target_amb_col = Color(0.44, 0.52, 0.68)
+			target_amb_energy = 0.86
+			target_fog_col = Color(0.28, 0.36, 0.52)
+			target_fog_density = 0.016
+			target_bloom = 0.15
+			target_lantern = 2.70
 			is_night = true
-			moon_col = Color(0.76, 0.88, 1.0)
+			moon_col = Color(0.82, 0.92, 1.0)
 			has_rain = true
 			firefly_count = 60
 		"crimson_eclipse":
-			target_sun_col = Color(1.0, 0.38, 0.46)
-			target_sun_energy = 0.80
-			target_sun_rot = Vector3(-38.0, 14.0, 0.0)
-			target_bg = Color(0.14, 0.04, 0.10)
-			target_sky_top = Color(0.09, 0.03, 0.12)
-			target_sky_hor = Color(0.54, 0.16, 0.26)
-			target_amb_col = Color(0.36, 0.14, 0.22)
-			target_amb_energy = 0.56
-			target_fog_col = Color(0.42, 0.14, 0.24)
-			target_fog_density = 0.018
-			target_bloom = 0.50
-			target_lantern = 3.25
+			target_sun_col = Color(1.0, 0.56, 0.68)
+			target_sun_energy = 1.04
+			target_sun_rot = Vector3(-36.0, 16.0, 0.0)
+			target_bg = Color(0.20, 0.08, 0.18)
+			target_sky_top = Color(0.15, 0.06, 0.22)
+			target_sky_hor = Color(0.62, 0.26, 0.42)
+			target_amb_col = Color(0.54, 0.32, 0.46)
+			target_amb_energy = 0.86
+			target_fog_col = Color(0.50, 0.24, 0.38)
+			target_fog_density = 0.014
+			target_bloom = 0.18
+			target_lantern = 2.75
 			is_night = true
-			moon_col = Color(1.0, 0.30, 0.36)
+			moon_col = Color(1.0, 0.38, 0.48)
 			has_rain = true
-			firefly_count = 95
+			firefly_count = 90
 
 	_set_night_sky_visible(is_night, moon_col)
 	_set_lantern_power(target_lantern)
@@ -357,13 +357,13 @@ func _build_lighting_and_postfx() -> void:
 	env.tonemap_mode = Environment.TONE_MAPPER_ACES
 	env.tonemap_exposure = 1.16
 
-	# Hậu kỳ HD-2D mơ màng mềm mại: Bloom ấm dịu tỏa quanh đèn lồng, hoa anh đào & mặt trăng
+	# Hậu kỳ Anime Fantasy dịu mắt: Bloom mềm quanh đèn lồng & cổng ma pháp, KHÔNG làm chói trắng mặt nước/vòng sáng!
 	env.glow_enabled = true
-	env.glow_intensity = 1.15
-	env.glow_strength = 1.10
-	env.glow_bloom = 0.46
+	env.glow_intensity = 0.56
+	env.glow_strength = 0.88
+	env.glow_bloom = 0.14
 	env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT
-	env.glow_hdr_threshold = 0.68
+	env.glow_hdr_threshold = 1.02
 
 	# Sương mù thung lũng ôm nhẹ mặt nước & đồi núi phía xa tạo chiều sâu mềm mịn
 	env.fog_enabled = true
@@ -512,11 +512,12 @@ func _build_night_sky_and_mountains() -> void:
 
 
 func _build_terrain_and_walls() -> void:
-	var stone_cobble_mat := _make_textured_material(Color(0.30, 0.28, 0.33), Color(0.18, 0.17, 0.22), 0.78, "cobble")
-	var dirt_path_mat := _make_textured_material(Color(0.34, 0.25, 0.18), Color(0.24, 0.17, 0.12), 0.90, "dirt")
-	var grass_mat := _make_textured_material(Color(0.13, 0.22, 0.14), Color(0.08, 0.15, 0.10), 0.92, "grass")
-	var stone_wall_mat := _make_textured_material(Color(0.27, 0.28, 0.34), Color(0.16, 0.17, 0.22), 0.82, "brick")
-	var stone_trim_mat := _make_textured_material(Color(0.36, 0.37, 0.42), Color(0.24, 0.25, 0.30), 0.76, "cobble")
+	# Sân đá lát phiến ánh tím-lam thanh thoát chuẩn thành trấn Tiên Hiệp Anime trong ảnh mẫu!
+	var stone_cobble_mat := _make_textured_material(Color(0.54, 0.50, 0.62), Color(0.32, 0.29, 0.40), 0.74, "cobble")
+	var dirt_path_mat := _make_textured_material(Color(0.48, 0.44, 0.56), Color(0.28, 0.25, 0.35), 0.78, "cobble")
+	var grass_mat := _make_textured_material(Color(0.18, 0.30, 0.24), Color(0.10, 0.19, 0.16), 0.90, "grass")
+	var stone_wall_mat := _make_textured_material(Color(0.40, 0.38, 0.48), Color(0.24, 0.22, 0.32), 0.80, "brick")
+	var stone_trim_mat := _make_textured_material(Color(0.52, 0.50, 0.60), Color(0.34, 0.32, 0.42), 0.74, "cobble")
 
 	# Mặt đất tầng dưới (Đấu trường chính)
 	var ground_body := StaticBody3D.new()
@@ -530,10 +531,10 @@ func _build_terrain_and_walls() -> void:
 	ground_body.add_child(ground_col)
 
 	_add_box_mesh(ground_body, Vector3(60.0, 2.0, 30.0), Vector3(0.0, -1.0, 0.0), grass_mat)
-	# Con đường lát đá cuội (bên phải hồ x: -2.0 .. +24.0) & đường đất ấm (bên trái hồ x: -24.0 .. -10.4)
-	# Tách hoàn toàn 2 bờ không bao giờ chồng đè lên mặt hồ (x: -10.2 .. -2.2) -> Hết 100% lỗi Z-fighting!
-	_add_box_mesh(ground_body, Vector3(26.0, 0.12, 7.6), Vector3(11.0, 0.04, 1.4), stone_cobble_mat)
-	_add_box_mesh(ground_body, Vector3(13.6, 0.12, 7.2), Vector3(-17.2, 0.04, 0.8), dirt_path_mat)
+	# Quảng trường đá lát rộng thoáng bên phải hồ (x: -2.0 .. +24.0) & sân đá bờ trái (x: -24.0 .. -10.4)
+	# Tách hoàn toàn 2 bờ không chồng đè mặt hồ (x: -10.2 .. -2.2) -> Hết 100% Z-fighting!
+	_add_box_mesh(ground_body, Vector3(26.0, 0.12, 15.2), Vector3(11.0, 0.04, 0.0), stone_cobble_mat)
+	_add_box_mesh(ground_body, Vector3(13.6, 0.12, 14.4), Vector3(-17.2, 0.04, 0.0), dirt_path_mat)
 
 	# Suối & Hồ nước trong xanh nằm gọn giữa 2 bờ đá (x: -10.2 .. -2.2, z: -2.4 .. +8.6) ở mặt phẳng sạch y=0.03
 	var water_mesh := MeshInstance3D.new()
@@ -690,29 +691,130 @@ func _build_terrain_and_walls() -> void:
 	_add_box_mesh(_hamlet_root, Vector3(0.38, 1.9, 3.6), Vector3(8.55, 1.15, -8.5), stone_wall_mat)
 	_add_box_mesh(_hamlet_root, Vector3(0.38, 1.9, 3.6), Vector3(12.65, 1.15, -8.5), stone_wall_mat)
 
-	# BẪY ĐỊA HÌNH 3D: Suối nước sâu bên trái (đánh bay quái rơi xuống suối chịu sát thương) & 2 Hố gai sắt
+	# Trang trí Hồ Sen thanh bình: Lá sen xanh ngọc, Hoa sen hồng nở rộ, Đèn hoa đăng nổi & Lan can đá cổ trang!
+	_build_lotus_pond_decor(stone_wall_mat, stone_trim_mat)
+
+	# BẪY ĐỊA HÌNH 3D: Giữ Làng Cổ Windferry hoàn toàn thanh bình không còn hố gai sắt lởm chởm! (Hố gai chỉ xuất hiện ở các màn chiến đấu)
 	var water_haz := HazardZone3D.new()
 	water_haz.name = "PondHazard"
 	water_haz.hazard_type = "water_hazard"
-	water_haz.zone_size = Vector3(11.5, 1.2, 6.2)
-	water_haz.damage_per_tick = 22
-	water_haz.position = Vector3(-8.4, 0.0, 4.8)
+	water_haz.zone_size = Vector3(8.0, 1.0, 5.2)
+	water_haz.damage_per_tick = 18
+	water_haz.position = Vector3(-6.2, 0.0, 5.6)
 	_hamlet_root.add_child(water_haz)
 
-	for sp_pos: Vector3 in [Vector3(12.8, 0.0, 4.8), Vector3(0.5, 0.0, -5.2)]:
-		var spike_haz := HazardZone3D.new()
-		spike_haz.hazard_type = "spike_pit"
-		spike_haz.zone_size = Vector3(2.8, 1.0, 2.4)
-		spike_haz.damage_per_tick = 28
-		spike_haz.position = sp_pos
-		_hamlet_root.add_child(spike_haz)
+
+## Trang trí Hồ Sen + Hoa Sen Hồng + Đèn Hoa Đăng Nổi + Trụ Lan Can Đèn ven bờ hồ (chuẩn ảnh mẫu Tiên Hiệp!)
+func _build_lotus_pond_decor(stone_wall_mat: Material, stone_trim_mat: Material) -> void:
+	var pad_mat := StandardMaterial3D.new()
+	pad_mat.albedo_color = Color(0.18, 0.48, 0.24)
+	pad_mat.roughness = 0.72
+	var pad_dark := StandardMaterial3D.new()
+	pad_dark.albedo_color = Color(0.12, 0.36, 0.18)
+	pad_dark.roughness = 0.78
+
+	var petal_mat := StandardMaterial3D.new()
+	petal_mat.albedo_color = Color(1.0, 0.62, 0.80)
+	petal_mat.emission_enabled = true
+	petal_mat.emission = Color(1.0, 0.54, 0.76)
+	petal_mat.emission_energy_multiplier = 0.45
+
+	var center_mat := StandardMaterial3D.new()
+	center_mat.albedo_color = Color(1.0, 0.90, 0.40)
+	center_mat.emission_enabled = true
+	center_mat.emission = Color(1.0, 0.82, 0.28)
+	center_mat.emission_energy_multiplier = 0.9
+
+	# 11 Lá sen xanh ngọc nổi nhẹ trên mặt hồ
+	var pad_specs := [
+		[Vector3(-8.4, 0.045, 4.4), 0.52],
+		[Vector3(-7.4, 0.045, 5.2), 0.44],
+		[Vector3(-6.0, 0.045, 4.2), 0.56],
+		[Vector3(-4.6, 0.045, 5.0), 0.48],
+		[Vector3(-3.6, 0.045, 3.8), 0.42],
+		[Vector3(-7.8, 0.045, 6.4), 0.50],
+		[Vector3(-5.2, 0.045, 6.2), 0.46],
+		[Vector3(-4.0, 0.045, 6.6), 0.38],
+		[Vector3(-8.2, 0.045, -0.8), 0.48],
+		[Vector3(-4.4, 0.045, -1.0), 0.46],
+		[Vector3(-6.4, 0.045, -1.4), 0.40],
+	]
+	for pi in range(pad_specs.size()):
+		var p_pos: Vector3 = pad_specs[pi][0]
+		var p_rad: float = pad_specs[pi][1]
+		var pad := MeshInstance3D.new()
+		var cyl := CylinderMesh.new()
+		cyl.top_radius = p_rad
+		cyl.bottom_radius = p_rad
+		cyl.height = 0.03
+		cyl.radial_segments = 16
+		pad.mesh = cyl
+		pad.position = p_pos
+		pad.material_override = pad_mat if (pi % 2 == 0) else pad_dark
+		_hamlet_root.add_child(pad)
+
+	# 5 Đóa Hoa Sen Hồng nở lung linh giữa lá sen
+	var lotus_positions: Array[Vector3] = [
+		Vector3(-8.3, 0.09, 4.4),
+		Vector3(-6.0, 0.09, 4.2),
+		Vector3(-4.5, 0.09, 5.1),
+		Vector3(-7.6, 0.09, 6.3),
+		Vector3(-4.4, 0.09, -1.0),
+	]
+	for lp: Vector3 in lotus_positions:
+		var lnode := Node3D.new()
+		lnode.position = lp
+		_hamlet_root.add_child(lnode)
+		for k in range(6):
+			var ang: float = float(k) * (TAU / 6.0)
+			var pet := MeshInstance3D.new()
+			var psm := SphereMesh.new()
+			psm.radius = 0.14
+			psm.height = 0.28
+			pet.mesh = psm
+			pet.position = Vector3(cos(ang) * 0.14, 0.08, sin(ang) * 0.14)
+			pet.scale = Vector3(1.1, 0.85, 0.72)
+			pet.rotation_degrees.y = -rad_to_deg(ang)
+			pet.material_override = petal_mat
+			lnode.add_child(pet)
+		var core := MeshInstance3D.new()
+		var csm := SphereMesh.new()
+		csm.radius = 0.11
+		csm.height = 0.20
+		core.mesh = csm
+		core.position = Vector3(0.0, 0.12, 0.0)
+		core.material_override = center_mat
+		lnode.add_child(core)
+
+	# 3 Đèn Hoa Đăng nổi tỏa sáng vàng ấm trên mặt hồ (giống đèn hoa đăng thả nước trong ảnh mẫu!)
+	var wood_raft := _make_textured_material(Color(0.32, 0.18, 0.10), Color(0.20, 0.11, 0.06), 0.82, "wood")
+	var paper_glow := StandardMaterial3D.new()
+	paper_glow.albedo_color = Color(1.0, 0.86, 0.48)
+	paper_glow.emission_enabled = true
+	paper_glow.emission = Color(1.0, 0.68, 0.24)
+	paper_glow.emission_energy_multiplier = 1.65
+
+	for rl_pos: Vector3 in [Vector3(-7.1, 0.06, 4.9), Vector3(-5.1, 0.06, 5.5), Vector3(-5.6, 0.06, -0.6)]:
+		_add_box_mesh(_hamlet_root, Vector3(0.42, 0.07, 0.42), rl_pos, wood_raft)
+		_add_box_mesh(_hamlet_root, Vector3(0.26, 0.34, 0.26), rl_pos + Vector3(0.0, 0.20, 0.0), paper_glow)
+		_add_box_mesh(_hamlet_root, Vector3(0.34, 0.06, 0.34), rl_pos + Vector3(0.0, 0.38, 0.0), wood_raft)
+
+	# Lan can đá & gỗ chạm khắc chạy dọc bờ hồ phải (x = -2.05) với trụ đèn lồng ấm áp!
+	for rz: float in [3.2, 5.0, 6.8]:
+		_add_box_mesh(_hamlet_root, Vector3(0.34, 0.82, 0.34), Vector3(-2.05, 0.46, rz), stone_wall_mat)
+		_add_box_mesh(_hamlet_root, Vector3(0.42, 0.14, 0.42), Vector3(-2.05, 0.90, rz), stone_trim_mat)
+	_add_box_mesh(_hamlet_root, Vector3(0.18, 0.14, 4.0), Vector3(-2.05, 0.72, 5.0), wood_raft)
+	_add_box_mesh(_hamlet_root, Vector3(0.18, 0.12, 4.0), Vector3(-2.05, 0.42, 5.0), wood_raft)
+	# Lồng đèn đá vàng ấm ngay đầu lan can cầu
+	_add_box_mesh(_hamlet_root, Vector3(0.28, 0.38, 0.28), Vector3(-2.05, 1.15, 3.2), paper_glow)
+	_add_box_mesh(_hamlet_root, Vector3(0.46, 0.12, 0.46), Vector3(-2.05, 1.38, 3.2), stone_trim_mat)
 
 
 func _build_cottages() -> void:
-	# 3 ngôi nhà gỗ có NỘI THẤT BÊN TRONG & HIỆU ỨNG CUTAWAY TỰ MỜ MẶT TIỀN khi bước vào cửa!
-	_create_cottage(Vector3(-12.0, 2.6, -13.4), Color(0.68, 0.58, 0.46), Color(0.24, 0.17, 0.14), true, "Xưởng Rèn Cổ", 40)
-	_create_cottage(Vector3(2.2, 2.6, -13.0), Color(0.80, 0.68, 0.56), Color(0.28, 0.16, 0.14), true, "Quán Trọ Windferry", 50)
-	_create_cottage(Vector3(16.2, 2.6, -13.4), Color(0.70, 0.64, 0.56), Color(0.18, 0.22, 0.34), false, "Kho Hàng Thương Nhân", 65)
+	# 3 ngôi nhà cổ trang mái ngói xanh lam ánh trăng có NỘI THẤT BÊN TRONG & CUTAWAY MẶT TIỀN!
+	_create_cottage(Vector3(-12.0, 2.6, -13.4), Color(0.84, 0.78, 0.70), Color(0.14, 0.24, 0.44), true, "Xưởng Rèn Cổ", 40)
+	_create_cottage(Vector3(2.2, 2.6, -13.0), Color(0.90, 0.84, 0.76), Color(0.16, 0.26, 0.48), true, "Quán Trọ Windferry", 50)
+	_create_cottage(Vector3(16.2, 2.6, -13.4), Color(0.82, 0.78, 0.72), Color(0.14, 0.22, 0.42), false, "Kho Hàng Thương Nhân", 65)
 
 	# Dây cờ vải nhiều màu treo giữa nhà giữa và nhà bên phải (chi tiết đắt giá giống ảnh Windferry!)
 	var rope_mat := StandardMaterial3D.new()
@@ -912,13 +1014,16 @@ func _build_village_props() -> void:
 	_add_box_mesh(_hamlet_root, Vector3(4.5, 0.14, 0.10), Vector3(19.5, 0.95, -6.8), wood_mat)
 	_add_box_mesh(_hamlet_root, Vector3(4.5, 0.14, 0.10), Vector3(19.5, 0.50, -6.8), wood_mat)
 
-	# Giữ đúng bố cục thoáng đãng & tinh tế của Windferry Hamlet trong ảnh mẫu:
-	# - 2 cột đèn chính ven bờ suối trái & bên phải nhân vật + 1 dây cờ vải treo giữa nhà giữa & nhà phải (đã dựng ở _build_cottages)
-	# - Chỉ đặt 1 Cổng Tam Quan cổ trang ở rìa phải ngoài cùng để giữ nguyên vẻ thơ mộng mặt tiền 3 ngôi nhà trong ảnh!
-	create_curved_wooden_gate(_hamlet_root, Vector3(17.8, 0.0, 1.2), 78.0, "PHONG HÀNH TRẤN")
-	create_red_lantern_string(_hamlet_root, Vector3(14.5, 4.2, -4.5), Vector3(18.5, 4.2, 2.5), 4)
+	# Kiến trúc Thành Trấn Tiên Hiệp chuẩn ảnh mẫu:
+	# 1) Cổng Tam Quan mái ngói xanh lam đặt uy nghi giữa hậu cảnh quảng trường (sau lưng nhân vật!)
+	create_curved_wooden_gate(_hamlet_root, Vector3(1.5, 0.0, -7.8), 0.0, "PHONG HÀNH TRẤN")
+	create_red_lantern_string(_hamlet_root, Vector3(-4.2, 4.1, -7.5), Vector3(1.5, 4.4, -7.6), 4)
+	create_red_lantern_string(_hamlet_root, Vector3(1.5, 4.4, -7.6), Vector3(8.0, 4.1, -7.5), 4)
 
-	# 4 cánh bướm sáng bay lượn gần nhân vật & đèn lồng phải (giống ảnh Windferry!)
+	# 2) Sạp Dù Hồng Thương Nhân (Quầy hàng ô giấy hồng kem + đèn lồng ấm giống bên trái ảnh mẫu!)
+	_build_merchant_parasol_stall(Vector3(-11.8, 0.0, -2.0))
+
+	# 4 cánh bướm sáng bay lượn quanh sân đá
 	var bf_tex := PixelArtGenerator.get_prop_texture("butterfly")
 	for bp: Vector3 in [Vector3(2.2, 1.1, 1.6), Vector3(4.0, 1.3, 1.9), Vector3(-2.4, 1.0, 2.1), Vector3(6.0, 1.2, 0.8)]:
 		var bf := _spawn_foliage_sprite_to(_hamlet_root, bf_tex, bp, 0.032, 0.0)
@@ -926,6 +1031,69 @@ func _build_village_props() -> void:
 		_butterflies.append(bf)
 
 	spawn_breakable_props()
+
+
+## Dựng Sạp Hàng Dù Giấy Hồng Kem + Quầy Gỗ + Đèn Lồng Ấm cho Thương Nhân Aurelius (chuẩn bên trái ảnh mẫu!)
+func _build_merchant_parasol_stall(pos: Vector3) -> void:
+	var stall := Node3D.new()
+	stall.position = pos
+	_hamlet_root.add_child(stall)
+
+	var wood_mat := _make_textured_material(Color(0.36, 0.21, 0.12), Color(0.24, 0.13, 0.07), 0.82, "wood")
+	var pink_umbrella := StandardMaterial3D.new()
+	pink_umbrella.albedo_color = Color(0.96, 0.66, 0.76)
+	pink_umbrella.roughness = 0.62
+	var cream_trim := StandardMaterial3D.new()
+	cream_trim.albedo_color = Color(0.98, 0.92, 0.84)
+	cream_trim.roughness = 0.65
+	var lantern_glow := StandardMaterial3D.new()
+	lantern_glow.albedo_color = Color(1.0, 0.86, 0.46)
+	lantern_glow.emission_enabled = true
+	lantern_glow.emission = Color(1.0, 0.66, 0.24)
+	lantern_glow.emission_energy_multiplier = 1.75
+
+	# Quầy gỗ & kệ hàng trưng bày lọ đan dược
+	_add_box_mesh(stall, Vector3(2.8, 0.92, 1.15), Vector3(0.0, 0.46, 0.0), wood_mat)
+	_add_box_mesh(stall, Vector3(3.0, 0.12, 1.30), Vector3(0.0, 0.96, 0.0), cream_trim)
+	# 3 bình gốm đan dược trên quầy
+	var pot_col := StandardMaterial3D.new()
+	pot_col.albedo_color = Color(0.28, 0.56, 0.82)
+	for px: float in [-0.85, -0.45, 0.80]:
+		var pot := MeshInstance3D.new()
+		var pcm := CylinderMesh.new()
+		pcm.top_radius = 0.14
+		pcm.bottom_radius = 0.18
+		pcm.height = 0.34
+		pot.mesh = pcm
+		pot.position = Vector3(px, 1.18, 0.18)
+		pot.material_override = pot_col
+		stall.add_child(pot)
+
+	# Trụ dù tre & Tán dù giấy tròn hồng pastel rộng che nắng mưa
+	var pole := MeshInstance3D.new()
+	var plm := CylinderMesh.new()
+	plm.top_radius = 0.08
+	plm.bottom_radius = 0.09
+	plm.height = 2.9
+	pole.mesh = plm
+	pole.position = Vector3(0.0, 1.45, -0.15)
+	pole.material_override = wood_mat
+	stall.add_child(pole)
+
+	var canopy := MeshInstance3D.new()
+	var ccm := CylinderMesh.new()
+	ccm.top_radius = 0.18
+	ccm.bottom_radius = 2.05
+	ccm.height = 0.82
+	ccm.radial_segments = 16
+	canopy.mesh = ccm
+	canopy.position = Vector3(0.0, 2.75, -0.15)
+	canopy.material_override = pink_umbrella
+	stall.add_child(canopy)
+
+	# Đèn lồng treo dưới mép tán dù
+	_add_box_mesh(stall, Vector3(0.28, 0.38, 0.28), Vector3(-1.25, 2.08, 0.30), lantern_glow)
+	_add_box_mesh(stall, Vector3(0.28, 0.38, 0.28), Vector3(1.25, 2.08, 0.30), lantern_glow)
 
 
 ## Sinh lại các thùng rượu & hòm hàng phá hủy được mỗi khi vào làng hoặc bắt đầu màn chơi mới
@@ -1038,16 +1206,19 @@ func _build_trees_and_foliage() -> void:
 		_spawn_foliage_sprite(bush_tex, Vector3(fgx, 0.0, 9.6 + randf_range(-0.6, 0.8)), 0.092, 0.95)
 
 	var tree_specs := [
-		[sakura_tex, Vector3(-18.5, 2.6, -12.0), 0.088, 3.8],
-		[sakura_tex, Vector3(9.8, 2.6, -15.2), 0.092, 4.0],
-		[sakura_tex, Vector3(21.5, 2.6, -11.8), 0.088, 3.8],
+		[sakura_tex, Vector3(-18.5, 2.6, -12.0), 0.095, 4.0],
+		[sakura_tex, Vector3(-8.2, 2.6, -11.6), 0.096, 4.0],
+		[sakura_tex, Vector3(9.8, 2.6, -14.2), 0.098, 4.2],
+		[sakura_tex, Vector3(21.5, 2.6, -11.8), 0.092, 3.9],
+		[sakura_tex, Vector3(10.8, 0.0, -4.2), 0.088, 3.6],
+		[sakura_tex, Vector3(-11.2, 0.0, 5.8), 0.082, 3.3],
 		[pine_tex, Vector3(-23.0, 2.6, -18.0), 0.11, 4.0],
 		[pine_tex, Vector3(-14.0, 2.6, -20.5), 0.12, 4.4],
 		[pine_tex, Vector3(2.5, 2.6, -21.0), 0.125, 4.6],
 		[pine_tex, Vector3(15.0, 2.6, -20.0), 0.115, 4.2],
 		[pine_tex, Vector3(24.5, 2.6, -18.5), 0.11, 4.0],
-		[tree_tex, Vector3(-20.5, 0.0, -4.8), 0.080, 3.4],
-		[autumn_tex, Vector3(21.0, 0.0, -4.5), 0.080, 3.4],
+		[sakura_tex, Vector3(-20.5, 0.0, -4.8), 0.085, 3.5],
+		[sakura_tex, Vector3(20.5, 0.0, -3.5), 0.085, 3.5],
 	]
 	for ts in tree_specs:
 		_spawn_foliage_sprite(ts[0], ts[1], ts[2], ts[3])
@@ -1229,22 +1400,26 @@ func _make_textured_material(c1: Color, c2: Color, rough: float, pattern: String
 			var col: Color = c2.lerp(c1, organic)
 
 			if pattern == "cobble":
-				# Đá cuội lát đường bo tròn mềm mại với khe rêu dịu
-				var rows: float = 5.0
-				var cols: float = 5.0
+				# Phiến đá lát quảng trường Tiên Hiệp hình chữ nhật rộng sang trọng + rải rác vài cánh hoa anh đào hồng!
+				var rows: float = 4.0
+				var cols: float = 3.0
 				var ry: float = fy * rows
 				var row_i: int = int(floor(ry))
 				var rx: float = fx * cols + (0.5 if (row_i % 2 == 1) else 0.0)
 				var col_i: int = int(floor(rx))
 				var lx: float = absf(fposmod(rx, 1.0) - 0.5) * 2.0
 				var ly: float = absf(fposmod(ry, 1.0) - 0.5) * 2.0
-				# Góc bo tròn siêu mịn (superellipse)
-				var edge: float = pow(lx, 3.2) + pow(ly, 3.2)
-				var stone_mask: float = clampf(1.0 - smoothstep(0.55, 0.96, edge), 0.0, 1.0)
+				var mx: float = 1.0 - smoothstep(0.84, 0.98, lx)
+				var my: float = 1.0 - smoothstep(0.80, 0.97, ly)
+				var stone_mask: float = mx * my
 				var tone_var: float = fposmod(sin(float(row_i * 19 + col_i * 37)) * 43758.54, 1.0)
-				var stone_col: Color = c1.lerp(c_warm, tone_var * 0.55).lerp(c_hi, organic * 0.35)
+				var stone_col: Color = c1.lerp(c_warm, tone_var * 0.42).lerp(c_hi, organic * 0.30)
 				col = c2.lerp(stone_col, stone_mask)
-				h_val = stone_mask * (0.72 + organic * 0.28)
+				# Chấm cánh hoa anh đào hồng pastel rụng nhẹ trên mặt đá quảng trường!
+				var petal_hash: float = fposmod(sin(float(floori(float(x) / 3.0) * 127 + floori(float(y) / 3.0) * 311)) * 18412.7, 1.0)
+				if petal_hash > 0.992 and stone_mask > 0.5:
+					col = col.lerp(Color(1.0, 0.68, 0.84), 0.65)
+				h_val = stone_mask * (0.76 + organic * 0.24)
 			elif pattern == "brick":
 				# Tường đá cổ bo vát nhẹ với vữa mềm tự nhiên
 				var ry: float = fy * 6.0

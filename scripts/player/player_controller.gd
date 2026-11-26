@@ -251,6 +251,19 @@ func _build_visual_nodes() -> void:
 	add_child(rim_halo)
 	_rim_halo_sprite = rim_halo
 
+	# Tên nhân vật xanh lục-vàng kèm mũi tên ▼ trên đầu (giống WindFerry ▼ trong ảnh mẫu!)
+	var p_name_lbl := Label3D.new()
+	p_name_lbl.name = "HeroOverheadName"
+	WuxiaFontTheme.style_label_3d(p_name_lbl)
+	p_name_lbl.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	p_name_lbl.pixel_size = 0.0076
+	p_name_lbl.font_size = 24
+	p_name_lbl.outline_size = 7
+	p_name_lbl.position = Vector3(0.0, 2.18, 0.0)
+	p_name_lbl.modulate = Color(0.62, 1.0, 0.56)
+	p_name_lbl.text = "WindFerry\n▼"
+	add_child(p_name_lbl)
+
 	# Bóng tròn mềm tiếp đất (Contact Shadow) giúp nhân vật đứng vững và rõ vị trí trong màn đêm
 	_contact_shadow = MeshInstance3D.new()
 	var sh_cyl := CylinderMesh.new()

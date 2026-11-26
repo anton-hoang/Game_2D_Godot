@@ -90,14 +90,14 @@ func _setup_scene_hierarchy() -> void:
 		wave_portal = WavePortal3D.new()
 		wave_portal.name = "WavePortal3D"
 		add_child(wave_portal)
-	wave_portal.position = Vector3(7.5, 0.05, 1.5)
+	wave_portal.position = Vector3(6.8, 0.05, 0.8)
 	wave_portal.portal_entered.connect(_on_portal_entered)
 
 	# CỔNG THÁP VÔ TẬN (CỬU THIÊN THÍ LUYỆN THÁP) đặt ngay khu vực bờ trái Làng Cổ Windferry!
 	tower_portal = WavePortal3D.new()
 	tower_portal.name = "EndlessTowerPortal3D"
 	add_child(tower_portal)
-	tower_portal.position = Vector3(-13.8, 0.05, 4.2)
+	tower_portal.position = Vector3(-13.6, 0.05, 3.6)
 	tower_portal.portal_entered.connect(func() -> void:
 		if is_in_town_hub:
 			endless_portal_entered.emit()
@@ -188,22 +188,21 @@ func enter_town_hub() -> void:
 	player.ultimate_changed.emit(player.current_ultimate, player.max_ultimate)
 
 	environment_builder.build_map_for_theme("hamlet_hub")
-	environment_builder.apply_random_time_of_day(true)
+	environment_builder.apply_time_of_day("blue_night", true)
 	AudioManager.play_bgm("ambient", false)
 
 	wave_portal.set_portal_active(true, SaveManager.unlocked_stage, false)
-	wave_portal._label_3d.text = "CỔNG CHIẾN ĐẤU (MÀN " + str(SaveManager.unlocked_stage) + ")\n(Bước vào để chọn màn đánh quái)"
-	wave_portal._label_3d.modulate = Color(1.0, 0.86, 0.35)
+	wave_portal.set_portal_style("✦ Đi Bản Đồ ✦", Color(0.24, 0.72, 1.0), Color(1.0, 0.90, 0.46))
 
 	# Kích hoạt Cổng Tháp Vô Tận sắc tím hoàng kim bên bờ trái Làng Cổ Windferry!
 	if tower_portal:
 		tower_portal.set_portal_active(true, 1, true)
-		var best_fl: int = SaveManager.best_endless_floor
-		tower_portal._label_3d.text = "✦ CỬU THIÊN THÍ LUYỆN THÁP ✦\n(Tháp Vô Tận • Kỷ lục: Tầng %d)" % best_fl
-		tower_portal._label_3d.modulate = Color(0.88, 0.62, 1.0)
+		tower_portal.set_portal_style("✦ Tháp Vô Tận ✦", Color(0.76, 0.38, 1.0), Color(0.96, 0.84, 1.0))
+
+	GameManager.stats_updated.emit(GameManager.score, SaveManager.gold, 0, 0)
 	wave_banner_requested.emit(
-		"LÀNG CỔ WINDFERRY (KHU VỰC YÊN BÌNH)",
-		"Nói chuyện NPC bằng [E] • Cổng Phải: 5 Màn Chiến Đấu • Cổng Trái: Tháp Vô Tận!"
+		"THÀNH TRẤN WINDFERRY",
+		"Nói chuyện NPC bằng [E] • Cổng Xanh: ✦ Đi Bản Đồ ✦ • Cổng Tím: ✦ Tháp Vô Tận ✦"
 	)
 
 
