@@ -199,7 +199,7 @@ func enter_town_hub() -> void:
 		tower_portal.set_portal_active(true, 1, true)
 		tower_portal.set_portal_style("✦ Tháp Vô Tận ✦", Color(0.76, 0.38, 1.0), Color(0.96, 0.84, 1.0))
 
-	GameManager.stats_updated.emit(GameManager.score, SaveManager.gold, 0, 0)
+	GameManager.stats_updated.emit(GameManager.current_score, SaveManager.gold, 0, 0)
 	wave_banner_requested.emit(
 		"THÀNH TRẤN WINDFERRY",
 		"Nói chuyện NPC bằng [E] • Cổng Xanh: ✦ Đi Bản Đồ ✦ • Cổng Tím: ✦ Tháp Vô Tận ✦"
